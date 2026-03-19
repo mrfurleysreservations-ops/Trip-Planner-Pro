@@ -15,16 +15,3 @@
     "@supabase/ssr": "0.5.2"
   }
 }
-```
-
-The key change is removing all the `^` symbols so it installs the exact versions we want.
-
-Save the file, then in your terminal run:
-```
-git add .
-```
-```
-git commit -m "fix versions"
-```
-```
-git push
