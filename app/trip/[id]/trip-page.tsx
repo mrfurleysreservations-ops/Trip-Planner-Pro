@@ -186,10 +186,10 @@ function AddBookingFormHub({ tripId, userId, accent, cardBg, cardBorder, muted, 
   const [partySize, setPartySize] = useState("");
 
   // Places Autocomplete refs
-  const hotelAddressRef = usePlacesAutocomplete((place) => setAddress(place), { types: ["establishment"] });
-  const restaurantAddressRef = usePlacesAutocomplete((place) => setAddress(place), { types: ["establishment"] });
-  const pickupRef = usePlacesAutocomplete((place) => setPickupLocation(place), { types: ["establishment"] });
-  const dropoffRef = usePlacesAutocomplete((place) => setDropoffLocation(place), { types: ["establishment"] });
+  const hotelAddressRef = usePlacesAutocomplete((place) => setAddress(place), {});
+  const restaurantAddressRef = usePlacesAutocomplete((place) => setAddress(place), {});
+  const pickupRef = usePlacesAutocomplete((place) => setPickupLocation(place), {});
+  const dropoffRef = usePlacesAutocomplete((place) => setDropoffLocation(place), {});
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${cardBorder}`,
@@ -411,10 +411,10 @@ function EditBookingFormHub({ booking, tripId, userId, accent, cardBg, cardBorde
 
   const [partySize, setPartySize] = useState(booking.party_size ? String(booking.party_size) : "");
 
-  const hotelAddressRef = usePlacesAutocomplete((place) => setAddress(place), { types: ["establishment"] });
-  const restaurantAddressRef = usePlacesAutocomplete((place) => setAddress(place), { types: ["establishment"] });
-  const pickupRef = usePlacesAutocomplete((place) => setPickupLocation(place), { types: ["establishment"] });
-  const dropoffRef = usePlacesAutocomplete((place) => setDropoffLocation(place), { types: ["establishment"] });
+  const hotelAddressRef = usePlacesAutocomplete((place) => setAddress(place), {});
+  const restaurantAddressRef = usePlacesAutocomplete((place) => setAddress(place), {});
+  const pickupRef = usePlacesAutocomplete((place) => setPickupLocation(place), {});
+  const dropoffRef = usePlacesAutocomplete((place) => setDropoffLocation(place), {});
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${cardBorder}`,
