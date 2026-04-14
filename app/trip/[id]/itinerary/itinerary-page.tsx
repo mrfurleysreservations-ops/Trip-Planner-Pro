@@ -2415,4 +2415,54 @@ export default function ItineraryPage({
                             style={{ background: th.accent, padding: "8px 20px", fontSize: 13, fontWeight: 700, opacity: total === 0 ? 0.4 : 1 }}
                           >
                             Import All ({total})
-     
+                          </button>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </>
+              )}
+
+              {/* Import loading */}
+              {importLoading && (
+                <div style={{ textAlign: "center", padding: "32px 20px" }}>
+                  <div style={{ fontSize: 48, marginBottom: 12, animation: "spin 1s linear infinite" }}>⏳</div>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: th.muted }}>Importing events...</div>
+                </div>
+              )}
+
+              {/* Import success */}
+              {importSuccess && !importLoading && (
+                <div style={{ textAlign: "center", padding: "32px 20px" }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+                  <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 18, color: th.text, marginBottom: 8 }}>
+                    {importSuccess}
+                  </div>
+                  <button onClick={resetImport} className="btn" style={{ background: th.accent, padding: "10px 24px", fontSize: 14, fontWeight: 700, marginTop: 8 }}>
+                    Done
+                  </button>
+                </div>
+              )}
+
+              {/* Import error */}
+              {importError && importStep === 3 && !importLoading && (
+                <div style={{ textAlign: "center", padding: "32px 20px" }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
+                  <div style={{ color: "#c62828", fontWeight: 700, fontSize: 15, marginBottom: 8 }}>{importError}</div>
+                  <button onClick={() => { setImportError(""); setImportStep(2); }} style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: th.muted, fontFamily: "'DM Sans', sans-serif" }}>Back</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal animations */}
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
+  );
+}

@@ -6,12 +6,6 @@ import { useRef, useEffect, useCallback } from "react";
  * (e.g., forms that mount/unmount). Gracefully degrades to a plain
  * text input if the Google Maps script hasn't loaded or no API key
  * is configured.
- *
- * Type options:
- *   - undefined / [] → all results (addresses, businesses, cities, etc.)
- *   - ["address"]    → street addresses only
- *   - ["establishment"] → businesses only
- *   - ["(cities)"]   → cities only
  */
 export function usePlacesAutocomplete(
   onSelect: (place: string) => void,
@@ -29,7 +23,7 @@ export function usePlacesAutocomplete(
     const acOptions: google.maps.places.AutocompleteOptions = {
       fields: ["formatted_address", "name"],
     };
-    // Only set types if explicitly provided — omitting it returns all result types
+    // Only set types if explicitly provided — omitting returns all result types
     if (typesRef.current && typesRef.current.length > 0) {
       acOptions.types = typesRef.current;
     }
@@ -70,7 +64,7 @@ export function usePlacesAutocomplete(
     }, 500);
 
     // Stop polling after 15s
-    setTimeout(() => clearInterval(interval), 15_000);
+    setTimeout(() => clearInterval(interval), 15000);
   }, [attach]);
 
   return callbackRef;
