@@ -17,12 +17,12 @@ interface StepProfileProps {
 export default function StepProfile({ data, onChange, onNext, userId }: StepProfileProps) {
   return (
     <div className="fade-in">
-      <div style={{ textAlign: "center", marginBottom: "32px" }}>
-        <div style={{ fontSize: "48px", marginBottom: "12px" }}>🧳</div>
-        <h1 style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 8px", fontFamily: "'Outfit', system-ui, sans-serif" }}>Welcome to Trip Planner Pro</h1>
+      <div style={{ textAlign: "center", marginBottom: "20px" }}>
+        <div style={{ fontSize: "36px", marginBottom: "8px" }}>🧳</div>
+        <h1 style={{ fontSize: "26px", fontWeight: 800, margin: "0 0 6px", fontFamily: "'Outfit', system-ui, sans-serif" }}>Welcome to Trip Planner Pro</h1>
         <p style={{ fontSize: "15px", color: "#777", margin: 0 }}>Let&apos;s get you set up in about 2 minutes</p>
       </div>
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
         <AvatarPicker
           currentUrl={data.avatarUrl}
           fallbackEmoji="📸"

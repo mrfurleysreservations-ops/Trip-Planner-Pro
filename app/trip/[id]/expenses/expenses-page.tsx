@@ -526,7 +526,7 @@ export default function ExpensesPageComponent({
 
       <TripSubNav tripId={trip.id} theme={th} />
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: 20, position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: 16, position: "relative", zIndex: 1 }}>
 
         {/* ═══ VIEW TOGGLE ═══ */}
         <div style={{ display: "flex", gap: 0, marginBottom: 20, background: `${th.accent}0a`, borderRadius: 12, border: `1.5px solid ${th.cardBorder}`, overflow: "hidden" }}>

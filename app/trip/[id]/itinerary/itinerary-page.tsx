@@ -1481,7 +1481,7 @@ export default function ItineraryPage({
           {/* ═══ CALENDAR TIME GRID ═══ */}
           {viewMode === "calendar" && (
           <div style={{
-            maxWidth: "900px", margin: "0 auto", padding: "0 12px 20px",
+            maxWidth: "600px", margin: "0 auto", padding: "0 12px 20px",
             overflowY: "auto",
           }}>
 
@@ -1629,7 +1629,7 @@ export default function ItineraryPage({
 
           {/* ═══ LIST VIEW ═══ */}
           {viewMode === "list" && (
-          <div style={{ maxWidth: 900, margin: "0 auto", padding: "12px 12px 20px" }}>
+          <div style={{ maxWidth: 600, margin: "0 auto", padding: "12px 12px 20px" }}>
             {tripDays.map((date, dayIdx) => {
               const dayNum = dayIdx + 1;
               const dayEvents = placedEvents

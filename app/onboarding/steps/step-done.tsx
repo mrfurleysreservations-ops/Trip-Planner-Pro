@@ -23,11 +23,11 @@ export default function StepDone({ data, onFinish }: StepDoneProps) {
 
   return (
     <div className="fade-in" style={{ textAlign: "center" }}>
-      <div style={{ fontSize: "64px", marginBottom: "16px" }}>
+      <div style={{ fontSize: "48px", marginBottom: "10px" }}>
         <span style={{ display: "inline-block", transform: showConfetti ? "scale(1)" : "scale(0)", transition: "transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)" }}>🎉</span>
       </div>
-      <h1 style={{ fontSize: "26px", fontWeight: 800, margin: "0 0 8px", fontFamily: "'Outfit', system-ui, sans-serif" }}>You&apos;re all set, {data.name?.split(" ")[0] || "traveler"}!</h1>
-      <p style={{ fontSize: "15px", color: "#777", margin: "0 0 24px", lineHeight: "1.5" }}>These preferences are saved to your profile and will be used every time you pack for a trip.</p>
+      <h1 style={{ fontSize: "24px", fontWeight: 800, margin: "0 0 6px", fontFamily: "'Outfit', system-ui, sans-serif" }}>You&apos;re all set, {data.name?.split(" ")[0] || "traveler"}!</h1>
+      <p style={{ fontSize: "14px", color: "#777", margin: "0 0 16px", lineHeight: "1.5" }}>These preferences are saved to your profile and will be used every time you pack for a trip.</p>
 
       {/* Saved preferences card */}
       <div style={{ background: "#fff", borderRadius: "20px", padding: "20px", border: "1.5px solid #e0e0e0", textAlign: "left", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", marginBottom: "16px" }}>
@@ -69,7 +69,7 @@ export default function StepDone({ data, onFinish }: StepDoneProps) {
       </div>
 
       {/* Pinterest teaser */}
-      <div style={{ background: "linear-gradient(135deg, #fce4ec, #f8bbd0)", borderRadius: "16px", padding: "20px", marginBottom: "24px", textAlign: "center" }}>
+      <div style={{ background: "linear-gradient(135deg, #fce4ec, #f8bbd0)", borderRadius: "16px", padding: "16px", marginBottom: "16px", textAlign: "center" }}>
         <div style={{ fontSize: "28px", marginBottom: "8px" }}>📌</div>
         <div style={{ fontSize: "14px", fontWeight: 700, color: "#c2185b", marginBottom: "4px" }}>Coming Soon: Style Inspiration</div>
         <div style={{ fontSize: "12px", color: "#ad1457", lineHeight: "1.5" }}>When you create a trip, we&apos;ll pull outfit inspiration from Pinterest based on your destination, style ({styleName || "your picks"}), and itinerary events.</div>

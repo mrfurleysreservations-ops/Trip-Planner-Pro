@@ -8,7 +8,7 @@ export default async function FriendsPage() {
   if (!user) redirect("/auth/login");
 
   return (
-    <div style={{ maxWidth: "900px", margin: "0 auto", padding: "28px 24px" }}>
+    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px 16px" }}>
       <h2 style={{
         fontFamily: "'Outfit', sans-serif",
         fontWeight: 800,

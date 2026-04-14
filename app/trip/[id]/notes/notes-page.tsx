@@ -516,7 +516,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
 
       <TripSubNav tripId={trip.id} theme={th} />
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "20px", position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px", position: "relative", zIndex: 1 }}>
 
         {/* ═══ FILTER TABS + ADD BUTTON ═══ */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>

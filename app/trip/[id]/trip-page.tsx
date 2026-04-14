@@ -735,7 +735,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
         {/* Sub-Navigation */}
         <TripSubNav tripId={id} theme={th} />
 
-        <div style={{ padding: "20px", maxWidth: "960px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+        <div style={{ padding: "16px", maxWidth: "600px", margin: "0 auto", position: "relative", zIndex: 1 }}>
           {/* Weather Forecast */}
           <WeatherCard location={trip.location} startDate={trip.start_date} endDate={trip.end_date} theme={th} />
 
@@ -1031,7 +1031,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
       {/* Sub-Navigation */}
       <TripSubNav tripId={id} theme={th} />
 
-      <div style={{ padding: "20px", maxWidth: "960px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+      <div style={{ padding: "16px", maxWidth: "600px", margin: "0 auto", position: "relative", zIndex: 1 }}>
         <div className="fade-in">
           <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "18px", fontWeight: 700, marginBottom: "12px" }}>🏷️ Trip Details</h3>
           <div className="card-glass" style={{ marginBottom: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>

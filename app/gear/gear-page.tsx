@@ -87,7 +87,7 @@ export default function GearPage({ userId, initialGear }: GearPageProps) {
     <div style={{ color: th.text, fontFamily: "'DM Sans', sans-serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "28px 24px" }}>
+      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px 16px" }}>
         {/* Add gear */}
         <div className="card-glass" style={{ padding: "16px", marginBottom: "20px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
           <input

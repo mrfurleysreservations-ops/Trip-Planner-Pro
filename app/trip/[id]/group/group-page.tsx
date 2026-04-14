@@ -303,7 +303,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
 
       <TripSubNav tripId={trip.id} theme={th} />
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "20px" }}>
+      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px" }}>
 
         {/* ═══ ROSTER: Horizontal scroll ═══ */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>

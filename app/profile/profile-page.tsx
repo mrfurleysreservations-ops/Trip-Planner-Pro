@@ -318,7 +318,7 @@ export default function ProfilePage({ userId, initialFamilies, userEmail, userNa
 
   return (
     <div style={{ color: th.text }}>
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "24px" }}>
+      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px" }}>
         {/* Profile card */}
         <div className="card-glass" style={{ padding: "24px", marginBottom: "24px" }}>
           {editingProfile ? (

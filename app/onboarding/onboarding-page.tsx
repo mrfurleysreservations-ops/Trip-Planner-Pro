@@ -227,10 +227,10 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
   // ─── Render ───
   return (
     <div style={{ maxWidth: "480px", margin: "0 auto", fontFamily: "'Outfit', system-ui, -apple-system, sans-serif", color: "#1a1a1a", minHeight: "100vh", background: BG }}>
-      <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, padding: "16px 20px 0" }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, padding: "10px 16px 0" }}>
         {step > 0 && step < TOTAL_STEPS - 1 && <ProgressDots total={TOTAL_STEPS} current={step} />}
       </div>
-      <div ref={containerRef} style={{ padding: "0 20px 40px", overflow: "auto" }}>
+      <div ref={containerRef} style={{ padding: "0 16px 20px", overflow: "auto" }}>
         {step === 0 && <StepProfile data={data} onChange={updateData} onNext={next} userId={userId} />}
         {step === 1 && <StepDetails data={data} onChange={updateData} onNext={next} onBack={back} />}
         {step === 2 && <StepStyle data={data} onChange={updateData} onNext={next} onBack={back} />}

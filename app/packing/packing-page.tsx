@@ -1017,7 +1017,7 @@ export default function PackingPage({ userId, initialSuitcases, families, initia
     <div style={{ color: th.text, fontFamily: "'DM Sans', sans-serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: tripId ? "0" : "28px 24px" }}>
+      <div style={{ maxWidth: "600px", margin: "0 auto", padding: tripId ? "0" : "16px 16px" }}>
         {/* Person selector */}
         {uniqueMembers.length === 0 ? (
           <div className="card-glass" style={{ padding: "32px", textAlign: "center", marginBottom: "20px" }}>
