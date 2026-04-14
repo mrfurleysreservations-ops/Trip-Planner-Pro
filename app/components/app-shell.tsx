@@ -73,14 +73,14 @@ export default function AppShell({ children }: AppShellProps) {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        padding: "10px 20px",
+        padding: "8px 16px",
         background: "#fff",
         borderBottom: "1px solid #e5e5e5",
       }}>
         <span style={{
           fontFamily: "'Outfit', sans-serif",
           fontWeight: 800,
-          fontSize: "16px",
+          fontSize: "18px",
           color: "#1a1a1a",
           letterSpacing: "-0.3px",
         }}>🧭 Trip Planner Pro</span>
@@ -96,7 +96,7 @@ export default function AppShell({ children }: AppShellProps) {
             background: "#f5f5f5",
             border: "1px solid #e0e0e0",
             color: "#777",
-            fontSize: "12px",
+            fontSize: "13px",
             padding: "5px 14px",
             borderRadius: "8px",
             cursor: "pointer",

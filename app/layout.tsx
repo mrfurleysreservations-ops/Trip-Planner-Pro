@@ -7,6 +7,12 @@ export const metadata = {
   description: "Organize camping, flying, road trips, and meetups with your crew.",
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 

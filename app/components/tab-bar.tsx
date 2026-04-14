@@ -65,7 +65,7 @@ export default function TabBar({ badges = {} }: TabBarProps) {
               transition: "border-color 0.2s, color 0.2s",
             }}
           >
-            <span style={{ position: "relative", fontSize: "20px", lineHeight: 1 }}>
+            <span style={{ position: "relative", fontSize: "22px", lineHeight: 1 }}>
               {tab.icon}
               {badge > 0 && (
                 <span style={{
@@ -88,7 +88,7 @@ export default function TabBar({ badges = {} }: TabBarProps) {
               )}
             </span>
             <span style={{
-              fontSize: "9px",
+              fontSize: "11px",
               fontWeight: active ? 700 : 500,
               color: active ? accent : muted,
               fontFamily: "'DM Sans', sans-serif",

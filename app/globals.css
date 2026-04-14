@@ -114,3 +114,34 @@ input, select, textarea, button {
 /* Horizontal slider scrollbar hide */
 .slider-hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .slider-hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Mobile-first adjustments (default is mobile, scale UP for desktop) */
+@media (min-width: 768px) {
+  .card-glass {
+    padding: 20px;
+  }
+  .btn {
+    padding: 12px 24px;
+    font-size: 15px;
+  }
+}
+
+/* Ensure touch targets are at least 44px on mobile */
+@media (max-width: 767px) {
+  .btn {
+    min-height: 44px;
+    font-size: 15px;
+  }
+  .btn-sm {
+    min-height: 36px;
+    font-size: 13px;
+  }
+  .input-modern {
+    font-size: 16px; /* prevents iOS zoom on focus */
+    padding: 12px 14px;
+  }
+  .badge {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+}

@@ -54,14 +54,14 @@ function TripCard({ trip, past, theme, onDelete, onNavigate }: TripCardProps) {
           </div>
           {/* Location */}
           {trip.location && (
-            <div style={{ fontSize: "13px", color: theme.muted, marginBottom: "4px" }}>
+            <div style={{ fontSize: "14px", color: theme.muted, marginBottom: "4px" }}>
               📍 {trip.location}
             </div>
           )}
           {/* Dates + badge */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
             <span className="badge" style={{ background: tth.accent }}>{tt.label}</span>
-            <span style={{ fontSize: "12px", color: "#999" }}>
+            <span style={{ fontSize: "13px", color: "#999" }}>
               {formatDateRange(trip.start_date, trip.end_date)}
             </span>
           </div>
@@ -131,7 +131,7 @@ export default function DashboardPage({ user, profile, initialTrips, initialFami
 
   return (
     <div style={{ color: th.text }}>
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "28px 24px" }}>
+      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px 16px" }}>
 
         {/* First-time setup prompt */}
         {families.length === 0 && (
@@ -141,7 +141,7 @@ export default function DashboardPage({ user, profile, initialTrips, initialFami
             borderColor: th.accent,
             background: `linear-gradient(135deg, rgba(232,148,58,0.06), #fff)`,
           }}>
-            <strong style={{ color: th.accent, fontSize: "16px" }}>👋 Welcome! Let's get started</strong>
+            <strong style={{ color: th.accent, fontSize: "17px" }}>👋 Welcome! Let's get started</strong>
             <p style={{ opacity: 0.6, fontSize: "14px", marginTop: "6px" }}>
               Create your family profile first — add your members and gear. Then when you start a trip, everything loads automatically.
             </p>
@@ -187,7 +187,7 @@ export default function DashboardPage({ user, profile, initialTrips, initialFami
         {upcomingTrips.length > 0 && (
           <div style={{ marginBottom: "32px" }}>
             <h3 style={{
-              fontSize: "13px",
+              fontSize: "14px",
               fontWeight: 700,
               color: "#999",
               textTransform: "uppercase",
@@ -208,7 +208,7 @@ export default function DashboardPage({ user, profile, initialTrips, initialFami
         {pastTrips.length > 0 && (
           <div>
             <h3 style={{
-              fontSize: "13px",
+              fontSize: "14px",
               fontWeight: 700,
               color: "#bbb",
               textTransform: "uppercase",
