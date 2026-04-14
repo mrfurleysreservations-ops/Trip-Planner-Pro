@@ -20,4 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
         )}
         <AppShell>{children}</AppShell>
-      </bod
+      </body>
+    </html>
+  );
+}
