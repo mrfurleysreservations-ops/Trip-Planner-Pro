@@ -8,7 +8,7 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   return (
     <html lang="en">
@@ -20,7 +20,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
         )}
         <AppShell>{children}</AppShell>
-      </body>
-    </html>
-  );
-}
+      </bod

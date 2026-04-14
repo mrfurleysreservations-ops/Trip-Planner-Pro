@@ -709,7 +709,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
         {/* Header */}
         <div style={{ background: th.headerBg, padding: "14px 20px", backdropFilter: "blur(20px)", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", position: "relative", zIndex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <button onClick={() => router.push("/dashboard")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", color: th.muted, padding: "4px" }}>←</button>
+            <button onClick={() => router.push("/dashboard")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", color: th.muted, padding: "10px", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
             <div>
               <div style={{ color: th.text, fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800 }}>
                 {trip.name}
@@ -724,8 +724,8 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
           </div>
           {isHost && (
             <button
-              onClick={() => router.push(`/trip/${id}`)}
-              style={{ background: "none", border: `1.5px solid ${th.cardBorder}`, borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "12px", color: th.muted, fontFamily: "'DM Sans', sans-serif" }}
+              onClick={() => router.push(`/trip/${id}?edit=true`)}
+              style={{ background: "none", border: `1.5px solid ${th.cardBorder}`, borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontSize: "13px", color: th.muted, fontFamily: "'DM Sans', sans-serif", minHeight: "44px", minWidth: "44px" }}
             >
               ✏️ Edit Details
             </button>
@@ -1013,7 +1013,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
       {/* Header */}
       <div style={{ background: th.headerBg, padding: "14px 20px", backdropFilter: "blur(20px)", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", position: "relative", zIndex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <button onClick={() => router.push("/dashboard")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", color: th.muted, padding: "4px" }}>←</button>
+          <button onClick={() => router.push("/dashboard")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", color: th.muted, padding: "10px", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
           <div>
             <div style={{ color: th.text, fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800 }}>
               {trip.name === "New Trip" ? "New Trip" : trip.name}
@@ -1051,8 +1051,25 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
             </div>
           </div>
 
-          {/* Next step */}
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+          {/* Next step / Done editing */}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+            {isHost && initialTrip.location && initialTrip.start_date && (
+              <button
+                onClick={async () => { await flushSaves(); router.push(`/trip/${id}`); }}
+                className="btn"
+                style={{
+                  background: "none",
+                  border: `1.5px solid ${th.cardBorder}`,
+                  padding: "12px 24px",
+                  fontSize: "15px",
+                  fontWeight: 700,
+                  color: th.muted,
+                  minHeight: "44px",
+                }}
+              >
+                ← Done Editing
+              </button>
+            )}
             <button
               onClick={handleNext}
               className="btn"
@@ -1061,6 +1078,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
                 padding: "12px 32px",
                 fontSize: "15px",
                 fontWeight: 700,
+                minHeight: "44px",
               }}
             >
               Next: Build Your Group →

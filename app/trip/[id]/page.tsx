@@ -3,9 +3,10 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Trip, TripBooking, TripMember } from "@/types/database.types";
 import TripPage from "./trip-page";
 
-export default async function TripServerPage({ params }: { params: { id: string } }) {
+export default async function TripServerPage({ params, searchParams }: { params: { id: string }; searchParams: { edit?: string } }) {
   const supabase = createServerSupabaseClient();
   const { id } = params;
+  const wantsEdit = searchParams.edit === "true";
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
@@ -36,7 +37,8 @@ export default async function TripServerPage({ params }: { params: { id: string 
     memberCount > 1;
 
   // Guests always go to the hub; hosts go to setup if incomplete
-  const needsSetup = isHost && !isSetupComplete;
+  // Also allow hosts to force-edit via ?edit=true query param
+  const needsSetup = isHost && (!isSetupComplete || wantsEdit);
 
   return (
     <TripPage
