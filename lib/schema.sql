@@ -58,6 +58,8 @@ create table public.family_members (
   age_type text default 'adult',
   appetite text default 'normal',
   linked_user_id uuid references auth.users on delete set null,
+  avatar_url text,
+  bio text,
   created_at timestamptz default now()
 );
 

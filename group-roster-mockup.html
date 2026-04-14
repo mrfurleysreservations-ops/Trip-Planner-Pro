@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Group Roster Mockup — Trip Planner Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: #f8f2fa; color: #1a1a1a; }
+
+  .header {
+    background: #f0e4f4; padding: 14px 20px;
+    border-bottom: 1px solid rgba(156,39,176,0.2);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .header h2 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 20px; }
+  .header .back { background: none; border: none; cursor: pointer; font-size: 18px; color: #8a6a9a; padding: 4px; margin-right: 8px; }
+  .header-left { display: flex; align-items: center; }
+
+  .subnav {
+    display: flex; background: #f0e4f4;
+    border-bottom: 1px solid rgba(156,39,176,0.2);
+    overflow-x: auto;
+  }
+  .subnav button {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 5px;
+    padding: 10px 16px; background: none; border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500; color: #8a6a9a; white-space: nowrap;
+  }
+  .subnav button.active { border-bottom-color: #9c27b0; color: #9c27b0; font-weight: 700; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+  .section-title {
+    font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 16px;
+    color: #1a1a1a;
+  }
+
+  /* ═══ HORIZONTAL ROSTER ═══ */
+  .roster-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .roster-header-left { display: flex; align-items: center; gap: 10px; }
+  .roster-count {
+    font-size: 12px; color: #8a6a9a; font-weight: 500;
+    background: rgba(156,39,176,0.1); padding: 2px 10px; border-radius: 20px;
+  }
+  .btn-next {
+    padding: 10px 24px; background: #9c27b0; color: #fff; border: none;
+    border-radius: 10px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 700; white-space: nowrap;
+  }
+
+  .roster-scroll-wrap {
+    position: relative; margin-bottom: 24px;
+  }
+  .roster-scroll {
+    display: flex; gap: 12px; overflow-x: auto; padding: 4px 0 12px;
+    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .roster-scroll::-webkit-scrollbar { display: none; }
+
+  .roster-chip {
+    flex: 0 0 auto; display: flex; flex-direction: column; align-items: center;
+    gap: 6px; padding: 12px 14px; min-width: 90px;
+    background: rgba(156,39,176,0.06); border: 1.5px solid rgba(156,39,176,0.2);
+    border-radius: 14px; position: relative; text-align: center;
+  }
+  .roster-chip.host { border-color: #9c27b0; background: rgba(156,39,176,0.1); }
+
+  .roster-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 18px; flex-shrink: 0;
+  }
+  .roster-avatar.host { background: #9c27b0; color: #fff; }
+  .roster-avatar.member { background: rgba(156,39,176,0.12); color: #1a1a1a; }
+
+  .roster-name { font-size: 12px; font-weight: 600; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+
+  .badge-host-sm {
+    font-size: 9px; font-weight: 700; background: #9c27b0; color: #fff;
+    padding: 1px 6px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .badge-pending-sm {
+    font-size: 9px; font-weight: 600; background: #fef3cd; color: #856404;
+    padding: 1px 6px; border-radius: 10px;
+  }
+  .badge-accepted-sm {
+    font-size: 9px; font-weight: 600; background: #d4edda; color: #155724;
+    padding: 1px 6px; border-radius: 10px;
+  }
+
+  /* Mini toggle on chip */
+  .toggle-sm { position: relative; width: 36px; height: 20px; flex-shrink: 0; margin-top: 2px; }
+  .toggle-sm input { opacity: 0; width: 0; height: 0; }
+  .toggle-sm .slider {
+    position: absolute; inset: 0; background: #ccc; border-radius: 20px;
+    cursor: pointer; transition: 0.3s;
+  }
+  .toggle-sm .slider::before {
+    content: ''; position: absolute; height: 14px; width: 14px;
+    left: 3px; bottom: 3px; background: #fff; border-radius: 50%;
+    transition: 0.3s;
+  }
+  .toggle-sm input:checked + .slider { background: #9c27b0; }
+  .toggle-sm input:checked + .slider::before { transform: translateX(16px); }
+  .toggle-sm input:disabled + .slider { opacity: 0.6; cursor: default; }
+
+  /* Fade edges to hint scrollability */
+  .roster-scroll-wrap::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 12px;
+    width: 40px; background: linear-gradient(to right, transparent, #f8f2fa);
+    pointer-events: none;
+  }
+
+  /* ═══ ADD PEOPLE SECTION ═══ */
+  .tab-bar {
+    display: flex; gap: 0; margin-bottom: 16px;
+    border-bottom: 2px solid rgba(156,39,176,0.15);
+  }
+  .tab-btn {
+    flex: 1; padding: 12px 16px; background: none; border: none;
+    border-bottom: 3px solid transparent; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    color: #8a6a9a; text-align: center; margin-bottom: -2px;
+  }
+  .tab-btn.active { border-bottom-color: #9c27b0; color: #9c27b0; font-weight: 700; }
+
+  .search-input {
+    width: 100%; padding: 10px 14px 10px 36px; border: 1.5px solid rgba(156,39,176,0.2);
+    border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px;
+    background: #fff; outline: none; margin-bottom: 14px;
+  }
+  .search-input:focus { border-color: #9c27b0; }
+  .search-wrap { position: relative; }
+  .search-wrap::before {
+    content: '🔍'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 14px; pointer-events: none;
+  }
+
+  .friend-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; border-radius: 10px; margin-bottom: 6px;
+    border: 1px solid rgba(156,39,176,0.2); background: rgba(156,39,176,0.06);
+  }
+  .friend-row.greyed {
+    opacity: 0.45; background: #f0f0f0; border-color: #e0e0e0;
+  }
+  .friend-row .friend-left { display: flex; align-items: center; gap: 10px; }
+  .friend-avatar {
+    width: 36px; height: 36px; border-radius: 50%; background: #9c27b0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 14px; font-weight: 700; flex-shrink: 0;
+  }
+  .friend-avatar.greyed { background: #bbb; }
+  .friend-name { font-size: 14px; font-weight: 600; }
+  .friend-email { font-size: 12px; color: #8a6a9a; }
+  .friend-note { font-size: 11px; color: #bbb; font-style: italic; }
+
+  .btn-add {
+    padding: 6px 14px; background: #9c27b0; color: #fff; border: none;
+    border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 600;
+  }
+  .btn-added {
+    padding: 6px 14px; background: #d4edda; color: #155724; border: none;
+    border-radius: 8px; font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 600;
+  }
+
+  .family-card {
+    background: rgba(156,39,176,0.06); border: 1.5px solid rgba(156,39,176,0.2);
+    border-radius: 14px; padding: 16px; margin-bottom: 10px; cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .family-card:hover { border-color: #9c27b0; box-shadow: 0 2px 12px rgba(156,39,176,0.1); }
+  .family-card.added { border-color: #28a745; background: rgba(40,167,69,0.06); }
+  .family-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .family-name { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 15px; }
+  .family-members { display: flex; flex-wrap: wrap; gap: 8px; }
+  .family-member-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; background: rgba(156,39,176,0.08); border-radius: 20px;
+    font-size: 12px; font-weight: 500;
+  }
+  .family-card.added .family-member-chip { background: rgba(40,167,69,0.1); }
+
+  .btn-add-family {
+    padding: 6px 16px; background: #9c27b0; color: #fff; border: none;
+    border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 600;
+  }
+  .btn-added-family {
+    padding: 6px 16px; background: #d4edda; color: #155724; border: none;
+    border-radius: 8px; font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 600;
+  }
+  .family-owner { font-size: 11px; color: #8a6a9a; font-weight: 500; }
+
+  .invite-section {
+    margin-top: 20px; padding-top: 16px;
+    border-top: 1px solid rgba(156,39,176,0.15);
+  }
+  .invite-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  .invite-input {
+    flex: 1 1 140px; padding: 8px 12px; border: 1.5px solid rgba(156,39,176,0.2);
+    border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px;
+    outline: none;
+  }
+  .invite-input:focus { border-color: #9c27b0; }
+
+  .divider-label {
+    font-size: 11px; font-weight: 600; color: #bbb; text-transform: uppercase;
+    letter-spacing: 0.05em; margin: 14px 0 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <button class="back">←</button>
+    <div>
+      <h2>Wine Tasting Weekend</h2>
+      <div style="font-size: 11px; opacity: 0.5;">📍 Napa Valley, CA · Apr 17 — Apr 19</div>
+    </div>
+  </div>
+</div>
+
+<!-- Sub-nav -->
+<div class="subnav">
+  <button class="active"><span>👥</span> Group</button>
+  <button><span>📝</span> Notes</button>
+  <button><span>📅</span> Itinerary</button>
+  <button><span>🧳</span> Packing</button>
+  <button><span>🍽️</span> Meals</button>
+  <button><span>🚐</span> Logistics</button>
+</div>
+
+<div class="container">
+
+  <!-- ═══ ROSTER: Horizontal scroll with Next button ═══ -->
+  <div class="roster-header">
+    <div class="roster-header-left">
+      <div class="section-title">Who's Going</div>
+      <span class="roster-count">4 people</span>
+    </div>
+    <button class="btn-next">Next: Research Notes →</button>
+  </div>
+
+  <div class="roster-scroll-wrap">
+    <div class="roster-scroll">
+
+      <!-- Host chip (pinned, toggle locked) -->
+      <div class="roster-chip host">
+        <div class="roster-avatar host">J</div>
+        <div class="roster-name">Joe</div>
+        <span class="badge-host-sm">Host</span>
+        <label class="toggle-sm">
+          <input type="checkbox" checked disabled />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Member chips -->
+      <div class="roster-chip">
+        <div class="roster-avatar member">S</div>
+        <div class="roster-name">Sarah</div>
+        <span class="badge-accepted-sm">Accepted</span>
+        <label class="toggle-sm">
+          <input type="checkbox" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="roster-chip">
+        <div class="roster-avatar member">D</div>
+        <div class="roster-name">Dave</div>
+        <span class="badge-pending-sm">Pending</span>
+        <label class="toggle-sm">
+          <input type="checkbox" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="roster-chip">
+        <div class="roster-avatar member">L</div>
+        <div class="roster-name">Lisa</div>
+        <span class="badge-pending-sm">Pending</span>
+        <label class="toggle-sm">
+          <input type="checkbox" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="roster-chip">
+        <div class="roster-avatar member">M</div>
+        <div class="roster-name">Mike</div>
+        <span class="badge-pending-sm">Pending</span>
+        <label class="toggle-sm">
+          <input type="checkbox" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="roster-chip">
+        <div class="roster-avatar member">J</div>
+        <div class="roster-name">Jenny</div>
+        <span class="badge-pending-sm">Pending</span>
+        <label class="toggle-sm">
+          <input type="checkbox" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="roster-chip">
+        <div class="roster-avatar member">R</div>
+        <div class="roster-name">Rachel</div>
+        <span class="badge-accepted-sm">Accepted</span>
+        <label class="toggle-sm">
+          <input type="checkbox" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ ADD PEOPLE (Tabs) ═══ -->
+  <div class="section-title" style="margin-bottom: 12px;">Add People</div>
+
+  <div class="tab-bar" id="addTabs">
+    <button class="tab-btn active" onclick="showTab('friends')">👥 Friends</button>
+    <button class="tab-btn" onclick="showTab('families')">🏠 Families</button>
+  </div>
+
+  <!-- FRIENDS TAB -->
+  <div id="tab-friends">
+    <div class="search-wrap">
+      <input class="search-input" id="friendSearch" placeholder="Search friends..." oninput="filterFriends()" />
+    </div>
+
+    <div id="friendResults">
+      <div class="divider-label">Your Friends</div>
+
+      <div class="friend-row" data-name="mike thompson">
+        <div class="friend-left">
+          <div class="friend-avatar">M</div>
+          <div><div class="friend-name">Mike Thompson</div></div>
+        </div>
+        <button class="btn-added">✓ Added</button>
+      </div>
+
+      <div class="friend-row" data-name="rachel kim">
+        <div class="friend-left">
+          <div class="friend-avatar">R</div>
+          <div><div class="friend-name">Rachel Kim</div></div>
+        </div>
+        <button class="btn-added">✓ Added</button>
+      </div>
+
+      <div class="friend-row" data-name="sarah">
+        <div class="friend-left">
+          <div class="friend-avatar">S</div>
+          <div><div class="friend-name">Sarah</div></div>
+        </div>
+        <button class="btn-added">✓ Added</button>
+      </div>
+
+      <div class="friend-row" data-name="tom brennan">
+        <div class="friend-left">
+          <div class="friend-avatar">T</div>
+          <div><div class="friend-name">Tom Brennan</div></div>
+        </div>
+        <button class="btn-add">+ Add</button>
+      </div>
+
+      <div class="divider-label" id="notOnAppLabel">Not on the app yet</div>
+
+      <div class="friend-row greyed" data-name="dave">
+        <div class="friend-left">
+          <div class="friend-avatar greyed">D</div>
+          <div>
+            <div class="friend-name">Dave</div>
+            <div class="friend-note">Invited — hasn't joined yet</div>
+          </div>
+        </div>
+        <button class="btn-added" style="opacity:0.5;">✓ Invited</button>
+      </div>
+
+      <div class="friend-row greyed" data-name="lisa">
+        <div class="friend-left">
+          <div class="friend-avatar greyed">L</div>
+          <div>
+            <div class="friend-name">Lisa</div>
+            <div class="friend-note">Invited — hasn't joined yet</div>
+          </div>
+        </div>
+        <button class="btn-added" style="opacity:0.5;">✓ Invited</button>
+      </div>
+    </div>
+
+    <!-- No results state -->
+    <div id="friendNoResults" style="display:none; text-align:center; padding:24px; color:#8a6a9a; font-size:14px;">
+      No friends matching "<span id="friendSearchTerm"></span>"
+    </div>
+
+    <div class="invite-section">
+      <div style="font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 8px;">✉️ Invite someone new</div>
+      <div class="invite-row">
+        <input class="invite-input" placeholder="Name" />
+        <input class="invite-input" placeholder="Email (optional)" />
+        <button class="btn-add" style="padding: 8px 16px; white-space: nowrap;">Send Invite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAMILIES TAB -->
+  <div id="tab-families" style="display:none;">
+    <div class="search-wrap">
+      <input class="search-input" id="familySearch" placeholder="Search families..." oninput="filterFamilies()" />
+    </div>
+
+    <div id="familyResults">
+      <div class="divider-label" id="yourFamiliesLabel">Your Families</div>
+
+      <div class="family-card added" data-name="the furleys">
+        <div class="family-header">
+          <div>
+            <div class="family-name">🏠 The Furleys</div>
+            <div class="family-owner">Your family</div>
+          </div>
+          <button class="btn-added-family">✓ Added</button>
+        </div>
+        <div class="family-members">
+          <span class="family-member-chip">🧑 Joe</span>
+          <span class="family-member-chip">🧑 Sarah</span>
+          <span class="family-member-chip">🧒 Emma</span>
+          <span class="family-member-chip">👶 Max</span>
+        </div>
+      </div>
+
+      <div class="divider-label" id="friendsFamiliesLabel">Friends' Families</div>
+
+      <div class="family-card" data-name="the thompsons mike thompson jenny cody">
+        <div class="family-header">
+          <div>
+            <div class="family-name">🏠 The Thompsons</div>
+            <div class="family-owner">Mike Thompson's family</div>
+          </div>
+          <button class="btn-add-family">+ Add All</button>
+        </div>
+        <div class="family-members">
+          <span class="family-member-chip">🧑 Mike</span>
+          <span class="family-member-chip">🧑 Jenny</span>
+          <span class="family-member-chip">🧒 Cody</span>
+        </div>
+      </div>
+
+      <div class="family-card" data-name="the kims rachel kim dan">
+        <div class="family-header">
+          <div>
+            <div class="family-name">🏠 The Kims</div>
+            <div class="family-owner">Rachel Kim's family</div>
+          </div>
+          <button class="btn-add-family">+ Add All</button>
+        </div>
+        <div class="family-members">
+          <span class="family-member-chip">🧑 Rachel</span>
+          <span class="family-member-chip">🧑 Dan</span>
+        </div>
+      </div>
+
+      <div class="family-card" data-name="the brennans tom brennan katie ava ben">
+        <div class="family-header">
+          <div>
+            <div class="family-name">🏠 The Brennans</div>
+            <div class="family-owner">Tom Brennan's family</div>
+          </div>
+          <button class="btn-add-family">+ Add All</button>
+        </div>
+        <div class="family-members">
+          <span class="family-member-chip">🧑 Tom</span>
+          <span class="family-member-chip">🧑 Katie</span>
+          <span class="family-member-chip">🧒 Ava</span>
+          <span class="family-member-chip">🧒 Ben</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- No results state -->
+    <div id="familyNoResults" style="display:none; text-align:center; padding:24px; color:#8a6a9a; font-size:14px;">
+      No families matching "<span id="familySearchTerm"></span>"
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showTab(tab) {
+  document.getElementById('tab-friends').style.display = tab === 'friends' ? 'block' : 'none';
+  document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim().toLowerCase().includes(tab));
+  });
+}
+
+function filterFriends() {
+  const q = document.getElementById('friendSearch').value.toLowerCase().trim();
+  const rows = document.querySelectorAll('#friendResults .friend-row');
+  let visibleCount = 0;
+  let visibleGreyed = 0;
+
+  rows.forEach(row => {
+    const name = row.getAttribute('data-name') || '';
+    const match = !q || name.includes(q);
+    row.style.display = match ? 'flex' : 'none';
+    if (match) {
+      visibleCount++;
+      if (row.classList.contains('greyed')) visibleGreyed++;
+    }
+  });
+
+  // Hide section labels if no results in that section
+  const notOnAppLabel = document.getElementById('notOnAppLabel');
+  if (notOnAppLabel) notOnAppLabel.style.display = visibleGreyed > 0 ? 'block' : 'none';
+
+  // Show/hide no results message
+  const noResults = document.getElementById('friendNoResults');
+  const searchTerm = document.getElementById('friendSearchTerm');
+  if (visibleCount === 0 && q) {
+    noResults.style.display = 'block';
+    searchTerm.textContent = q;
+  } else {
+    noResults.style.display = 'none';
+  }
+}
+
+function filterFamilies() {
+  const q = document.getElementById('familySearch').value.toLowerCase().trim();
+  const cards = document.querySelectorAll('#familyResults .family-card');
+  let visibleYours = 0;
+  let visibleFriends = 0;
+
+  cards.forEach(card => {
+    const name = card.getAttribute('data-name') || '';
+    const match = !q || name.includes(q);
+    card.style.display = match ? 'block' : 'none';
+    if (match) {
+      // Check if it's "your" family (has the .added class by default in the mockup)
+      if (card.classList.contains('added')) visibleYours++;
+      else visibleFriends++;
+    }
+  });
+
+  const yourLabel = document.getElementById('yourFamiliesLabel');
+  const friendsLabel = document.getElementById('friendsFamiliesLabel');
+  if (yourLabel) yourLabel.style.display = visibleYours > 0 ? 'block' : 'none';
+  if (friendsLabel) friendsLabel.style.display = visibleFriends > 0 ? 'block' : 'none';
+
+  const noResults = document.getElementById('familyNoResults');
+  const searchTerm = document.getElementById('familySearchTerm');
+  if ((visibleYours + visibleFriends) === 0 && q) {
+    noResults.style.display = 'block';
+    searchTerm.textContent = q;
+  } else {
+    noResults.style.display = 'none';
+  }
+}
+</script>
+
+</body>
+</html>

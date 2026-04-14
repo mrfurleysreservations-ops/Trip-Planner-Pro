@@ -4,8 +4,8 @@
 
 body {
   font-family: 'DM Sans', sans-serif;
-  background: #0f0f1a;
-  color: #e8e6e3;
+  background: #f8f8f8;
+  color: #1a1a1a;
   min-height: 100vh;
 }
 
@@ -14,14 +14,14 @@ input, select, textarea, button {
 }
 
 ::selection {
-  background: rgba(232, 148, 58, 0.3);
+  background: rgba(232, 148, 58, 0.25);
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
 
 /* Animations */
 @keyframes fadeIn {
@@ -40,24 +40,23 @@ input, select, textarea, button {
 /* Modern input style */
 .input-modern {
   padding: 10px 14px;
-  border: 1.5px solid rgba(255,255,255,0.1);
+  border: 1.5px solid #ddd;
   border-radius: 10px;
   font-size: 14px;
-  background: rgba(255,255,255,0.05);
-  color: inherit;
+  background: #fff;
+  color: #1a1a1a;
   outline: none;
   width: 100%;
-  backdrop-filter: blur(4px);
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .input-modern:focus {
-  border-color: rgba(255,255,255,0.25);
-  background: rgba(255,255,255,0.08);
+  border-color: #e8943a;
+  box-shadow: 0 0 0 3px rgba(232, 148, 58, 0.1);
 }
 
 .input-modern::placeholder {
-  color: rgba(255,255,255,0.3);
+  color: #aaa;
 }
 
 /* Button styles */
@@ -81,16 +80,17 @@ input, select, textarea, button {
 
 /* Card */
 .card-glass {
-  background: rgba(255,255,255,0.06);
-  border: 1.5px solid rgba(255,255,255,0.1);
+  background: #fff;
+  border: 1.5px solid #e5e5e5;
   border-radius: 14px;
   padding: 18px;
-  backdrop-filter: blur(10px);
-  transition: border-color 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .card-glass:hover {
-  border-color: rgba(255,255,255,0.18);
+  border-color: #d0d0d0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 /* Badge */
@@ -110,3 +110,7 @@ input, select, textarea, button {
   font-weight: 800;
   letter-spacing: -0.02em;
 }
+
+/* Horizontal slider scrollbar hide */
+.slider-hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.slider-hide-scrollbar::-webkit-scrollbar { display: none; }

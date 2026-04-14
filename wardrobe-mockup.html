@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wardrobe + Outfit UX Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; background: #f8f8f8; color: #1a1a1a; }
+.container { max-width: 420px; margin: 0 auto; padding: 20px 16px; }
+h2 { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+h3 { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; }
+
+/* Navigation */
+.nav { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid #eee; position: sticky; top: 0; background: #f8f8f8; z-index: 10; padding-top: 8px; }
+.nav-btn { padding: 10px 18px; font-size: 14px; font-weight: 600; border: none; background: none; cursor: pointer; color: #999; border-bottom: 2px solid transparent; margin-bottom: -2px; font-family: 'DM Sans', sans-serif; }
+.nav-btn.active { color: #e8943a; border-bottom-color: #e8943a; }
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* Cards */
+.card { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid #e8e8e8; }
+.card-muted { background: #fafafa; border: 1px dashed #ddd; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+
+/* Buttons */
+.btn { padding: 8px 16px; border-radius: 10px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.btn-accent { background: #e8943a; color: #fff; }
+.btn-light { background: #f0f0f0; color: #1a1a1a; }
+.btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 8px; }
+
+/* Tabs inside wardrobe */
+.tab-row { display: flex; gap: 0; margin-bottom: 14px; background: #f0f0f0; border-radius: 10px; padding: 3px; }
+.tab-btn { flex: 1; padding: 8px; text-align: center; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; background: none; color: #777; font-family: 'DM Sans', sans-serif; }
+.tab-btn.active { background: #fff; color: #1a1a1a; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+/* Wardrobe item cards */
+.wardrobe-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+.wardrobe-card { width: 75px; height: 75px; border-radius: 10px; flex-shrink: 0; position: relative; overflow: hidden; border: 2px solid #e0e0e0; background: #f8f8f8; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+.wardrobe-card .emoji { font-size: 22px; }
+.wardrobe-card .name { font-size: 10px; text-align: center; padding: 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; opacity: 0.7; }
+.wardrobe-card.has-photo { background-size: cover; background-position: center; justify-content: flex-end; }
+.wardrobe-card.has-photo .photo-label { background: rgba(0,0,0,0.55); color: #fff; font-size: 10px; font-weight: 600; padding: 2px 4px; position: absolute; bottom: 0; left: 0; right: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wardrobe-card .photo-btn { position: absolute; top: 2px; right: 2px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.wardrobe-card .delete-btn { position: absolute; top: 2px; left: 2px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* Already-in-suitcase badge (NEW - replaces dim) */
+.wardrobe-card.in-suitcase { border-color: #e8943a; }
+.wardrobe-card .added-badge { position: absolute; bottom: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: #e8943a; display: flex; align-items: center; justify-content: center; z-index: 2; }
+.wardrobe-card .added-badge span { color: #fff; font-size: 9px; font-weight: 700; }
+
+/* Small wardrobe cards in suitcase */
+.wardrobe-card-sm { width: 65px; height: 65px; }
+
+/* Outfit cards */
+.outfit-card { width: 140px; flex-shrink: 0; border-radius: 12px; border: 2px solid #e0e0e0; overflow: hidden; cursor: pointer; background: #fff; }
+.outfit-photo { width: 100%; height: 90px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 28px; position: relative; }
+.outfit-photo img { width: 100%; height: 100%; object-fit: cover; }
+.outfit-info { padding: 8px 10px; }
+.outfit-info .outfit-name { font-size: 13px; font-weight: 600; }
+.outfit-info .outfit-count { font-size: 11px; opacity: 0.5; }
+.outfit-items-preview { display: flex; gap: 3px; margin-top: 4px; }
+.outfit-items-preview .mini { width: 20px; height: 20px; border-radius: 4px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+
+/* Modal */
+.modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.modal { background: #fff; border-radius: 16px; padding: 24px; width: 90%; max-width: 400px; }
+.modal h3 { font-size: 16px; margin-bottom: 16px; }
+.photo-upload-zone { width: 100%; height: 160px; border-radius: 12px; border: 2px dashed #ddd; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: #fafafa; margin-bottom: 14px; overflow: hidden; }
+.photo-upload-zone .cam { font-size: 32px; }
+.photo-upload-zone .hint { font-size: 13px; opacity: 0.5; margin-top: 6px; }
+.input-field { width: 100%; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 14px; font-family: 'DM Sans', sans-serif; margin-bottom: 10px; outline: none; }
+.input-field:focus { border-color: #e8943a; }
+.select-field { width: 100%; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 14px; font-family: 'DM Sans', sans-serif; margin-bottom: 16px; outline: none; background: #fff; }
+
+/* Suitcase item row */
+.item-row { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; }
+.checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.checkbox.checked { background: #e8943a; border-color: #e8943a; }
+.checkbox.checked::after { content: "✓"; color: #fff; font-size: 13px; font-weight: 700; }
+.item-name { flex: 1; font-size: 14px; }
+.item-cat { font-size: 12px; opacity: 0.5; }
+.item-qty { width: 30px; text-align: center; font-size: 13px; opacity: 0.5; }
+
+/* Category header */
+.cat-header { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid #e8e8e8; cursor: pointer; margin-top: 4px; }
+.cat-header .arrow { font-size: 14px; }
+.cat-header .icon { font-size: 14px; }
+.cat-header .label { font-weight: 600; font-size: 13px; }
+.cat-header .count { opacity: 0.4; font-size: 12px; }
+
+/* Slider label */
+.slider-label { font-size: 11px; font-weight: 600; opacity: 0.45; margin-bottom: 4px; margin-top: 6px; }
+
+/* Progress bar */
+.progress { height: 4px; border-radius: 2px; background: #f0f0f0; margin-top: 8px; overflow: hidden; }
+.progress-fill { height: 100%; background: #e8943a; border-radius: 2px; }
+
+/* Section label */
+.section-label { font-size: 12px; font-weight: 600; opacity: 0.5; margin-bottom: 8px; margin-top: 4px; }
+
+/* Annotation callouts */
+.annotation { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; line-height: 1.5; }
+.annotation strong { color: #e8943a; }
+.new-badge { display: inline-block; background: #e8943a; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+
+/* Outfit creation checklist */
+.checklist-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; cursor: pointer; }
+.checklist-item .check { width: 20px; height: 20px; border-radius: 6px; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; }
+.checklist-item .check.on { background: #e8943a; border-color: #e8943a; }
+.checklist-item .check.on::after { content: "✓"; color: #fff; font-size: 11px; font-weight: 700; }
+.checklist-item .check-label { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2 style="text-align: center; font-size: 18px; margin-bottom: 4px;">Wardrobe + Outfit UX Mockup</h2>
+  <p style="text-align: center; font-size: 12px; opacity: 0.5; margin-bottom: 16px;">Tap screens below to explore the proposed flow</p>
+
+  <!-- Screen navigation -->
+  <div class="nav">
+    <button class="nav-btn active" onclick="showScreen('wardrobe-items')">Wardrobe Items</button>
+    <button class="nav-btn" onclick="showScreen('wardrobe-outfits')">Outfits Tab</button>
+    <button class="nav-btn" onclick="showScreen('suitcase')">Suitcase</button>
+    <button class="nav-btn" onclick="showScreen('modals')">Modals</button>
+  </div>
+
+  <!-- ==================== SCREEN 1: Wardrobe Items Tab ==================== -->
+  <div id="wardrobe-items" class="screen active">
+
+    <div class="annotation">
+      <strong>📍 Screen:</strong> Person selected → "👗 Wardrobe" button tapped → Items tab active.<br>
+      <strong>What changed:</strong> Inline add bar replaced with "+ Create Item" button. Items tab/Outfits tab toggle added.
+    </div>
+
+    <div class="card">
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3>👗 Sarah's Wardrobe</h3>
+        <button class="btn btn-accent btn-sm" onclick="showScreen('modals')">+ Create Item</button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-row">
+        <button class="tab-btn active">Items (12)</button>
+        <button class="tab-btn" onclick="showScreen('wardrobe-outfits')">Outfits (3)</button>
+      </div>
+
+      <!-- Category: Tops -->
+      <p style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">👕 Tops</p>
+      <div class="wardrobe-scroll">
+        <div class="wardrobe-card has-photo" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 75 75%22><rect fill=%22%234a90d9%22 width=%2275%22 height=%2275%22/><text x=%2237%22 y=%2242%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2212%22>👕</text></svg>')">
+          <div class="photo-label">Blue Polo</div>
+          <button class="photo-btn">📷</button>
+          <button class="delete-btn">✕</button>
+        </div>
+        <div class="wardrobe-card">
+          <span class="emoji">👕</span>
+          <span class="name">White T-Shirt</span>
+          <button class="photo-btn">📷</button>
+          <button class="delete-btn">✕</button>
+        </div>
+        <div class="wardrobe-card">
+          <span class="emoji">👕</span>
+          <span class="name">Dress Shirt</span>
+          <button class="photo-btn">📷</button>
+          <button class="delete-btn">✕</button>
+        </div>
+      </div>
+
+      <!-- Category: Bottoms -->
+      <p style="font-size: 14px; font-weight: 600; margin-bottom: 6px; margin-top: 12px;">👖 Bottoms</p>
+      <div class="wardrobe-scroll">
+        <div class="wardrobe-card">
+          <span class="emoji">👖</span>
+          <span class="name">Jeans</span>
+          <button class="photo-btn">📷</button>
+          <button class="delete-btn">✕</button>
+        </div>
+        <div class="wardrobe-card">
+          <span class="emoji">👖</span>
+          <span class="name">Khaki Shorts</span>
+          <button class="photo-btn">📷</button>
+          <button class="delete-btn">✕</button>
+        </div>
+      </div>
+
+      <!-- Category: Shoes -->
+      <p style="font-size: 14px; font-weight: 600; margin-bottom: 6px; margin-top: 12px;">👟 Shoes</p>
+      <div class="wardrobe-scroll">
+        <div class="wardrobe-card has-photo" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 75 75%22><rect fill=%22%23555%22 width=%2275%22 height=%2275%22/><text x=%2237%22 y=%2242%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2212%22>👟</text></svg>')">
+          <div class="photo-label">Nike Sneakers</div>
+          <button class="photo-btn">📷</button>
+          <button class="delete-btn">✕</button>
+        </div>
+        <div class="wardrobe-card">
+          <span class="emoji">👟</span>
+          <span class="name">Sandals</span>
+          <button class="photo-btn">📷</button>
+          <button class="delete-btn">✕</button>
+        </div>
+      </div>
+
+      <!-- Category: Accessories -->
+      <p style="font-size: 14px; font-weight: 600; margin-bottom: 6px; margin-top: 12px;">🎒 Accessories</p>
+      <div class="wardrobe-scroll">
+        <div class="wardrobe-card">
+          <span class="emoji">🎒</span>
+          <span class="name">Sunglasses</span>
+          <button class="photo-btn">📷</button>
+          <button class="delete-btn">✕</button>
+        </div>
+        <div class="wardrobe-card">
+          <span class="emoji">🎒</span>
+          <span class="name">Watch</span>
+          <button class="photo-btn">📷</button>
+          <button class="delete-btn">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SCREEN 2: Wardrobe Outfits Tab ==================== -->
+  <div id="wardrobe-outfits" class="screen">
+
+    <div class="annotation">
+      <strong>📍 Screen:</strong> Wardrobe → Outfits tab. <span class="new-badge">NEW</span><br>
+      <strong>What it does:</strong> Shows saved outfits as visual cards. Each is a named group of wardrobe items. Tap to view, "+ Create Outfit" opens creation flow.
+    </div>
+
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3>👗 Sarah's Wardrobe</h3>
+        <button class="btn btn-accent btn-sm" onclick="showScreen('modals')">+ Create Outfit</button>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn" onclick="showScreen('wardrobe-items')">Items (12)</button>
+        <button class="tab-btn active">Outfits (3)</button>
+      </div>
+
+      <!-- Outfit cards grid -->
+      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <!-- Outfit 1 -->
+        <div class="outfit-card">
+          <div class="outfit-photo" style="background: linear-gradient(135deg, #4a90d9, #357abd);">
+            <span style="font-size: 36px;">🏖️</span>
+          </div>
+          <div class="outfit-info">
+            <div class="outfit-name">Beach Day</div>
+            <div class="outfit-count">4 items</div>
+            <div class="outfit-items-preview">
+              <div class="mini">👕</div>
+              <div class="mini">👖</div>
+              <div class="mini">👟</div>
+              <div class="mini">🎒</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Outfit 2 -->
+        <div class="outfit-card">
+          <div class="outfit-photo" style="background: linear-gradient(135deg, #2d2d2d, #555);">
+            <span style="font-size: 36px;">👔</span>
+          </div>
+          <div class="outfit-info">
+            <div class="outfit-name">Nice Dinner</div>
+            <div class="outfit-count">5 items</div>
+            <div class="outfit-items-preview">
+              <div class="mini">👕</div>
+              <div class="mini">👖</div>
+              <div class="mini">👟</div>
+              <div class="mini">🎒</div>
+              <div class="mini">🎒</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Outfit 3 -->
+        <div class="outfit-card">
+          <div class="outfit-photo" style="background: linear-gradient(135deg, #5a9a2f, #4a8a1f);">
+            <span style="font-size: 36px;">🥾</span>
+          </div>
+          <div class="outfit-info">
+            <div class="outfit-name">Hiking</div>
+            <div class="outfit-count">6 items</div>
+            <div class="outfit-items-preview">
+              <div class="mini">👕</div>
+              <div class="mini">👖</div>
+              <div class="mini">🧥</div>
+              <div class="mini">👟</div>
+              <div class="mini">🎒</div>
+              <div class="mini">+1</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SCREEN 3: Suitcase Suitcase ==================== -->
+  <div id="suitcase" class="screen">
+
+    <div class="annotation">
+      <strong>📍 Screen:</strong> Suitcase open → packing items.<br>
+      <strong>What changed:</strong> "Add an outfit" slider at top. Per-category sections have "Pick from your wardrobe" sliders. Already-added items have orange border + badge instead of being dimmed.
+    </div>
+
+    <div class="card" style="position: relative;">
+      <!-- Close button -->
+      <button style="position: absolute; top: 10px; right: 10px; background: #f0f0f0; border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #666;">✕</button>
+
+      <!-- Suitcase header -->
+      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+        <span style="font-weight: 700; font-size: 15px;">🧳 Carry-On</span>
+        <span style="opacity: 0.5; font-size: 12px;">3/8 packed</span>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="progress">
+        <div class="progress-fill" style="width: 37.5%;"></div>
+      </div>
+
+      <!-- ===== ADD AN OUTFIT SECTION (NEW) ===== -->
+      <div style="margin-top: 14px; margin-bottom: 10px;">
+        <p class="section-label">👗 Add an outfit</p>
+        <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px;">
+          <!-- Outfit card mini -->
+          <div style="flex-shrink: 0; width: 120px; border-radius: 10px; border: 2px solid #e0e0e0; overflow: hidden; cursor: pointer; background: #fff;">
+            <div style="height: 60px; background: linear-gradient(135deg, #4a90d9, #357abd); display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 24px;">🏖️</span>
+            </div>
+            <div style="padding: 6px 8px;">
+              <div style="font-size: 12px; font-weight: 600;">Beach Day</div>
+              <div style="font-size: 10px; opacity: 0.5;">4 items</div>
+            </div>
+          </div>
+          <div style="flex-shrink: 0; width: 120px; border-radius: 10px; border: 2px solid #e0e0e0; overflow: hidden; cursor: pointer; background: #fff;">
+            <div style="height: 60px; background: linear-gradient(135deg, #2d2d2d, #555); display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 24px;">👔</span>
+            </div>
+            <div style="padding: 6px 8px;">
+              <div style="font-size: 12px; font-weight: 600;">Nice Dinner</div>
+              <div style="font-size: 10px; opacity: 0.5;">5 items</div>
+            </div>
+          </div>
+          <div style="flex-shrink: 0; width: 120px; border-radius: 10px; border: 2px solid #e0e0e0; overflow: hidden; cursor: pointer; background: #fff;">
+            <div style="height: 60px; background: linear-gradient(135deg, #5a9a2f, #4a8a1f); display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 24px;">🥾</span>
+            </div>
+            <div style="padding: 6px 8px;">
+              <div style="font-size: 12px; font-weight: 600;">Hiking</div>
+              <div style="font-size: 10px; opacity: 0.5;">6 items</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== CATEGORY: TOPS ===== -->
+      <div class="cat-header">
+        <span class="arrow">▾</span>
+        <span class="icon">👕</span>
+        <span class="label">Tops</span>
+        <span class="count">(1/2 packed)</span>
+      </div>
+
+      <!-- Wardrobe slider with "Pick from your wardrobe" label -->
+      <p class="slider-label">Pick from your wardrobe</p>
+      <div class="wardrobe-scroll" style="margin-bottom: 4px;">
+        <!-- Already in suitcase - orange border + badge -->
+        <div class="wardrobe-card wardrobe-card-sm in-suitcase">
+          <span class="emoji" style="font-size: 19px;">👕</span>
+          <span class="name">White T-Shirt</span>
+          <div class="added-badge"><span>✓</span></div>
+        </div>
+        <!-- Not in suitcase - normal -->
+        <div class="wardrobe-card wardrobe-card-sm">
+          <span class="emoji" style="font-size: 19px;">👕</span>
+          <span class="name">Dress Shirt</span>
+        </div>
+        <div class="wardrobe-card wardrobe-card-sm has-photo" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 65 65%22><rect fill=%22%234a90d9%22 width=%2265%22 height=%2265%22/><text x=%2232%22 y=%2238%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2210%22>👕</text></svg>'); width: 65px; height: 65px;">
+          <div class="photo-label" style="font-size: 9px;">Blue Polo</div>
+        </div>
+      </div>
+
+      <!-- Existing items in suitcase -->
+      <div class="item-row">
+        <div class="checkbox checked"></div>
+        <span class="item-name">White T-Shirt</span>
+        <span class="item-qty">×1</span>
+      </div>
+      <div class="item-row">
+        <div class="checkbox"></div>
+        <span class="item-name">Tank Top</span>
+        <span class="item-qty">×2</span>
+      </div>
+
+      <!-- ===== CATEGORY: BOTTOMS ===== -->
+      <div class="cat-header" style="margin-top: 8px;">
+        <span class="arrow">▾</span>
+        <span class="icon">👖</span>
+        <span class="label">Bottoms</span>
+        <span class="count">(1/2 packed)</span>
+      </div>
+
+      <p class="slider-label">Pick from your wardrobe</p>
+      <div class="wardrobe-scroll" style="margin-bottom: 4px;">
+        <div class="wardrobe-card wardrobe-card-sm in-suitcase">
+          <span class="emoji" style="font-size: 19px;">👖</span>
+          <span class="name">Jeans</span>
+          <div class="added-badge"><span>✓</span></div>
+        </div>
+        <div class="wardrobe-card wardrobe-card-sm">
+          <span class="emoji" style="font-size: 19px;">👖</span>
+          <span class="name">Khaki Shorts</span>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="checkbox checked"></div>
+        <span class="item-name">Jeans</span>
+        <span class="item-qty">×1</span>
+      </div>
+      <div class="item-row">
+        <div class="checkbox"></div>
+        <span class="item-name">Board Shorts</span>
+        <span class="item-qty">×1</span>
+      </div>
+
+      <!-- ===== CATEGORY: SHOES ===== -->
+      <div class="cat-header" style="margin-top: 8px;">
+        <span class="arrow">▾</span>
+        <span class="icon">👟</span>
+        <span class="label">Shoes</span>
+        <span class="count">(1/2 packed)</span>
+      </div>
+
+      <p class="slider-label">Pick from your wardrobe</p>
+      <div class="wardrobe-scroll" style="margin-bottom: 4px;">
+        <div class="wardrobe-card wardrobe-card-sm in-suitcase has-photo" style="border-color: #e8943a; background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 65 65%22><rect fill=%22%23555%22 width=%2265%22 height=%2265%22/><text x=%2232%22 y=%2238%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2210%22>👟</text></svg>'); width: 65px; height: 65px;">
+          <div class="photo-label" style="font-size: 9px;">Nike Sneakers</div>
+          <div class="added-badge"><span>✓</span></div>
+        </div>
+        <div class="wardrobe-card wardrobe-card-sm">
+          <span class="emoji" style="font-size: 19px;">👟</span>
+          <span class="name">Sandals</span>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="checkbox checked"></div>
+        <span class="item-name">Nike Sneakers</span>
+        <span class="item-qty">×1</span>
+      </div>
+      <div class="item-row">
+        <div class="checkbox"></div>
+        <span class="item-name">Flip Flops</span>
+        <span class="item-qty">×1</span>
+      </div>
+
+      <!-- Add item button -->
+      <div style="margin-top: 12px;">
+        <button class="btn btn-light btn-sm">+ New Item</button>
+      </div>
+
+      <!-- Footer actions -->
+      <div style="margin-top: 14px; border-top: 1px solid #eee; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-light btn-sm">📋 Save as Template</button>
+        <span style="color: #e74c3c; font-size: 13px; opacity: 0.6; cursor: pointer;">🗑 Delete Suitcase</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SCREEN 4: Modals ==================== -->
+  <div id="modals" class="screen">
+
+    <div class="annotation">
+      <strong>📍 Modals:</strong> These pop up over the current screen. Showing both here for review.
+    </div>
+
+    <!-- MODAL 1: Create Wardrobe Item -->
+    <h2>Modal 1: Create Wardrobe Item <span class="new-badge">NEW</span></h2>
+    <div class="card" style="margin-top: 8px;">
+      <div class="modal" style="position: relative; width: 100%; max-width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+        <h3 style="font-family: 'Outfit', sans-serif;">Add to Wardrobe</h3>
+
+        <div class="photo-upload-zone">
+          <span class="cam">📷</span>
+          <span class="hint">Tap to add photo</span>
+        </div>
+
+        <input class="input-field" placeholder="Item name (e.g., Blue Polo)" value="Blue Polo">
+        <select class="select-field">
+          <option>👕 Tops</option>
+          <option>👖 Bottoms</option>
+          <option>🧥 Outerwear</option>
+          <option>👟 Shoes</option>
+          <option>🎒 Accessories</option>
+        </select>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button class="btn btn-light btn-sm">Cancel</button>
+          <button class="btn btn-accent btn-sm">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 2: Create Outfit -->
+    <h2 style="margin-top: 20px;">Modal 2: Create Outfit <span class="new-badge">NEW</span></h2>
+    <div class="card" style="margin-top: 8px;">
+      <div class="modal" style="position: relative; width: 100%; max-width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+        <h3 style="font-family: 'Outfit', sans-serif;">Create Outfit</h3>
+
+        <div class="photo-upload-zone" style="height: 120px;">
+          <span class="cam">📷</span>
+          <span class="hint">Tap to add outfit photo</span>
+        </div>
+
+        <input class="input-field" placeholder="Outfit name (e.g., Beach Day)" value="Beach Day">
+
+        <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px; margin-top: 4px;">Select items:</p>
+
+        <!-- Category group -->
+        <p style="font-size: 12px; font-weight: 600; opacity: 0.5; margin-bottom: 4px;">👕 Tops</p>
+        <div class="checklist-item">
+          <div class="check on"></div>
+          <span class="check-label">Blue Polo</span>
+        </div>
+        <div class="checklist-item">
+          <div class="check"></div>
+          <span class="check-label">White T-Shirt</span>
+        </div>
+        <div class="checklist-item">
+          <div class="check"></div>
+          <span class="check-label">Dress Shirt</span>
+        </div>
+
+        <p style="font-size: 12px; font-weight: 600; opacity: 0.5; margin-bottom: 4px; margin-top: 10px;">👖 Bottoms</p>
+        <div class="checklist-item">
+          <div class="check on"></div>
+          <span class="check-label">Khaki Shorts</span>
+        </div>
+        <div class="checklist-item">
+          <div class="check"></div>
+          <span class="check-label">Jeans</span>
+        </div>
+
+        <p style="font-size: 12px; font-weight: 600; opacity: 0.5; margin-bottom: 4px; margin-top: 10px;">👟 Shoes</p>
+        <div class="checklist-item">
+          <div class="check on"></div>
+          <span class="check-label">Sandals</span>
+        </div>
+
+        <p style="font-size: 12px; font-weight: 600; opacity: 0.5; margin-bottom: 4px; margin-top: 10px;">🎒 Accessories</p>
+        <div class="checklist-item">
+          <div class="check on"></div>
+          <span class="check-label">Sunglasses</span>
+        </div>
+        <div class="checklist-item">
+          <div class="check"></div>
+          <span class="check-label">Watch</span>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
+          <button class="btn btn-light btn-sm">Cancel</button>
+          <button class="btn btn-accent btn-sm">Save Outfit (4 items)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // Highlight correct nav button
+  const labels = { 'wardrobe-items': 0, 'wardrobe-outfits': 1, 'suitcase': 2, 'modals': 3 };
+  document.querySelectorAll('.nav-btn')[labels[id]].classList.add('active');
+}
+
+// Make checkboxes and checklist items interactive
+document.querySelectorAll('.checkbox').forEach(cb => {
+  cb.addEventListener('click', () => cb.classList.toggle('checked'));
+});
+document.querySelectorAll('.checklist-item').forEach(item => {
+  item.addEventListener('click', () => item.querySelector('.check').classList.toggle('on'));
+});
+</script>
+
+</body>
+</html>
