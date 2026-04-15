@@ -301,9 +301,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
         </div>
       </div>
 
-      <TripSubNav tripId={trip.id} theme={th} />
-
-      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px" }}>
+      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px 16px 140px" }}>
 
         {/* ═══ ROSTER: Horizontal scroll ═══ */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -313,13 +311,6 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
               {members.length} {members.length === 1 ? "person" : "people"}
             </span>
           </div>
-          <button
-            onClick={() => router.push(`/trip/${trip.id}/notes`)}
-            className="btn"
-            style={{ background: th.accent, padding: "10px 24px", fontSize: 14, fontWeight: 700, whiteSpace: "nowrap" }}
-          >
-            Next: Research Notes →
-          </button>
         </div>
 
         <div style={{ position: "relative", marginBottom: 24 }}>
@@ -593,6 +584,49 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
         )}
 
       </div>
+
+      {/* ── Sticky "Save & Continue" CTA ── */}
+      <div style={{
+        position: "fixed",
+        bottom: "56px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "100%",
+        maxWidth: "480px",
+        zIndex: 101,
+        padding: "0 16px 12px",
+        boxSizing: "border-box" as const,
+        background: `linear-gradient(to top, ${th.bg} 70%, transparent)`,
+        pointerEvents: "none" as const,
+      }}>
+        <button
+          onClick={async () => { router.push(`/trip/${trip.id}`); }}
+          style={{
+            pointerEvents: "auto" as const,
+            width: "100%",
+            padding: "16px 24px",
+            fontSize: "16px",
+            fontWeight: 700,
+            fontFamily: "'Outfit', sans-serif",
+            color: "#fff",
+            background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2} 100%)`,
+            border: "none",
+            borderRadius: "14px",
+            cursor: "pointer",
+            boxShadow: "0 4px 20px rgba(232,148,58,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            transition: "all 0.2s ease",
+            minHeight: "52px",
+          }}
+        >
+          {"Save & Continue to Your Trip →"}
+        </button>
+      </div>
+
+      <TripSubNav tripId={trip.id} theme={th} />
     </div>
   );
 }
