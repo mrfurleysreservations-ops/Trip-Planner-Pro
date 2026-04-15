@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
-import { BG } from "./constants";
+import { ACCENT, BG } from "./constants";
 import { PACKING_STYLE_DEFAULTS } from "@/lib/constants";
 import type { OnboardingData, OnboardingPageProps, InviterInfo, InviterFriend } from "./types";
 
