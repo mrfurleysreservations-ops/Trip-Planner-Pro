@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Trip, TripBooking, TripMember } from "@/types/database.types";
 import TripPage from "./trip-page";
 
-export default async function TripServerPage({ params, searchParams }: { params: { id: string }; searchParams: { edit?: string } }) {
+export default async function TripServerPage({ params, searchParams }: { params: { id: string }; searchParams: { edit?: string; from?: string } }) {
   const supabase = createServerSupabaseClient();
   const { id } = params;
   const wantsEdit = searchParams.edit === "true";
