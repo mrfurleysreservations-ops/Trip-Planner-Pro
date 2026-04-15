@@ -17,13 +17,14 @@ import StepPeople from "./steps/step-people";
 import StepFriendSuggestions from "./steps/step-friend-suggestions";
 import StepPacking from "./steps/step-packing";
 import StepDone from "./steps/step-done";
+import StepWelcome from "./steps/step-welcome";
 
 
 // ═══════════════════════════════════════════════════════════
 //  MAIN ONBOARDING COMPONENT
 // ═══════════════════════════════════════════════════════════
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 export default function OnboardingPage({ userId, userEmail, userName, avatarUrl }: OnboardingPageProps) {
   const router = useRouter();
@@ -122,8 +123,8 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
   const next = () => {
     setStep((s) => {
       let nextStep = Math.min(s + 1, TOTAL_STEPS - 1);
-      // Skip friend suggestions step (4) if user was NOT invited
-      if (nextStep === 4 && !hasInviter) nextStep = 5;
+      // Skip friend suggestions step (5) if user was NOT invited
+      if (nextStep === 5 && !hasInviter) nextStep = 6;
       return nextStep;
     });
     containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -132,8 +133,10 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
   const back = () => {
     setStep((s) => {
       let prevStep = Math.max(s - 1, 0);
-      // Skip friend suggestions step (4) if user was NOT invited
-      if (prevStep === 4 && !hasInviter) prevStep = 3;
+      // Skip friend suggestions step (5) if user was NOT invited
+      if (prevStep === 5 && !hasInviter) prevStep = 4;
+      // Don't go back to welcome gate from profile
+      if (prevStep === 0) prevStep = 1;
       return prevStep;
     });
     containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -229,20 +232,23 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
   const getNavConfig = (): { showBack: boolean; nextLabel: string; nextDisabled: boolean; onBack: () => void; onNext: () => void } | null => {
     switch (step) {
       case 0:
-        return { showBack: false, nextLabel: "Let's go", nextDisabled: !data.name?.trim(), onBack: back, onNext: next };
+        // Welcome gate — no nav bar, CTAs are inside the step
+        return null;
       case 1:
-        return { showBack: true, nextLabel: "Next", nextDisabled: !data.ageRange, onBack: back, onNext: next };
+        return { showBack: false, nextLabel: "Let's go", nextDisabled: !data.name?.trim(), onBack: back, onNext: next };
       case 2:
+        return { showBack: true, nextLabel: "Next", nextDisabled: !data.ageRange, onBack: back, onNext: next };
+      case 3:
         return { showBack: true, nextLabel: "Next", nextDisabled: (data.clothingStyles || []).length === 0, onBack: back, onNext: next };
-      case 3: {
+      case 4: {
         const totalPeople = (data.connections || []).length + (data.familyMembers || []).length + (data.invitesSent || []).length;
         return { showBack: true, nextLabel: totalPeople === 0 ? "Skip for now" : "Next", nextDisabled: false, onBack: back, onNext: next };
       }
-      case 4: {
+      case 5: {
         const suggestionsLeft = inviterFriends.filter((f) => !(data.connections || []).find((c) => c.id === f.id)).length;
         return { showBack: true, nextLabel: suggestionsLeft === 0 ? "Next" : "Skip or continue", nextDisabled: false, onBack: back, onNext: next };
       }
-      case 5:
+      case 6:
         return { showBack: true, nextLabel: "Save & Continue", nextDisabled: false, onBack: back, onNext: next };
       default:
         return null;
@@ -255,23 +261,24 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
   return (
     <div style={{ maxWidth: "480px", margin: "0 auto", fontFamily: "'Outfit', system-ui, -apple-system, sans-serif", color: "#1a1a1a", minHeight: "100vh", background: BG }}>
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, padding: "10px 16px 0" }}>
-        {step > 0 && step < TOTAL_STEPS - 1 && <ProgressDots total={TOTAL_STEPS} current={step} />}
+        {step > 1 && step < TOTAL_STEPS - 1 && <ProgressDots total={TOTAL_STEPS - 1} current={step - 1} />}
       </div>
-      <div ref={containerRef} style={{ padding: "0 16px 80px" }}>
-        {step === 0 && <StepProfile data={data} onChange={updateData} userId={userId} />}
-        {step === 1 && <StepDetails data={data} onChange={updateData} />}
-        {step === 2 && <StepStyle data={data} onChange={updateData} />}
-        {step === 3 && <StepPeople data={data} onChange={updateData} userId={userId} />}
-        {step === 4 && hasInviter && inviter && <StepFriendSuggestions data={data} onChange={updateData} inviter={inviter} inviterFriends={inviterFriends} />}
-        {step === 5 && <StepPacking data={data} onChange={updateData} />}
-        {step === 6 && <StepDone data={data} />}
+      <div ref={containerRef} style={{ padding: step === 0 ? "0" : "0 16px 80px" }}>
+        {step === 0 && <StepWelcome onSetup={next} onSkip={() => router.push("/dashboard")} />}
+        {step === 1 && <StepProfile data={data} onChange={updateData} userId={userId} />}
+        {step === 2 && <StepDetails data={data} onChange={updateData} />}
+        {step === 3 && <StepStyle data={data} onChange={updateData} />}
+        {step === 4 && <StepPeople data={data} onChange={updateData} userId={userId} />}
+        {step === 5 && hasInviter && inviter && <StepFriendSuggestions data={data} onChange={updateData} inviter={inviter} inviterFriends={inviterFriends} />}
+        {step === 6 && <StepPacking data={data} onChange={updateData} />}
+        {step === 7 && <StepDone data={data} />}
       </div>
       {navConfig && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: "480px", margin: "0 auto", padding: "12px 20px", background: "#fff", borderTop: "1px solid #e5e5e5", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", zIndex: 20 }}>
           <NavButtons onBack={navConfig.onBack} onNext={navConfig.onNext} nextLabel={navConfig.nextLabel} nextDisabled={navConfig.nextDisabled} showBack={navConfig.showBack} />
         </div>
       )}
-      {step === 6 && (
+      {step === 7 && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: "480px", margin: "0 auto", padding: "12px 20px", background: "#fff", borderTop: "1px solid #e5e5e5", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", zIndex: 20 }}>
           <button onClick={saveAndFinish} style={{ width: "100%", padding: "16px", borderRadius: "14px", border: "none", background: ACCENT, color: "#fff", fontSize: "16px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(232,148,58,0.35)" }}>Start Planning a Trip →</button>
         </div>

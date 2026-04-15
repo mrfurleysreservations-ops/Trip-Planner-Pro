@@ -980,6 +980,63 @@ export default function PackingPage({
     );
   }
 
+  // ─── Packing gate: block if onboarding not completed ───
+  if (!userProfile?.onboarding_completed) {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{
+          background: "#fff",
+          borderRadius: "18px",
+          padding: "36px 28px",
+          maxWidth: "380px",
+          width: "90%",
+          textAlign: "center",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+        }}>
+          <div style={{ fontSize: "36px", marginBottom: "14px" }}>📋</div>
+          <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 10px" }}>Set up your profile first</h2>
+          <p style={{ fontSize: "14px", color: "#666", lineHeight: 1.5, margin: "0 0 24px" }}>
+            Before we can build your packing list, we need to know your style, preferences, and who you're packing for. It only takes 2 minutes.
+          </p>
+          <button
+            onClick={() => router.push("/onboarding")}
+            style={{
+              width: "100%",
+              padding: "14px",
+              borderRadius: "14px",
+              border: "none",
+              background: accent,
+              color: "#fff",
+              fontSize: "15px",
+              fontWeight: 700,
+              cursor: "pointer",
+              boxShadow: "0 4px 16px rgba(232,148,58,0.35)",
+              marginBottom: "10px",
+            }}
+          >
+            Set Up Now →
+          </button>
+          <button
+            onClick={() => router.back()}
+            style={{
+              width: "100%",
+              padding: "14px",
+              borderRadius: "14px",
+              border: "2px solid #e0e0e0",
+              background: "#fff",
+              color: "#555",
+              fontSize: "15px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: "100vh", background: th.bg, color: th.text, fontFamily: "'DM Sans', sans-serif" }}>
       {th.vibeBg && <div style={{ position: "fixed", inset: 0, background: th.vibeBg, pointerEvents: "none", zIndex: 0 }} />}

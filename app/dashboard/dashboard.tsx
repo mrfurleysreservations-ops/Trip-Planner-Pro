@@ -83,6 +83,7 @@ export default function DashboardPage({ user, profile, initialTrips, initialFami
   const [trips, setTrips] = useState<Trip[]>(initialTrips);
   const [families] = useState<FamilyWithMembers[]>(initialFamilies);
   const [creating, setCreating] = useState(false);
+  const [reminderDismissed, setReminderDismissed] = useState(false);
   const supabase = createBrowserSupabaseClient();
   const router = useRouter();
   const th = THEMES.home;
@@ -132,6 +133,62 @@ export default function DashboardPage({ user, profile, initialTrips, initialFami
   return (
     <div style={{ color: th.text }}>
       <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px 16px" }}>
+
+        {/* Onboarding reminder card */}
+        {profile && !profile.onboarding_completed && !reminderDismissed && (
+          <div style={{
+            borderRadius: "18px",
+            border: "1.5px solid #e8e8e8",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+            background: "#fff",
+            padding: "18px 20px",
+            marginBottom: "20px",
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            gap: "14px",
+          }}>
+            <button
+              onClick={() => setReminderDismissed(true)}
+              style={{
+                position: "absolute",
+                top: "10px",
+                right: "12px",
+                background: "none",
+                border: "none",
+                fontSize: "18px",
+                color: "#bbb",
+                cursor: "pointer",
+                padding: "2px 6px",
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+            <div style={{ fontSize: "32px", flexShrink: 0 }}>🧳</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: "15px", fontWeight: 700 }}>Finish setting up your profile</div>
+              <div style={{ fontSize: "13px", color: "#888", marginTop: "2px" }}>Get personalized packing lists, style suggestions, and more</div>
+            </div>
+            <button
+              onClick={() => router.push("/onboarding")}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "12px",
+                border: "none",
+                background: th.accent,
+                color: "#fff",
+                fontSize: "14px",
+                fontWeight: 700,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              Set Up →
+            </button>
+          </div>
+        )}
 
         {/* First-time setup prompt */}
         {families.length === 0 && (
