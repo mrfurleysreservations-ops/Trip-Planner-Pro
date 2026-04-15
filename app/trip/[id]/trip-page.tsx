@@ -732,10 +732,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
           )}
         </div>
 
-        {/* Sub-Navigation */}
-        <TripSubNav tripId={id} theme={th} />
-
-        <div style={{ padding: "16px", maxWidth: "600px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+        <div style={{ padding: "16px", paddingBottom: "80px", maxWidth: "600px", margin: "0 auto", position: "relative", zIndex: 1 }}>
           {/* Weather Forecast */}
           <WeatherCard location={trip.location} startDate={trip.start_date} endDate={trip.end_date} theme={th} />
 
@@ -996,10 +993,12 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
           {/* Quick actions */}
           <div className="fade-in" style={{ textAlign: "center", padding: "32px 20px" }}>
             <p style={{ color: th.muted, fontSize: "13px", opacity: 0.6 }}>
-              Use the tabs above to plan your trip.
+              Use the tabs below to plan your trip.
             </p>
           </div>
         </div>
+
+        <TripSubNav tripId={id} theme={th} />
       </div>
     );
   }
@@ -1028,10 +1027,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
         </div>
       </div>
 
-      {/* Sub-Navigation */}
-      <TripSubNav tripId={id} theme={th} />
-
-      <div style={{ padding: "16px", maxWidth: "600px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+      <div style={{ padding: "16px", paddingBottom: "80px", maxWidth: "600px", margin: "0 auto", position: "relative", zIndex: 1 }}>
         <div className="fade-in">
           <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "18px", fontWeight: 700, marginBottom: "12px" }}>🏷️ Trip Details</h3>
           <div className="card-glass" style={{ marginBottom: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -1088,6 +1084,8 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
 
         <div style={{ textAlign: "center", padding: "16px", fontSize: "10px", opacity: 0.3 }}>✓ Auto-saved</div>
       </div>
+
+      <TripSubNav tripId={id} theme={th} />
     </div>
   );
 }

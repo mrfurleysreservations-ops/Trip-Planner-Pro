@@ -30,15 +30,22 @@ export default function TripSubNav({ tripId, theme }: TripSubNavProps) {
 
   return (
     <nav style={{
+      position: "fixed",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      maxWidth: "480px",
+      margin: "0 auto",
+      zIndex: 100,
       display: "flex",
-      gap: "0",
-      background: theme.headerBg,
-      borderBottom: `1px solid ${theme.cardBorder}`,
-      overflowX: "auto",
-      WebkitOverflowScrolling: "touch",
-      position: "relative",
-      zIndex: 1,
-      scrollbarWidth: "none",
+      justifyContent: "space-around",
+      alignItems: "center",
+      height: "56px",
+      background: "rgba(255,255,255,0.97)",
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      borderTop: "1px solid #e5e5e5",
+      padding: "0 4px",
     }}>
       {SUB_NAV_TABS.map((tab) => {
         const active = activeSegment === tab.segment;
@@ -47,25 +54,30 @@ export default function TripSubNav({ tripId, theme }: TripSubNavProps) {
             key={tab.key}
             onClick={() => router.push(`/trip/${tripId}/${tab.segment}`)}
             style={{
-              flex: "0 0 auto",
+              flex: 1,
               display: "flex",
+              flexDirection: "column",
               alignItems: "center",
-              gap: "5px",
-              padding: "10px 16px",
+              justifyContent: "center",
+              gap: "2px",
+              height: "100%",
               background: "none",
               border: "none",
-              borderBottom: `3px solid ${active ? theme.accent : "transparent"}`,
+              borderTop: `3px solid ${active ? theme.accent : "transparent"}`,
               cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: "13px",
-              fontWeight: active ? 700 : 500,
-              color: active ? theme.accent : theme.muted,
-              whiteSpace: "nowrap",
-              transition: "border-color 0.2s, color 0.2s",
+              padding: 0,
+              minWidth: 0,
+              transition: "all 0.2s ease",
             }}
           >
-            <span style={{ fontSize: "14px" }}>{tab.icon}</span>
-            {tab.label}
+            <span style={{ fontSize: "18px", lineHeight: 1 }}>{tab.icon}</span>
+            <span style={{
+              fontSize: "10px",
+              fontWeight: active ? 700 : 500,
+              color: active ? theme.accent : "#999",
+              fontFamily: "'DM Sans', sans-serif",
+              whiteSpace: "nowrap",
+            }}>{tab.label}</span>
           </button>
         );
       })}

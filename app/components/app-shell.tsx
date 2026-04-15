@@ -66,50 +66,56 @@ export default function AppShell({ children }: AppShellProps) {
     router.refresh();
   };
 
+  const insideTrip = pathname.startsWith("/trip/");
+
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>
-      {/* Top title bar */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "8px 16px",
-        background: "#fff",
-        borderBottom: "1px solid #e5e5e5",
-      }}>
-        <span style={{
-          fontFamily: "'Outfit', sans-serif",
-          fontWeight: 800,
-          fontSize: "18px",
-          color: "#1a1a1a",
-          letterSpacing: "-0.3px",
-        }}>🧭 Trip Planner Pro</span>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {userAvatarUrl ? (
-            <img src={userAvatarUrl} alt="You" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }} />
-          ) : (
-            <span style={{ fontSize: 20 }}>👤</span>
-          )}
-        <button
-          onClick={signOut}
-          style={{
-            background: "#f5f5f5",
-            border: "1px solid #e0e0e0",
-            color: "#777",
-            fontSize: "13px",
-            padding: "5px 14px",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif",
-            fontWeight: 500,
-            transition: "background 0.2s",
-          }}
-        >Sign Out</button>
-        </div>
-      </div>
+      {!insideTrip && (
+        <>
+          {/* Top title bar */}
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "8px 16px",
+            background: "#fff",
+            borderBottom: "1px solid #e5e5e5",
+          }}>
+            <span style={{
+              fontFamily: "'Outfit', sans-serif",
+              fontWeight: 800,
+              fontSize: "18px",
+              color: "#1a1a1a",
+              letterSpacing: "-0.3px",
+            }}>🧭 Trip Planner Pro</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {userAvatarUrl ? (
+                <img src={userAvatarUrl} alt="You" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }} />
+              ) : (
+                <span style={{ fontSize: 20 }}>👤</span>
+              )}
+            <button
+              onClick={signOut}
+              style={{
+                background: "#f5f5f5",
+                border: "1px solid #e0e0e0",
+                color: "#777",
+                fontSize: "13px",
+                padding: "5px 14px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+                fontWeight: 500,
+                transition: "background 0.2s",
+              }}
+            >Sign Out</button>
+            </div>
+          </div>
 
-      {/* Tab bar */}
-      <TabBar badges={alertCount > 0 ? { notifications: alertCount } : {}} />
+          {/* Tab bar */}
+          <TabBar badges={alertCount > 0 ? { notifications: alertCount } : {}} />
+        </>
+      )}
 
       {/* Page content */}
       <div>{children}</div>
