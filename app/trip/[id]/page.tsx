@@ -29,13 +29,11 @@ export default async function TripServerPage({ params, searchParams }: { params:
   const userName = currentMember?.name || "Someone";
 
   // Determine if the trip setup is complete
-  // A trip is "set up" when it has a real name, location, at least one date,
-  // and at least one member beyond the host
+  // A trip is "set up" when it has a real name, location, and at least one date
   const isSetupComplete =
     trip.name !== "New Trip" &&
     !!trip.location &&
-    (!!trip.start_date || !!trip.end_date) &&
-    memberCount > 1;
+    (!!trip.start_date || !!trip.end_date);
 
   // Guests always go to the hub; hosts go to setup if incomplete
   // Also allow hosts to force-edit via ?edit=true query param
