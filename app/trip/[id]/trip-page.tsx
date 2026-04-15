@@ -1027,7 +1027,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
         </div>
       </div>
 
-      <div style={{ padding: "16px", paddingBottom: "80px", maxWidth: "600px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+      <div style={{ padding: "16px", paddingBottom: "140px", maxWidth: "600px", margin: "0 auto", position: "relative", zIndex: 1 }}>
         <div className="fade-in">
           <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "18px", fontWeight: 700, marginBottom: "12px" }}>🏷️ Trip Details</h3>
           <div className="card-glass" style={{ marginBottom: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -1047,42 +1047,50 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
             </div>
           </div>
 
-          {/* Next step / Done editing */}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
-            {isHost && initialTrip.location && initialTrip.start_date && (
-              <button
-                onClick={async () => { await flushSaves(); router.push(`/trip/${id}`); }}
-                className="btn"
-                style={{
-                  background: "none",
-                  border: `1.5px solid ${th.cardBorder}`,
-                  padding: "12px 24px",
-                  fontSize: "15px",
-                  fontWeight: 700,
-                  color: th.muted,
-                  minHeight: "44px",
-                }}
-              >
-                ← Done Editing
-              </button>
-            )}
-            <button
-              onClick={handleNext}
-              className="btn"
-              style={{
-                background: th.accent,
-                padding: "12px 32px",
-                fontSize: "15px",
-                fontWeight: 700,
-                minHeight: "44px",
-              }}
-            >
-              Next: Build Your Group →
-            </button>
-          </div>
         </div>
 
         <div style={{ textAlign: "center", padding: "16px", fontSize: "10px", opacity: 0.3 }}>✓ Auto-saved</div>
+      </div>
+
+      {/* Sticky Save & Continue CTA */}
+      <div style={{
+        position: "fixed",
+        bottom: "56px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "100%",
+        maxWidth: "480px",
+        zIndex: 101,
+        padding: "0 16px 12px",
+        boxSizing: "border-box" as const,
+        background: `linear-gradient(to top, ${th.bg} 70%, transparent)`,
+        pointerEvents: "none" as const,
+      }}>
+        <button
+          onClick={async () => { await flushSaves(); router.push(`/trip/${id}/group`); }}
+          style={{
+            pointerEvents: "auto" as const,
+            width: "100%",
+            padding: "16px 24px",
+            fontSize: "16px",
+            fontWeight: 700,
+            fontFamily: "'Outfit', sans-serif",
+            color: "#fff",
+            background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2} 100%)`,
+            border: "none",
+            borderRadius: "14px",
+            cursor: "pointer",
+            boxShadow: "0 4px 20px rgba(232,148,58,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            transition: "all 0.2s ease",
+            minHeight: "52px",
+          }}
+        >
+          {"Save & Continue to Your Group →"}
+        </button>
       </div>
 
       <TripSubNav tripId={id} theme={th} />
