@@ -600,7 +600,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
         pointerEvents: "none" as const,
       }}>
         <button
-          onClick={async () => { router.push(`/trip/${trip.id}`); }}
+          onClick={async () => { router.push(`/trip/${trip.id}?from=group`); }}
           style={{
             pointerEvents: "auto" as const,
             width: "100%",
