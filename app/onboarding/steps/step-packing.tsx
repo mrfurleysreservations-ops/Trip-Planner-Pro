@@ -16,11 +16,20 @@ export default function StepPacking({ data, onChange }: StepProps) {
   const currentValue = data.packingStyle as string | null;
   const option = STYLE_OPTIONS[selectedIndex];
 
-  // Sync selectedIndex if packingStyle already has a saved value
+  // Sync selectedIndex if packingStyle already has a saved value, or auto-select first option
   useEffect(() => {
     if (currentValue) {
       const idx = STYLE_OPTIONS.findIndex((o) => o.value === currentValue);
       if (idx >= 0) setSelectedIndex(idx);
+    } else {
+      // Auto-commit the first option so "Next" works without tapping a pill
+      const defaults = PACKING_STYLE_DEFAULTS[STYLE_OPTIONS[0].value] || {};
+      onChange({
+        packingStyle: STYLE_OPTIONS[0].value,
+        orgMethod: defaults.organization_method || null,
+        foldingMethod: defaults.folding_method || null,
+        compartmentSystem: defaults.compartment_system || null,
+      } as Partial<OnboardingData>);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
