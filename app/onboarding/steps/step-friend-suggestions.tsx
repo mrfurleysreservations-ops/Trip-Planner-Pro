@@ -1,7 +1,6 @@
 "use client";
 
 import StepHeader from "../components/step-header";
-import NavButtons from "../components/nav-buttons";
 import { ACCENT } from "../constants";
 import type { StepProps, InviterInfo, InviterFriend } from "../types";
 
@@ -10,7 +9,7 @@ interface StepFriendSuggestionsProps extends StepProps {
   inviterFriends: InviterFriend[];
 }
 
-export default function StepFriendSuggestions({ data, onChange, onNext, onBack, inviter, inviterFriends }: StepFriendSuggestionsProps) {
+export default function StepFriendSuggestions({ data, onChange, inviter, inviterFriends }: StepFriendSuggestionsProps) {
   const connections = data.connections || [];
 
   const toggleFriend = (friend: InviterFriend) => {
@@ -73,7 +72,6 @@ export default function StepFriendSuggestions({ data, onChange, onNext, onBack, 
         </div>
       )}
 
-      <NavButtons onBack={onBack} onNext={onNext} nextLabel={suggestions.length === 0 ? "Next" : "Skip or continue"} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { PACKING_STYLE_DEFAULTS } from "@/lib/constants";
 import type { OnboardingData, OnboardingPageProps, InviterInfo, InviterFriend } from "./types";
 
 import ProgressDots from "./components/progress-dots";
+import NavButtons from "./components/nav-buttons";
 import StepProfile from "./steps/step-profile";
 import StepDetails from "./steps/step-details";
 import StepStyle from "./steps/step-style";
@@ -224,21 +225,57 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
     }
   };
 
+  // ─── Nav config per step ───
+  const getNavConfig = (): { showBack: boolean; nextLabel: string; nextDisabled: boolean; onBack: () => void; onNext: () => void } | null => {
+    switch (step) {
+      case 0:
+        return { showBack: false, nextLabel: "Let's go", nextDisabled: !data.name?.trim(), onBack: back, onNext: next };
+      case 1:
+        return { showBack: true, nextLabel: "Next", nextDisabled: !data.ageRange, onBack: back, onNext: next };
+      case 2:
+        return { showBack: true, nextLabel: "Next", nextDisabled: (data.clothingStyles || []).length === 0, onBack: back, onNext: next };
+      case 3: {
+        const totalPeople = (data.connections || []).length + (data.familyMembers || []).length + (data.invitesSent || []).length;
+        return { showBack: true, nextLabel: totalPeople === 0 ? "Skip for now" : "Next", nextDisabled: false, onBack: back, onNext: next };
+      }
+      case 4: {
+        const suggestionsLeft = inviterFriends.filter((f) => !(data.connections || []).find((c) => c.id === f.id)).length;
+        return { showBack: true, nextLabel: suggestionsLeft === 0 ? "Next" : "Skip or continue", nextDisabled: false, onBack: back, onNext: next };
+      }
+      case 5:
+        return { showBack: true, nextLabel: "Save & Continue", nextDisabled: false, onBack: back, onNext: next };
+      default:
+        return null;
+    }
+  };
+
+  const navConfig = getNavConfig();
+
   // ─── Render ───
   return (
-    <div style={{ maxWidth: "480px", margin: "0 auto", fontFamily: "'Outfit', system-ui, -apple-system, sans-serif", color: "#1a1a1a", minHeight: "100vh", background: BG }}>
-      <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, padding: "10px 16px 0" }}>
+    <div style={{ maxWidth: "480px", margin: "0 auto", fontFamily: "'Outfit', system-ui, -apple-system, sans-serif", color: "#1a1a1a", height: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, padding: "10px 16px 0", flexShrink: 0 }}>
         {step > 0 && step < TOTAL_STEPS - 1 && <ProgressDots total={TOTAL_STEPS} current={step} />}
       </div>
-      <div ref={containerRef} style={{ padding: "0 16px 20px", overflow: "auto" }}>
-        {step === 0 && <StepProfile data={data} onChange={updateData} onNext={next} userId={userId} />}
-        {step === 1 && <StepDetails data={data} onChange={updateData} onNext={next} onBack={back} />}
-        {step === 2 && <StepStyle data={data} onChange={updateData} onNext={next} onBack={back} />}
-        {step === 3 && <StepPeople data={data} onChange={updateData} onNext={next} onBack={back} userId={userId} />}
-        {step === 4 && hasInviter && inviter && <StepFriendSuggestions data={data} onChange={updateData} onNext={next} onBack={back} inviter={inviter} inviterFriends={inviterFriends} />}
-        {step === 5 && <StepPacking data={data} onChange={updateData} onNext={next} onBack={back} />}
-        {step === 6 && <StepDone data={data} onFinish={saveAndFinish} />}
+      <div ref={containerRef} style={{ flex: 1, padding: "0 16px 20px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        {step === 0 && <StepProfile data={data} onChange={updateData} userId={userId} />}
+        {step === 1 && <StepDetails data={data} onChange={updateData} />}
+        {step === 2 && <StepStyle data={data} onChange={updateData} />}
+        {step === 3 && <StepPeople data={data} onChange={updateData} userId={userId} />}
+        {step === 4 && hasInviter && inviter && <StepFriendSuggestions data={data} onChange={updateData} inviter={inviter} inviterFriends={inviterFriends} />}
+        {step === 5 && <StepPacking data={data} onChange={updateData} />}
+        {step === 6 && <StepDone data={data} />}
       </div>
+      {navConfig && (
+        <div style={{ padding: "12px 20px", background: "#fff", borderTop: "1px solid #e5e5e5", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+          <NavButtons onBack={navConfig.onBack} onNext={navConfig.onNext} nextLabel={navConfig.nextLabel} nextDisabled={navConfig.nextDisabled} showBack={navConfig.showBack} />
+        </div>
+      )}
+      {step === 6 && (
+        <div style={{ padding: "12px 20px", background: "#fff", borderTop: "1px solid #e5e5e5", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+          <button onClick={saveAndFinish} style={{ width: "100%", padding: "16px", borderRadius: "14px", border: "none", background: ACCENT, color: "#fff", fontSize: "16px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(232,148,58,0.35)" }}>Start Planning a Trip →</button>
+        </div>
+      )}
       <style>{`
         .fade-in { animation: fadeIn 0.35s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }

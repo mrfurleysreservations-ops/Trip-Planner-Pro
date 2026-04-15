@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import StepHeader from "../components/step-header";
-import NavButtons from "../components/nav-buttons";
 import UserRow from "../components/user-row";
 import { ACCENT } from "../constants";
 import type { StepProps, AppUser, FamilyEntry } from "../types";
@@ -21,7 +20,7 @@ const TABS = [
   { key: "invite", label: "Invite", icon: "✉️" },
 ];
 
-export default function StepPeople({ data, onChange, onNext, onBack, userId }: StepProps & { userId: string }) {
+export default function StepPeople({ data, onChange, userId }: StepProps & { userId: string }) {
   const [activeTab, setActiveTab] = useState("find");
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -119,19 +118,19 @@ export default function StepPeople({ data, onChange, onNext, onBack, userId }: S
       {totalPeople > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "16px", justifyContent: "center" }}>
           {connections.map((c) => (
-            <span key={`c-${c.id}`} style={{ fontSize: "12px", fontWeight: 600, background: "rgba(232,148,58,0.1)", border: "1.5px solid rgba(232,148,58,0.25)", borderRadius: "20px", padding: "5px 12px", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span key={`c-${c.id}`} style={{ fontSize: "13px", fontWeight: 600, background: "rgba(232,148,58,0.1)", border: "1.5px solid rgba(232,148,58,0.25)", borderRadius: "20px", padding: "5px 12px", display: "flex", alignItems: "center", gap: "6px" }}>
               {c.avatar_url ? <img src={c.avatar_url} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover" }} /> : c.avatar} {c.name.split(" ")[0]}
               <span onClick={() => toggleConnection(c)} style={{ cursor: "pointer", color: "#ccc", fontSize: "14px", lineHeight: 1 }}>×</span>
             </span>
           ))}
           {familyMembers.map((m) => (
-            <span key={`f-${m.id}`} style={{ fontSize: "12px", fontWeight: 600, background: "rgba(76,175,80,0.1)", border: "1.5px solid rgba(76,175,80,0.25)", borderRadius: "20px", padding: "5px 12px", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span key={`f-${m.id}`} style={{ fontSize: "13px", fontWeight: 600, background: "rgba(76,175,80,0.1)", border: "1.5px solid rgba(76,175,80,0.25)", borderRadius: "20px", padding: "5px 12px", display: "flex", alignItems: "center", gap: "6px" }}>
               {m.icon} {m.name} {m.linkedUserId && <span style={{ fontSize: "9px", color: "#4caf50" }}>linked</span>}
               <span onClick={() => removeFamilyMember(m.id)} style={{ cursor: "pointer", color: "#ccc", fontSize: "14px", lineHeight: 1 }}>×</span>
             </span>
           ))}
           {inviteSent.map((email, i) => (
-            <span key={`i-${i}`} style={{ fontSize: "12px", fontWeight: 600, background: "rgba(33,150,243,0.1)", border: "1.5px solid rgba(33,150,243,0.25)", borderRadius: "20px", padding: "5px 12px", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span key={`i-${i}`} style={{ fontSize: "13px", fontWeight: 600, background: "rgba(33,150,243,0.1)", border: "1.5px solid rgba(33,150,243,0.25)", borderRadius: "20px", padding: "5px 12px", display: "flex", alignItems: "center", gap: "6px" }}>
               ✉️ {email.split("@")[0]} <span style={{ fontSize: "10px", color: "#999" }}>pending</span>
             </span>
           ))}
@@ -141,7 +140,7 @@ export default function StepPeople({ data, onChange, onNext, onBack, userId }: S
       {/* Tab bar */}
       <div style={{ display: "flex", gap: "4px", marginBottom: "16px", background: "#f0f0f0", borderRadius: "14px", padding: "4px" }}>
         {TABS.map((tab) => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ flex: 1, padding: "10px 8px", borderRadius: "11px", border: "none", background: activeTab === tab.key ? "#fff" : "transparent", color: activeTab === tab.key ? "#1a1a1a" : "#999", fontSize: "12px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s", boxShadow: activeTab === tab.key ? "0 1px 4px rgba(0,0,0,0.1)" : "none", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ flex: 1, padding: "10px 8px", borderRadius: "11px", border: "none", background: activeTab === tab.key ? "#fff" : "transparent", color: activeTab === tab.key ? "#1a1a1a" : "#999", fontSize: "14px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s", boxShadow: activeTab === tab.key ? "0 1px 4px rgba(0,0,0,0.1)" : "none", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
             <span>{tab.icon}</span> {tab.label}
           </button>
         ))}
@@ -150,7 +149,7 @@ export default function StepPeople({ data, onChange, onNext, onBack, userId }: S
       {/* ── Tab: Find People ── */}
       {activeTab === "find" && (
         <div className="fade-in">
-          <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search by name or email..." style={{ width: "100%", padding: "12px 16px", borderRadius: "14px", border: "2px solid #e0e0e0", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "10px" }} onFocus={(e) => e.target.style.borderColor = ACCENT} onBlur={(e) => e.target.style.borderColor = "#e0e0e0"} />
+          <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search by name or email..." style={{ width: "100%", padding: "12px 16px", borderRadius: "14px", border: "2px solid #e0e0e0", fontSize: "16px", outline: "none", boxSizing: "border-box", marginBottom: "10px" }} onFocus={(e) => e.target.style.borderColor = ACCENT} onBlur={(e) => e.target.style.borderColor = "#e0e0e0"} />
 
           {searchQuery.trim().length > 0 && hasSearchMatches && (
             <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: ACCENT, marginBottom: "6px", paddingLeft: "4px" }}>Matches</div>
@@ -191,7 +190,7 @@ export default function StepPeople({ data, onChange, onNext, onBack, userId }: S
       {/* ── Tab: Your Family ── */}
       {activeTab === "family" && (
         <div className="fade-in">
-          <p style={{ fontSize: "13px", color: "#777", margin: "0 0 12px", lineHeight: "1.5" }}>
+          <p style={{ fontSize: "14px", color: "#777", margin: "0 0 12px", lineHeight: "1.5" }}>
             Add family members you&apos;ll pack for. If they&apos;re on the app, link their account — otherwise just add their name.
           </p>
 
@@ -201,7 +200,7 @@ export default function StepPeople({ data, onChange, onNext, onBack, userId }: S
                 <div key={m.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "12px", background: m.linkedUserId ? "rgba(232,148,58,0.04)" : "#f8f8f8", border: `1px solid ${m.linkedUserId ? "rgba(232,148,58,0.2)" : "#eee"}` }}>
                   <span style={{ fontSize: "24px" }}>{m.icon}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "14px", fontWeight: 600 }}>{m.name}</div>
+                    <div style={{ fontSize: "15px", fontWeight: 600 }}>{m.name}</div>
                     <div style={{ fontSize: "11px", color: "#999" }}>
                       {FAM_TYPES.find((t) => t.value === m.age_type)?.label}
                       {m.linkedUserId && <span style={{ color: ACCENT, marginLeft: "6px" }}>· Linked to app account</span>}
@@ -214,8 +213,8 @@ export default function StepPeople({ data, onChange, onNext, onBack, userId }: S
           )}
 
           <div style={{ background: "#fff", borderRadius: "14px", padding: "14px", border: "1.5px solid #e0e0e0", marginBottom: "10px" }}>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: ACCENT, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "8px" }}>Link someone on the app</div>
-            <input value={famLinkSearch} onChange={(e) => setFamLinkSearch(e.target.value)} placeholder="Search app users to link as family..." style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", border: "2px solid #e0e0e0", fontSize: "13px", outline: "none", boxSizing: "border-box", marginBottom: "6px" }} onFocus={(e) => e.target.style.borderColor = ACCENT} onBlur={(e) => e.target.style.borderColor = "#e0e0e0"} />
+            <div style={{ fontSize: "12px", fontWeight: 700, color: ACCENT, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "8px" }}>Link someone on the app</div>
+            <input value={famLinkSearch} onChange={(e) => setFamLinkSearch(e.target.value)} placeholder="Search app users to link as family..." style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", border: "2px solid #e0e0e0", fontSize: "15px", outline: "none", boxSizing: "border-box", marginBottom: "6px" }} onFocus={(e) => e.target.style.borderColor = ACCENT} onBlur={(e) => e.target.style.borderColor = "#e0e0e0"} />
             {famLinkResults.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", maxHeight: "140px", overflowY: "auto" }}>
                 {famLinkResults.map((user) => {
@@ -233,14 +232,14 @@ export default function StepPeople({ data, onChange, onNext, onBack, userId }: S
           </div>
 
           <div style={{ background: "#fff", borderRadius: "14px", padding: "14px", border: "1.5px solid #e0e0e0" }}>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#4caf50", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "8px" }}>Or add someone without an account</div>
+            <div style={{ fontSize: "12px", fontWeight: 700, color: "#4caf50", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "8px" }}>Or add someone without an account</div>
             <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
-              <input value={newFamName} onChange={(e) => setNewFamName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && newFamName.trim() && addFamilyMember(newFamName.trim())} placeholder="Name" style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "2px solid #e0e0e0", fontSize: "14px", outline: "none", boxSizing: "border-box" }} onFocus={(e) => e.target.style.borderColor = ACCENT} onBlur={(e) => e.target.style.borderColor = "#e0e0e0"} />
+              <input value={newFamName} onChange={(e) => setNewFamName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && newFamName.trim() && addFamilyMember(newFamName.trim())} placeholder="Name" style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "2px solid #e0e0e0", fontSize: "16px", outline: "none", boxSizing: "border-box" }} onFocus={(e) => e.target.style.borderColor = ACCENT} onBlur={(e) => e.target.style.borderColor = "#e0e0e0"} />
               <button onClick={() => newFamName.trim() && addFamilyMember(newFamName.trim())} style={{ padding: "10px 16px", borderRadius: "10px", border: "none", background: ACCENT, color: "#fff", fontSize: "14px", fontWeight: 700, cursor: "pointer", opacity: newFamName.trim() ? 1 : 0.4 }}>+ Add</button>
             </div>
             <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
               {FAM_TYPES.map((t) => (
-                <button key={t.value} onClick={() => setNewFamAge(t.value)} style={{ padding: "6px 12px", borderRadius: "20px", border: `1.5px solid ${newFamAge === t.value ? ACCENT : "#e0e0e0"}`, background: newFamAge === t.value ? "rgba(232,148,58,0.08)" : "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
+                <button key={t.value} onClick={() => setNewFamAge(t.value)} style={{ padding: "8px 14px", borderRadius: "20px", border: `1.5px solid ${newFamAge === t.value ? ACCENT : "#e0e0e0"}`, background: newFamAge === t.value ? "rgba(232,148,58,0.08)" : "#fff", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
                   <span>{t.icon}</span> {t.label}
                 </button>
               ))}
@@ -252,7 +251,7 @@ export default function StepPeople({ data, onChange, onNext, onBack, userId }: S
       {/* ── Tab: Invite by email ── */}
       {activeTab === "invite" && (
         <div className="fade-in">
-          <p style={{ fontSize: "13px", color: "#777", margin: "0 0 12px", lineHeight: "1.5" }}>
+          <p style={{ fontSize: "14px", color: "#777", margin: "0 0 12px", lineHeight: "1.5" }}>
             Know someone who should be on the app? Send them an invite — they&apos;ll automatically connect with you when they sign up.
           </p>
           <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
@@ -274,7 +273,6 @@ export default function StepPeople({ data, onChange, onNext, onBack, userId }: S
         </div>
       )}
 
-      <NavButtons onBack={onBack} onNext={onNext} nextLabel={totalPeople === 0 ? "Skip for now" : "Next"} />
     </div>
   );
 }

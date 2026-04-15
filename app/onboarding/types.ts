@@ -53,8 +53,8 @@ export interface InviterFriend {
 export interface StepProps {
   data: OnboardingData;
   onChange: (updates: Partial<OnboardingData>) => void;
-  onNext: () => void;
-  onBack: () => void;
+  onNext?: () => void;
+  onBack?: () => void;
 }
 
 export interface OnboardingPageProps {
