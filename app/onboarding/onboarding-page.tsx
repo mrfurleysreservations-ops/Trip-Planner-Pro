@@ -253,11 +253,11 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
 
   // ─── Render ───
   return (
-    <div style={{ maxWidth: "480px", margin: "0 auto", fontFamily: "'Outfit', system-ui, -apple-system, sans-serif", color: "#1a1a1a", height: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
-      <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, padding: "10px 16px 0", flexShrink: 0 }}>
+    <div style={{ maxWidth: "480px", margin: "0 auto", fontFamily: "'Outfit', system-ui, -apple-system, sans-serif", color: "#1a1a1a", minHeight: "100vh", background: BG }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, padding: "10px 16px 0" }}>
         {step > 0 && step < TOTAL_STEPS - 1 && <ProgressDots total={TOTAL_STEPS} current={step} />}
       </div>
-      <div ref={containerRef} style={{ flex: 1, padding: "0 16px 20px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+      <div ref={containerRef} style={{ padding: "0 16px 80px" }}>
         {step === 0 && <StepProfile data={data} onChange={updateData} userId={userId} />}
         {step === 1 && <StepDetails data={data} onChange={updateData} />}
         {step === 2 && <StepStyle data={data} onChange={updateData} />}
@@ -267,12 +267,12 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
         {step === 6 && <StepDone data={data} />}
       </div>
       {navConfig && (
-        <div style={{ padding: "12px 20px", background: "#fff", borderTop: "1px solid #e5e5e5", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: "480px", margin: "0 auto", padding: "12px 20px", background: "#fff", borderTop: "1px solid #e5e5e5", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", zIndex: 20 }}>
           <NavButtons onBack={navConfig.onBack} onNext={navConfig.onNext} nextLabel={navConfig.nextLabel} nextDisabled={navConfig.nextDisabled} showBack={navConfig.showBack} />
         </div>
       )}
       {step === 6 && (
-        <div style={{ padding: "12px 20px", background: "#fff", borderTop: "1px solid #e5e5e5", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: "480px", margin: "0 auto", padding: "12px 20px", background: "#fff", borderTop: "1px solid #e5e5e5", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", zIndex: 20 }}>
           <button onClick={saveAndFinish} style={{ width: "100%", padding: "16px", borderRadius: "14px", border: "none", background: ACCENT, color: "#fff", fontSize: "16px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(232,148,58,0.35)" }}>Start Planning a Trip →</button>
         </div>
       )}
