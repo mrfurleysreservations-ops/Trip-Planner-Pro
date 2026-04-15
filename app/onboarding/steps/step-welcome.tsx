@@ -137,7 +137,10 @@ export default function StepWelcome({ onSetup, onSkip }: StepWelcomeProps) {
         </div>
 
         <button
-          onClick={() => router.push("/dashboard")}
+          onClick={() => {
+            document.cookie = "skipped_onboarding=true; path=/; max-age=31536000";
+            router.push("/dashboard");
+          }}
           style={{
             width: "100%",
             padding: "14px",

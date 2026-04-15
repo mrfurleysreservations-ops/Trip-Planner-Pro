@@ -221,6 +221,9 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
       // 4. Store email invites as friend_links with "invited" status
       // (simplified — in production this would trigger email sends)
 
+      // Clear skip cookie now that onboarding is complete
+      document.cookie = "skipped_onboarding=; path=/; max-age=0";
+
       router.push("/dashboard");
     } catch (err) {
       console.error("Error saving onboarding data:", err);

@@ -24,15 +24,20 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect users who haven't completed onboarding
+  // UNLESS they chose "Explore the App" (skip cookie set)
   if (user && !isAuthPage && !isOnboardingPage && !isPublicPage) {
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("onboarding_completed")
-      .eq("id", user.id)
-      .single();
+    const skippedOnboarding = request.cookies.get("skipped_onboarding")?.value === "true";
 
-    if (profile && !profile.onboarding_completed) {
-      return NextResponse.redirect(new URL("/onboarding", request.url));
+    if (!skippedOnboarding) {
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("onboarding_completed")
+        .eq("id", user.id)
+        .single();
+
+      if (profile && !profile.onboarding_completed) {
+        return NextResponse.redirect(new URL("/onboarding", request.url));
+      }
     }
   }
 
