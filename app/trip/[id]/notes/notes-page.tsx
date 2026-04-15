@@ -505,13 +505,6 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
             Notes
           </h2>
         </div>
-        <button
-          onClick={() => router.push(`/trip/${trip.id}/itinerary`)}
-          className="btn"
-          style={{ background: th.accent, padding: "10px 24px", fontSize: 14, fontWeight: 700, whiteSpace: "nowrap" }}
-        >
-          Next: Itinerary →
-        </button>
       </div>
 
       <TripSubNav tripId={trip.id} theme={th} />

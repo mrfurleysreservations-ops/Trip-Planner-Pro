@@ -519,9 +519,6 @@ export default function ExpensesPageComponent({
             Expenses
           </h2>
         </div>
-        <button onClick={openAddModal} className="btn" style={{ background: th.accent, padding: "10px 20px", fontSize: 13, fontWeight: 700 }}>
-          + Add Expense
-        </button>
       </div>
 
       <TripSubNav tripId={trip.id} theme={th} />

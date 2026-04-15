@@ -1256,9 +1256,6 @@ export default function ItineraryPage({
           >
             📥 Import
           </button>
-          <button onClick={() => router.push(`/trip/${trip.id}/packing`)} className="btn" style={{ background: th.accent, padding: "10px 24px", fontSize: 14, fontWeight: 700, whiteSpace: "nowrap" }}>
-            Next: Packing →
-          </button>
         </div>
       </div>
 
