@@ -1011,14 +1011,14 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
               maxHeight: "90vh", overflowY: "auto" as const,
               borderRadius: "20px 20px 0 0",
               boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
-              background: th.card || "#fff",
+              background: th.bg,
               animation: "slideUp 0.2s ease-out"
             }}>
               <div style={{
                 position: "sticky", top: 0, zIndex: 1,
                 padding: "18px 20px 14px",
                 borderBottom: `1px solid ${th.cardBorder}`,
-                background: th.card || "#fff",
+                background: th.bg,
                 borderRadius: "20px 20px 0 0",
                 display: "flex", alignItems: "center", justifyContent: "space-between"
               }}>
@@ -1063,14 +1063,14 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
                 maxHeight: "90vh", overflowY: "auto" as const,
                 borderRadius: "20px 20px 0 0",
                 boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
-                background: th.card || "#fff",
+                background: th.bg,
                 animation: "slideUp 0.2s ease-out"
               }}>
                 <div style={{
                   position: "sticky", top: 0, zIndex: 1,
                   padding: "18px 20px 14px",
                   borderBottom: `1px solid ${th.cardBorder}`,
-                  background: th.card || "#fff",
+                  background: th.bg,
                   borderRadius: "20px 20px 0 0",
                   display: "flex", alignItems: "center", justifyContent: "space-between"
                 }}>

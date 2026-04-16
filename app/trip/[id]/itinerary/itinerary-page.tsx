@@ -132,6 +132,7 @@ export default function ItineraryPage({
   const [addConfirmation, setAddConfirmation] = useState("");
   const [addCost, setAddCost] = useState("");
   const [addLink, setAddLink] = useState("");
+  const [showAddMoreDetails, setShowAddMoreDetails] = useState(false);
   const [addIsOptional, setAddIsOptional] = useState(false);
   const [addStartTime, setAddStartTime] = useState("");
   const [addEndTime, setAddEndTime] = useState("");
@@ -264,6 +265,7 @@ export default function ItineraryPage({
     setAddIsOptional(false);
     setAddStartTime("");
     setAddEndTime("");
+    setShowAddMoreDetails(false);
   }, []);
 
   // ─── Handle deep-link from notes "Convert to Event" flow ───
@@ -2116,7 +2118,7 @@ export default function ItineraryPage({
             maxHeight: "90vh", overflowY: "auto" as const,
             borderRadius: "20px 20px 0 0",
             boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
-            background: th.card || "#fff",
+            background: th.bg,
             animation: "slideUp 0.2s ease-out"
           }}>
             {/* Sticky modal header */}
@@ -2124,7 +2126,7 @@ export default function ItineraryPage({
               position: "sticky", top: 0, zIndex: 1,
               padding: "18px 20px 14px",
               borderBottom: `1px solid ${th.cardBorder}`,
-              background: th.card || "#fff",
+              background: th.bg,
               borderRadius: "20px 20px 0 0",
               display: "flex", alignItems: "center", justifyContent: "space-between"
             }}>
@@ -2137,17 +2139,17 @@ export default function ItineraryPage({
               }}>✕</button>
             </div>
 
-            {/* Form body */}
-            <div style={{ padding: "16px 20px 24px" }}>
-              {/* Day selector */}
-              <div style={{ marginBottom: 14 }}>
+            {/* Form body — compact layout */}
+            <div style={{ padding: "14px 20px 20px" }}>
+              {/* Day selector pills */}
+              <div style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: th.muted, textTransform: "uppercase", marginBottom: 6, display: "block" }}>Day</label>
-                <div style={{ display: "flex", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 4 }}>
+                <div style={{ display: "flex", gap: 6, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 4 }}>
                   {tripDays.map((day) => {
                     const active = addDate === day;
                     return (
                       <button key={day} onClick={() => setAddDate(day)} style={{
-                        padding: "8px 14px", borderRadius: 20, whiteSpace: "nowrap",
+                        padding: "6px 12px", borderRadius: 20, whiteSpace: "nowrap",
                         border: `1.5px solid ${active ? th.accent : th.cardBorder}`,
                         background: active ? `${th.accent}1a` : "transparent",
                         color: active ? th.accent : th.muted,
@@ -2161,46 +2163,164 @@ export default function ItineraryPage({
                 </div>
               </div>
 
-              {/* Time slot selector */}
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: th.muted, textTransform: "uppercase", marginBottom: 6, display: "block" }}>Time Slot</label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {(["morning", "afternoon", "evening"] as const).map((slot) => {
-                    const active = addTimeSlot === slot;
-                    const labels: Record<string, string> = { morning: "Morning", afternoon: "Afternoon", evening: "Evening" };
-                    return (
-                      <button key={slot} onClick={() => setAddTimeSlot(slot)} style={{
-                        flex: 1, padding: "8px 14px", borderRadius: 20,
-                        border: `1.5px solid ${active ? th.accent : th.cardBorder}`,
-                        background: active ? `${th.accent}1a` : "transparent",
-                        color: active ? th.accent : th.muted,
-                        fontWeight: active ? 700 : 500, fontSize: 13,
-                        cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-                      }}>
-                        {labels[slot]}
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* Event title */}
+              <input
+                value={addTitle}
+                onChange={(e) => setAddTitle(e.target.value)}
+                placeholder="Event title (required)"
+                className="input-modern"
+                style={{ marginBottom: 8 }}
+                autoFocus
+              />
+
+              {/* Start & End time — single row */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: th.muted, display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                  Start
+                  <input
+                    type="time"
+                    value={addStartTime}
+                    onChange={(e) => setAddStartTime(e.target.value)}
+                    className="input-modern"
+                    style={{ flex: 1 }}
+                  />
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: th.muted, display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                  End
+                  <input
+                    type="time"
+                    value={addEndTime}
+                    onChange={(e) => setAddEndTime(e.target.value)}
+                    className="input-modern"
+                    style={{ flex: 1 }}
+                  />
+                </label>
               </div>
 
-              {/* Existing form fields */}
-              {renderFormFields("add", {
-                title: addTitle, description: addDescription, location: addLocation, eventType: addEventType,
-                dressCode: addDressCode, reservation: addReservation, confirmation: addConfirmation, cost: addCost,
-                link: addLink, isOptional: addIsOptional, startTime: addStartTime, endTime: addEndTime,
-              }, {
-                setTitle: setAddTitle, setDescription: setAddDescription, setLocation: setAddLocation, setEventType: setAddEventType,
-                setDressCode: setAddDressCode, setReservation: setAddReservation, setConfirmation: setAddConfirmation, setCost: setAddCost,
-                setLink: setAddLink, setIsOptional: setAddIsOptional, setStartTime: setAddStartTime, setEndTime: setAddEndTime,
-              }, addLocationRef)}
+              {/* Activity type & Dress code — single row */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <select
+                  value={addEventType}
+                  onChange={(e) => setAddEventType(e.target.value)}
+                  className="input-modern"
+                  style={{ flex: 1 }}
+                >
+                  {EVENT_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.icon} {t.label}</option>
+                  ))}
+                </select>
+                <select
+                  value={addDressCode}
+                  onChange={(e) => setAddDressCode(e.target.value)}
+                  className="input-modern"
+                  style={{ flex: 1 }}
+                >
+                  <option value="">No dress code</option>
+                  {DRESS_CODES.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Description */}
+              <input
+                value={addDescription}
+                onChange={(e) => setAddDescription(e.target.value)}
+                placeholder="Description (optional)"
+                className="input-modern"
+                style={{ marginBottom: 8 }}
+              />
+
+              {/* Location */}
+              <input
+                ref={addLocationRef}
+                value={addLocation}
+                onChange={(e) => setAddLocation(e.target.value)}
+                placeholder="📍 Location (optional)"
+                className="input-modern"
+                style={{ marginBottom: 8 }}
+              />
+
+              {/* More Details — expandable */}
+              <button
+                onClick={() => setShowAddMoreDetails(!showAddMoreDetails)}
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 6,
+                  fontSize: 13, fontWeight: 600, color: th.accent,
+                  fontFamily: "'DM Sans', sans-serif", padding: "4px 0",
+                  marginBottom: showAddMoreDetails ? 8 : 0,
+                }}
+              >
+                <span style={{
+                  display: "inline-block", transition: "transform 0.2s",
+                  transform: showAddMoreDetails ? "rotate(90deg)" : "rotate(0deg)",
+                  fontSize: 11,
+                }}>▶</span>
+                More Details
+              </button>
+
+              {showAddMoreDetails && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {/* Reservation # & Confirmation code */}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      value={addReservation}
+                      onChange={(e) => setAddReservation(e.target.value)}
+                      placeholder="Reservation #"
+                      className="input-modern"
+                      style={{ flex: 1 }}
+                    />
+                    <input
+                      value={addConfirmation}
+                      onChange={(e) => setAddConfirmation(e.target.value)}
+                      placeholder="Confirmation code"
+                      className="input-modern"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                  {/* Cost & Link */}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      value={addCost}
+                      onChange={(e) => setAddCost(e.target.value)}
+                      placeholder="Cost per person ($)"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="input-modern"
+                      style={{ flex: 1 }}
+                    />
+                    <input
+                      value={addLink}
+                      onChange={(e) => setAddLink(e.target.value)}
+                      placeholder="Link / URL"
+                      className="input-modern"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                  {/* Optional checkbox */}
+                  <label style={{
+                    display: "flex", alignItems: "center", gap: 8, fontSize: 13,
+                    fontWeight: 600, color: th.muted, cursor: "pointer",
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={addIsOptional}
+                      onChange={(e) => setAddIsOptional(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: th.accent }}
+                    />
+                    Optional event (members can opt out)
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* Sticky save button */}
             <div style={{
               position: "sticky", bottom: 0,
               padding: "12px 20px 20px",
-              background: th.card || "#fff",
+              background: th.bg,
               borderTop: `1px solid ${th.cardBorder}`
             }}>
               <button
