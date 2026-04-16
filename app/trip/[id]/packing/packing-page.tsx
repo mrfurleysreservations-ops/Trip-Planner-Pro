@@ -359,28 +359,52 @@ export default function PackingPage({
   }, [ofGroupEvents, activeMemberEvents]);
 
   // ─── Auto-group events by dress code per day ───
+  // ─── Find events that aren't in ANY outfit group yet ───
+  const ungroupedEvents = useMemo(() => {
+    const groupedEventIds = new Set(ofGroupEvents.map(ge => ge.event_id));
+    return activeMemberEvents.filter(e => !groupedEventIds.has(e.id));
+  }, [activeMemberEvents, ofGroupEvents]);
+
   const autoGroupEvents = useCallback(async () => {
     if (autoGroupingRef.current) return;
     autoGroupingRef.current = true;
     try {
-      // Only auto-group if there are NO existing groups for this member
-      if (memberOutfitGroups.length > 0) return;
+      // Incremental: only group events that aren't in any group yet
+      if (ungroupedEvents.length === 0) return;
+
+      // Bucket ungrouped events by date + dress code
+      const buckets = new Map<string, ItineraryEvent[]>();
+      ungroupedEvents.forEach(evt => {
+        const dc = evt.dress_code || "casual";
+        const key = `${evt.date}__${dc}`;
+        const bucket = buckets.get(key) || [];
+        bucket.push(evt);
+        buckets.set(key, bucket);
+      });
 
       const newGroups: OutfitGroup[] = [];
       const newGroupEvents: OutfitGroupEvent[] = [];
-      let sortOrder = 0;
+      let sortOrder = memberOutfitGroups.length;
 
-      for (const [date, dayEvents] of eventsByDate) {
-        // Group same-dress-code events on the same day together
-        const dressCodeBuckets = new Map<string, ItineraryEvent[]>();
-        dayEvents.forEach(evt => {
-          const dc = evt.dress_code || "casual";
-          const bucket = dressCodeBuckets.get(dc) || [];
-          bucket.push(evt);
-          dressCodeBuckets.set(dc, bucket);
-        });
+      for (const [, bucketEvents] of buckets) {
+        const firstEvt = bucketEvents[0];
+        const date = firstEvt.date!;
+        const dressCode = firstEvt.dress_code || "casual";
 
-        for (const [dressCode, bucketEvents] of dressCodeBuckets) {
+        // Check if there's an existing group on the same day with the same dress code
+        const existingGroup = memberOutfitGroups.find(g => g.date === date && g.dress_code === dressCode);
+
+        if (existingGroup) {
+          // Add events to the existing group instead of creating a new one
+          for (const evt of bucketEvents) {
+            const { data: ge } = await supabase.from("outfit_group_events").insert({
+              outfit_group_id: existingGroup.id,
+              event_id: evt.id,
+            }).select().single();
+            if (ge) newGroupEvents.push(ge as OutfitGroupEvent);
+          }
+        } else {
+          // Create a new group
           const label = `${getDressCodeLabel(dressCode)} — ${formatDate(date)}`;
           const { data: group, error } = await supabase.from("outfit_groups").insert({
             trip_id: trip.id,
@@ -406,19 +430,21 @@ export default function PackingPage({
 
       if (newGroups.length > 0) {
         setOfGroups(prev => [...prev, ...newGroups]);
+      }
+      if (newGroupEvents.length > 0) {
         setOfGroupEvents(prev => [...prev, ...newGroupEvents]);
       }
     } finally {
       autoGroupingRef.current = false;
     }
-  }, [supabase, trip.id, activeMemberId, memberOutfitGroups, eventsByDate]);
+  }, [supabase, trip.id, activeMemberId, memberOutfitGroups, ungroupedEvents]);
 
-  // Auto-group on mount if no groups exist and events are available
+  // Auto-group whenever there are ungrouped events (works on mount AND when new events appear)
   useEffect(() => {
-    if (activeMemberEvents.length > 0 && memberOutfitGroups.length === 0) {
+    if (ungroupedEvents.length > 0) {
       autoGroupEvents();
     }
-  }, [activeMemberEvents.length, memberOutfitGroups.length, autoGroupEvents]);
+  }, [ungroupedEvents.length, autoGroupEvents]);
 
   // ─── Merge two outfit groups ───
   const mergeGroups = useCallback(async (sourceGroupId: string, targetGroupId: string) => {
@@ -1287,8 +1313,14 @@ export default function PackingPage({
                   });
                 })()}
 
-                <div style={{ textAlign: "center", marginTop: "16px" }}>
-                  <button onClick={() => setActiveView("walkthrough")} style={{ padding: "12px 30px", background: accent, color: "white", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Looks good → Build Outfits</button>
+                {/* Spacer for sticky CTA */}
+                <div style={{ height: "80px" }} />
+
+                {/* Sticky gradient CTA */}
+                <div style={{ position: "fixed", bottom: "56px", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "480px", zIndex: 101, padding: "0 16px 12px", boxSizing: "border-box" as const, background: `linear-gradient(to top, ${th.bg} 70%, transparent)`, pointerEvents: "none" as const }}>
+                  <button onClick={() => setActiveView("walkthrough")} style={{ pointerEvents: "auto" as const, width: "100%", padding: "16px 24px", fontSize: "16px", fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: "#fff", background: `linear-gradient(135deg, ${accent} 0%, ${th.accent2} 100%)`, border: "none", borderRadius: "14px", cursor: "pointer", boxShadow: "0 4px 20px rgba(232,148,58,0.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s ease", minHeight: "52px" }}>
+                    Looks good → Build Outfits
+                  </button>
                 </div>
               </>
             )}
