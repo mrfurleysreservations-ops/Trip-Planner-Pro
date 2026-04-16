@@ -55,7 +55,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 
   // ─── Add note form state ───
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [addTitle, setAddTitle] = useState("");
   const [addBody, setAddBody] = useState("");
   const [addLink, setAddLink] = useState("");
@@ -153,7 +153,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
       setAddTitle("");
       setAddBody("");
       setAddLink("");
-      setShowAddForm(false);
+      setShowAddModal(false);
     }
     setLoading(false);
   }, [supabase, trip.id, userId, currentUserName, addTitle, addBody, addLink, notes]);
@@ -531,32 +531,8 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
             >
               Import
             </button>
-            <button
-              onClick={() => { setShowAddForm(true); cancelEdit(); }}
-              className="btn"
-              style={{ background: th.accent, padding: "10px 20px", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}
-            >
-              + Add Note
-            </button>
           </div>
         </div>
-
-        {/* ═══ ADD NOTE FORM ═══ */}
-        {showAddForm && (
-          <div style={{ background: th.card, border: `1.5px solid ${th.accent}`, borderRadius: 14, padding: 20, marginBottom: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15 }}>New Note</span>
-              <button onClick={() => setShowAddForm(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: th.muted, padding: 4 }}>✕</button>
-            </div>
-            <input value={addTitle} onChange={(e) => setAddTitle(e.target.value)} placeholder="Title (required)" className="input-modern" style={{ marginBottom: 10 }} autoFocus />
-            <textarea value={addBody} onChange={(e) => setAddBody(e.target.value)} placeholder="Details, thoughts, links... (optional)" className="input-modern" rows={3} style={{ marginBottom: 10, resize: "vertical", minHeight: 60 }} />
-            <input value={addLink} onChange={(e) => setAddLink(e.target.value)} placeholder="Link URL (optional)" className="input-modern" style={{ marginBottom: 14 }} />
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => setShowAddForm(false)} style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: th.muted, fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
-              <button onClick={addNote} disabled={loading || !addTitle.trim()} className="btn" style={{ background: th.accent, padding: "8px 20px", fontSize: 13, fontWeight: 700, opacity: loading || !addTitle.trim() ? 0.5 : 1 }}>Save Note</button>
-            </div>
-          </div>
-        )}
 
         {/* ═══ NOTES LIST ═══ */}
         {filteredNotes.length === 0 && (
@@ -618,7 +594,147 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
             </div>
           );
         })}
+
+        {/* Spacer for sticky CTA */}
+        <div style={{ height: "80px" }} />
+
+        {/* Sticky gradient CTA */}
+        <div style={{
+          position: "fixed",
+          bottom: "56px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "100%",
+          maxWidth: "480px",
+          zIndex: 101,
+          padding: "0 16px 12px",
+          boxSizing: "border-box" as const,
+          background: `linear-gradient(to top, ${th.bg} 70%, transparent)`,
+          pointerEvents: "none" as const
+        }}>
+          <button onClick={() => { setShowAddModal(true); cancelEdit(); }} style={{
+            pointerEvents: "auto" as const,
+            width: "100%",
+            padding: "16px 24px",
+            fontSize: "16px",
+            fontWeight: 700,
+            fontFamily: "'Outfit', sans-serif",
+            color: "#fff",
+            background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+            border: "none",
+            borderRadius: "14px",
+            cursor: "pointer",
+            boxShadow: "0 4px 20px rgba(232,148,58,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            minHeight: "52px"
+          }}>
+            + Add Note
+          </button>
+        </div>
       </div>
+
+      {/* ═══ ADD NOTE BOTTOM-SHEET MODAL ═══ */}
+      {showAddModal && (
+        <div onClick={() => setShowAddModal(false)} style={{
+          position: "fixed", inset: 0, zIndex: 1000,
+          background: "rgba(0,0,0,0.45)",
+          display: "flex", alignItems: "flex-end", justifyContent: "center",
+          animation: "fadeIn 0.15s ease-out"
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: "100%", maxWidth: "480px",
+            maxHeight: "90vh", overflowY: "auto" as const,
+            borderRadius: "20px 20px 0 0",
+            boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
+            background: th.card || "#fff",
+            animation: "slideUp 0.2s ease-out"
+          }}>
+            {/* Sticky modal header */}
+            <div style={{
+              position: "sticky", top: 0, zIndex: 1,
+              padding: "18px 20px 14px",
+              borderBottom: `1px solid ${th.cardBorder}`,
+              background: th.card || "#fff",
+              borderRadius: "20px 20px 0 0",
+              display: "flex", alignItems: "center", justifyContent: "space-between"
+            }}>
+              <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "18px", margin: 0 }}>
+                Add Note
+              </h3>
+              <button onClick={() => setShowAddModal(false)} style={{
+                background: "none", border: "none", fontSize: "22px",
+                cursor: "pointer", color: th.muted, padding: "4px"
+              }}>✕</button>
+            </div>
+
+            {/* Form body */}
+            <div style={{ padding: "16px 20px 24px" }}>
+              <input
+                value={addTitle}
+                onChange={(e) => setAddTitle(e.target.value)}
+                placeholder="Title (required)"
+                style={{
+                  width: "100%", padding: "10px 14px", borderRadius: "10px",
+                  border: `1px solid ${th.cardBorder}`, fontSize: "14px",
+                  fontFamily: "'DM Sans', sans-serif", marginBottom: 10,
+                  boxSizing: "border-box", background: th.card, color: th.text,
+                }}
+                autoFocus
+              />
+              <textarea
+                value={addBody}
+                onChange={(e) => setAddBody(e.target.value)}
+                placeholder="Details, thoughts, links... (optional)"
+                rows={3}
+                style={{
+                  width: "100%", padding: "10px 14px", borderRadius: "10px",
+                  border: `1px solid ${th.cardBorder}`, fontSize: "14px",
+                  fontFamily: "'DM Sans', sans-serif", marginBottom: 10,
+                  resize: "vertical", minHeight: 60, boxSizing: "border-box",
+                  background: th.card, color: th.text,
+                }}
+              />
+              <input
+                value={addLink}
+                onChange={(e) => setAddLink(e.target.value)}
+                placeholder="Link URL (optional)"
+                style={{
+                  width: "100%", padding: "10px 14px", borderRadius: "10px",
+                  border: `1px solid ${th.cardBorder}`, fontSize: "14px",
+                  fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box",
+                  background: th.card, color: th.text,
+                }}
+              />
+            </div>
+
+            {/* Sticky save button */}
+            <div style={{
+              position: "sticky", bottom: 0,
+              padding: "12px 20px 20px",
+              background: th.card || "#fff",
+              borderTop: `1px solid ${th.cardBorder}`
+            }}>
+              <button
+                onClick={addNote}
+                disabled={loading || !addTitle.trim()}
+                style={{
+                  width: "100%", padding: "14px",
+                  background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+                  color: "#fff", border: "none", borderRadius: "12px",
+                  fontSize: "15px", fontWeight: 700, fontFamily: "'Outfit', sans-serif",
+                  cursor: loading || !addTitle.trim() ? "not-allowed" : "pointer",
+                  opacity: loading || !addTitle.trim() ? 0.5 : 1,
+                }}
+              >
+                Save Note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══ NOTE DETAIL MODAL ═══ */}
       {selectedNote && (

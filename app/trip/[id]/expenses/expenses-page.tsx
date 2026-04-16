@@ -839,6 +839,46 @@ export default function ExpensesPageComponent({
             )}
           </>
         )}
+
+        {/* Spacer for sticky CTA */}
+        <div style={{ height: "80px" }} />
+
+        {/* Sticky gradient CTA */}
+        <div style={{
+          position: "fixed",
+          bottom: "56px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "100%",
+          maxWidth: "480px",
+          zIndex: 101,
+          padding: "0 16px 12px",
+          boxSizing: "border-box" as const,
+          background: `linear-gradient(to top, ${th.bg} 70%, transparent)`,
+          pointerEvents: "none" as const
+        }}>
+          <button onClick={openAddModal} style={{
+            pointerEvents: "auto" as const,
+            width: "100%",
+            padding: "16px 24px",
+            fontSize: "16px",
+            fontWeight: 700,
+            fontFamily: "'Outfit', sans-serif",
+            color: "#fff",
+            background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+            border: "none",
+            borderRadius: "14px",
+            cursor: "pointer",
+            boxShadow: "0 4px 20px rgba(232,148,58,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            minHeight: "52px"
+          }}>
+            + Add Expense
+          </button>
+        </div>
       </div>
 
       {/* ═══ ADD EXPENSE MODAL ═══ */}

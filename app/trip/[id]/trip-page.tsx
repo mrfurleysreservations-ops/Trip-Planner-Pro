@@ -588,6 +588,8 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
   const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
   const [confirmDeleteBookingId, setConfirmDeleteBookingId] = useState<string | null>(null);
   const [collapsedTypes, setCollapsedTypes] = useState<Record<string, boolean>>({});
+  const [showAddBookingModal, setShowAddBookingModal] = useState(false);
+  const [showEditBookingModal, setShowEditBookingModal] = useState(false);
 
   // Member name lookup
   const memberNameMap = useMemo(() => {
@@ -742,51 +744,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
               <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, margin: 0 }}>
                 🧳 Travel & Lodging
               </h3>
-              {!showBookingForm && (
-                <button
-                  onClick={() => setShowBookingForm(true)}
-                  className="btn"
-                  style={{ background: th.accent, padding: "8px 18px", fontSize: 13, fontWeight: 700 }}
-                >
-                  + Add
-                </button>
-              )}
             </div>
-
-            {/* Add Booking Form */}
-            {showBookingForm && (
-              <AddBookingFormHub
-                tripId={id}
-                userId={userId}
-                accent={th.accent}
-                cardBg={th.card}
-                cardBorder={th.cardBorder}
-                muted={th.muted}
-                text={th.text}
-                onAdded={handleBookingAdded}
-                onCancel={() => setShowBookingForm(false)}
-              />
-            )}
-
-            {/* Edit Booking Form */}
-            {editingBookingId && (() => {
-              const editBooking = bookings.find((b) => b.id === editingBookingId);
-              if (!editBooking) return null;
-              return (
-                <EditBookingFormHub
-                  booking={editBooking}
-                  tripId={id}
-                  userId={userId}
-                  accent={th.accent}
-                  cardBg={th.card}
-                  cardBorder={th.cardBorder}
-                  muted={th.muted}
-                  text={th.text}
-                  onEdited={handleBookingEdited}
-                  onCancel={() => setEditingBookingId(null)}
-                />
-              );
-            })()}
 
             {/* Bookings grouped by type — collapsible */}
             {Object.keys(bookingsByType).length > 0 ? (
@@ -918,7 +876,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
                                 {canEdit && (
                                   <div style={{ display: "flex", gap: 8 }}>
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); setEditingBookingId(b.id); setExpandedBookingId(null); }}
+                                      onClick={(e) => { e.stopPropagation(); setEditingBookingId(b.id); setShowEditBookingModal(true); setExpandedBookingId(null); }}
                                       style={{
                                         background: `${th.accent}1a`, color: th.accent, border: `1px solid ${th.accent}40`,
                                         borderRadius: 8, padding: "4px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer",
@@ -969,7 +927,8 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
                   </div>
                 );
               })
-            ) : !showBookingForm && !editingBookingId ? (
+            ) : null}
+            {Object.keys(bookingsByType).length === 0 && (
               /* Empty state */
               <div style={{ textAlign: "center", padding: "48px 20px" }}>
                 <div style={{ fontSize: 42, marginBottom: 12 }}>🧳</div>
@@ -980,14 +939,14 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
                   Add your hotel, flights, car rentals, and reservations so everyone has the details.
                 </p>
                 <button
-                  onClick={() => setShowBookingForm(true)}
+                  onClick={() => setShowAddBookingModal(true)}
                   className="btn"
                   style={{ background: th.accent, padding: "12px 28px", fontSize: 14, fontWeight: 700 }}
                 >
                   + Add Booking
                 </button>
               </div>
-            ) : null}
+            )}
           </div>
 
           {/* Quick actions */}
@@ -996,9 +955,156 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
               Use the tabs below to plan your trip.
             </p>
           </div>
+
+          <div style={{ height: "80px" }} />
         </div>
 
+        {/* Sticky gradient CTA */}
+        <div style={{
+          position: "fixed",
+          bottom: "56px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "100%",
+          maxWidth: "480px",
+          zIndex: 101,
+          padding: "0 16px 12px",
+          boxSizing: "border-box" as const,
+          background: `linear-gradient(to top, ${th.bg} 70%, transparent)`,
+          pointerEvents: "none" as const
+        }}>
+          <button onClick={() => setShowAddBookingModal(true)} style={{
+            pointerEvents: "auto" as const,
+            width: "100%",
+            padding: "16px 24px",
+            fontSize: "16px",
+            fontWeight: 700,
+            fontFamily: "'Outfit', sans-serif",
+            color: "#fff",
+            background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+            border: "none",
+            borderRadius: "14px",
+            cursor: "pointer",
+            boxShadow: "0 4px 20px rgba(232,148,58,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            minHeight: "52px"
+          }}>
+            + Add Booking
+          </button>
+        </div>
+
+        {/* Add Booking Modal */}
+        {showAddBookingModal && (
+          <div onClick={() => setShowAddBookingModal(false)} style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
+            animation: "fadeIn 0.15s ease-out"
+          }}>
+            <div onClick={e => e.stopPropagation()} style={{
+              width: "100%", maxWidth: "480px",
+              maxHeight: "90vh", overflowY: "auto" as const,
+              borderRadius: "20px 20px 0 0",
+              boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
+              background: th.card || "#fff",
+              animation: "slideUp 0.2s ease-out"
+            }}>
+              <div style={{
+                position: "sticky", top: 0, zIndex: 1,
+                padding: "18px 20px 14px",
+                borderBottom: `1px solid ${th.cardBorder}`,
+                background: th.card || "#fff",
+                borderRadius: "20px 20px 0 0",
+                display: "flex", alignItems: "center", justifyContent: "space-between"
+              }}>
+                <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "18px", margin: 0 }}>
+                  Add Booking
+                </h3>
+                <button onClick={() => setShowAddBookingModal(false)} style={{
+                  background: "none", border: "none", fontSize: "22px",
+                  cursor: "pointer", color: th.muted, padding: "4px"
+                }}>✕</button>
+              </div>
+              <div style={{ padding: "16px 20px 24px" }}>
+                <AddBookingFormHub
+                  tripId={id}
+                  userId={userId}
+                  accent={th.accent}
+                  cardBg={th.card}
+                  cardBorder={th.cardBorder}
+                  muted={th.muted}
+                  text={th.text}
+                  onAdded={(booking) => { handleBookingAdded(booking); setShowAddBookingModal(false); }}
+                  onCancel={() => setShowAddBookingModal(false)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Booking Modal */}
+        {showEditBookingModal && editingBookingId && (() => {
+          const editBooking = bookings.find((b) => b.id === editingBookingId);
+          if (!editBooking) return null;
+          return (
+            <div onClick={() => { setShowEditBookingModal(false); setEditingBookingId(null); }} style={{
+              position: "fixed", inset: 0, zIndex: 1000,
+              background: "rgba(0,0,0,0.45)",
+              display: "flex", alignItems: "flex-end", justifyContent: "center",
+              animation: "fadeIn 0.15s ease-out"
+            }}>
+              <div onClick={e => e.stopPropagation()} style={{
+                width: "100%", maxWidth: "480px",
+                maxHeight: "90vh", overflowY: "auto" as const,
+                borderRadius: "20px 20px 0 0",
+                boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
+                background: th.card || "#fff",
+                animation: "slideUp 0.2s ease-out"
+              }}>
+                <div style={{
+                  position: "sticky", top: 0, zIndex: 1,
+                  padding: "18px 20px 14px",
+                  borderBottom: `1px solid ${th.cardBorder}`,
+                  background: th.card || "#fff",
+                  borderRadius: "20px 20px 0 0",
+                  display: "flex", alignItems: "center", justifyContent: "space-between"
+                }}>
+                  <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "18px", margin: 0 }}>
+                    Edit Booking
+                  </h3>
+                  <button onClick={() => { setShowEditBookingModal(false); setEditingBookingId(null); }} style={{
+                    background: "none", border: "none", fontSize: "22px",
+                    cursor: "pointer", color: th.muted, padding: "4px"
+                  }}>✕</button>
+                </div>
+                <div style={{ padding: "16px 20px 24px" }}>
+                  <EditBookingFormHub
+                    booking={editBooking}
+                    tripId={id}
+                    userId={userId}
+                    accent={th.accent}
+                    cardBg={th.card}
+                    cardBorder={th.cardBorder}
+                    muted={th.muted}
+                    text={th.text}
+                    onEdited={(updated) => { handleBookingEdited(updated); setShowEditBookingModal(false); }}
+                    onCancel={() => { setShowEditBookingModal(false); setEditingBookingId(null); }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         <TripSubNav tripId={id} theme={th} />
+
+        <style>{`
+          @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+          @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        `}</style>
       </div>
     );
   }

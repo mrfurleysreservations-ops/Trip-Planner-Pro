@@ -120,6 +120,9 @@ export default function ItineraryPage({
 
   // Add event form state
   const [addFormSlot, setAddFormSlot] = useState<{ date: string; timeSlot: string } | null>(null);
+  const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [addDate, setAddDate] = useState<string>("");
+  const [addTimeSlot, setAddTimeSlot] = useState<string>("morning");
   const [addTitle, setAddTitle] = useState("");
   const [addDescription, setAddDescription] = useState("");
   const [addLocation, setAddLocation] = useState("");
@@ -246,6 +249,9 @@ export default function ItineraryPage({
 
   const resetAddForm = useCallback(() => {
     setAddFormSlot(null);
+    setShowAddEventModal(false);
+    setAddDate("");
+    setAddTimeSlot("morning");
     setAddTitle("");
     setAddDescription("");
     setAddLocation("");
@@ -271,7 +277,9 @@ export default function ItineraryPage({
     const dayIdx = tripDays.indexOf(targetDate);
     if (dayIdx >= 0) setSelectedDayIdx(dayIdx);
 
-    setAddFormSlot({ date: targetDate, timeSlot: timeToSlot(startTime) });
+    setAddDate(targetDate);
+    setAddTimeSlot(timeToSlot(startTime));
+    setShowAddEventModal(true);
     setAddTitle(fromNoteTitle || "");
     setAddDescription(fromNoteDescription || "");
     setAddLink(fromNoteLink || "");
@@ -292,15 +300,15 @@ export default function ItineraryPage({
   }, [openEventId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addEvent = useCallback(async () => {
-    if (!addFormSlot || !addTitle.trim()) return;
+    if (!addDate || !addTitle.trim()) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("itinerary_events")
       .insert({
         trip_id: trip.id,
         created_by: userId,
-        date: addFormSlot.date,
-        time_slot: addStartTime ? timeToSlot(addStartTime) : addFormSlot.timeSlot,
+        date: addDate,
+        time_slot: addStartTime ? timeToSlot(addStartTime) : addTimeSlot,
         start_time: addStartTime || null,
         end_time: addEndTime || null,
         title: addTitle.trim(),
@@ -339,7 +347,7 @@ export default function ItineraryPage({
       resetAddForm();
     }
     setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, addFormSlot, addTitle, addDescription, addLocation, addEventType, addDressCode, addReservation, addConfirmation, addCost, addLink, addIsOptional, addStartTime, addEndTime, resetAddForm]);
+  }, [supabase, trip.id, userId, currentUserName, addDate, addTimeSlot, addTitle, addDescription, addLocation, addEventType, addDressCode, addReservation, addConfirmation, addCost, addLink, addIsOptional, addStartTime, addEndTime, resetAddForm]);
 
   const startEdit = useCallback((e: ItineraryEvent) => {
     setEditingId(e.id);
@@ -1178,7 +1186,9 @@ export default function ItineraryPage({
     const endStr = `${String(Math.min(hour + 1, 23)).padStart(2, "0")}:00`;
     setAddStartTime(timeStr);
     setAddEndTime(endStr);
-    setAddFormSlot({ date: selectedDate, timeSlot: timeToSlot(timeStr) });
+    setAddDate(selectedDate);
+    setAddTimeSlot(timeToSlot(timeStr));
+    setShowAddEventModal(true);
   }, [selectedDate, resetAddForm]);
 
   // ─── Render ───
@@ -1482,9 +1492,6 @@ export default function ItineraryPage({
             overflowY: "auto",
           }}>
 
-            {/* Add form — shown above grid when active */}
-            {addFormSlot?.date === selectedDate && renderAddForm()}
-
             {/* Edit form — shown above grid when editing */}
             {editingId && (() => {
               const editingEvent = events.find((e) => e.id === editingId);
@@ -1638,7 +1645,6 @@ export default function ItineraryPage({
                   return TIME_SLOT_ORDER[a.time_slot] - TIME_SLOT_ORDER[b.time_slot];
                 });
               const isCollapsed = collapsedDays.has(date);
-              const showAddFormHere = addFormSlot?.date === date;
 
               return (
                 <div key={date} style={{ marginBottom: 2 }}>
@@ -1741,35 +1747,28 @@ export default function ItineraryPage({
                         );
                       })}
 
-                      {/* Inline add form for this day */}
-                      {showAddFormHere && (
-                        <div style={{ margin: "8px 8px" }}>
-                          {renderAddForm()}
-                        </div>
-                      )}
-
                       {/* + Add Event button */}
-                      {!showAddFormHere && (
-                        <button
-                          onClick={() => {
-                            resetAddForm();
-                            setAddFormSlot({ date, timeSlot: "morning" });
-                          }}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 6,
-                            padding: "8px 16px", margin: "8px 8px",
-                            background: "none", border: `1.5px dashed ${th.cardBorder}`,
-                            borderRadius: 10, cursor: "pointer",
-                            fontSize: 13, fontWeight: 600, color: th.muted,
-                            fontFamily: "'DM Sans', sans-serif",
-                            transition: "all 0.15s",
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = th.accent; e.currentTarget.style.color = th.accent; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = th.cardBorder; e.currentTarget.style.color = th.muted; }}
-                        >
-                          + Add Event
-                        </button>
-                      )}
+                      <button
+                        onClick={() => {
+                          resetAddForm();
+                          setAddDate(date);
+                          setAddTimeSlot("morning");
+                          setShowAddEventModal(true);
+                        }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6,
+                          padding: "8px 16px", margin: "8px 8px",
+                          background: "none", border: `1.5px dashed ${th.cardBorder}`,
+                          borderRadius: 10, cursor: "pointer",
+                          fontSize: 13, fontWeight: 600, color: th.muted,
+                          fontFamily: "'DM Sans', sans-serif",
+                          transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = th.accent; e.currentTarget.style.color = th.accent; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = th.cardBorder; e.currentTarget.style.color = th.muted; }}
+                      >
+                        + Add Event
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1777,6 +1776,51 @@ export default function ItineraryPage({
             })}
           </div>
           )}
+
+          {/* Spacer for sticky CTA */}
+        <div style={{ height: "80px" }} />
+
+        {/* Sticky gradient CTA */}
+        <div style={{
+          position: "fixed",
+          bottom: "56px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "100%",
+          maxWidth: "480px",
+          zIndex: 101,
+          padding: "0 16px 12px",
+          boxSizing: "border-box" as const,
+          background: `linear-gradient(to top, ${th.bg} 70%, transparent)`,
+          pointerEvents: "none" as const
+        }}>
+          <button onClick={() => {
+            resetAddForm();
+            setAddDate(tripDays[0] || "");
+            setAddTimeSlot("morning");
+            setShowAddEventModal(true);
+          }} style={{
+            pointerEvents: "auto" as const,
+            width: "100%",
+            padding: "16px 24px",
+            fontSize: "16px",
+            fontWeight: 700,
+            fontFamily: "'Outfit', sans-serif",
+            color: "#fff",
+            background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+            border: "none",
+            borderRadius: "14px",
+            cursor: "pointer",
+            boxShadow: "0 4px 20px rgba(232,148,58,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            minHeight: "52px"
+          }}>
+            + Add Event
+          </button>
+        </div>
 
         </div>
       )}
@@ -2056,6 +2100,125 @@ export default function ItineraryPage({
           </div>
         );
       })()}
+
+      {/* ═══ ADD EVENT MODAL ═══ */}
+      {showAddEventModal && (
+        <div onClick={() => setShowAddEventModal(false)} style={{
+          position: "fixed", inset: 0, zIndex: 1000,
+          background: "rgba(0,0,0,0.45)",
+          display: "flex", alignItems: "flex-end", justifyContent: "center",
+          animation: "fadeIn 0.15s ease-out"
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: "100%", maxWidth: "480px",
+            maxHeight: "90vh", overflowY: "auto" as const,
+            borderRadius: "20px 20px 0 0",
+            boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
+            background: th.card || "#fff",
+            animation: "slideUp 0.2s ease-out"
+          }}>
+            {/* Sticky modal header */}
+            <div style={{
+              position: "sticky", top: 0, zIndex: 1,
+              padding: "18px 20px 14px",
+              borderBottom: `1px solid ${th.cardBorder}`,
+              background: th.card || "#fff",
+              borderRadius: "20px 20px 0 0",
+              display: "flex", alignItems: "center", justifyContent: "space-between"
+            }}>
+              <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "18px", margin: 0 }}>
+                Add Event
+              </h3>
+              <button onClick={() => setShowAddEventModal(false)} style={{
+                background: "none", border: "none", fontSize: "22px",
+                cursor: "pointer", color: th.muted, padding: "4px"
+              }}>✕</button>
+            </div>
+
+            {/* Form body */}
+            <div style={{ padding: "16px 20px 24px" }}>
+              {/* Day selector */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: th.muted, textTransform: "uppercase", marginBottom: 6, display: "block" }}>Day</label>
+                <div style={{ display: "flex", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 4 }}>
+                  {tripDays.map((day) => {
+                    const active = addDate === day;
+                    return (
+                      <button key={day} onClick={() => setAddDate(day)} style={{
+                        padding: "8px 14px", borderRadius: 20, whiteSpace: "nowrap",
+                        border: `1.5px solid ${active ? th.accent : th.cardBorder}`,
+                        background: active ? `${th.accent}1a` : "transparent",
+                        color: active ? th.accent : th.muted,
+                        fontWeight: active ? 700 : 500, fontSize: 13,
+                        cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                      }}>
+                        {formatDate(day)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Time slot selector */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: th.muted, textTransform: "uppercase", marginBottom: 6, display: "block" }}>Time Slot</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {(["morning", "afternoon", "evening"] as const).map((slot) => {
+                    const active = addTimeSlot === slot;
+                    const labels: Record<string, string> = { morning: "Morning", afternoon: "Afternoon", evening: "Evening" };
+                    return (
+                      <button key={slot} onClick={() => setAddTimeSlot(slot)} style={{
+                        flex: 1, padding: "8px 14px", borderRadius: 20,
+                        border: `1.5px solid ${active ? th.accent : th.cardBorder}`,
+                        background: active ? `${th.accent}1a` : "transparent",
+                        color: active ? th.accent : th.muted,
+                        fontWeight: active ? 700 : 500, fontSize: 13,
+                        cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                      }}>
+                        {labels[slot]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Existing form fields */}
+              {renderFormFields("add", {
+                title: addTitle, description: addDescription, location: addLocation, eventType: addEventType,
+                dressCode: addDressCode, reservation: addReservation, confirmation: addConfirmation, cost: addCost,
+                link: addLink, isOptional: addIsOptional, startTime: addStartTime, endTime: addEndTime,
+              }, {
+                setTitle: setAddTitle, setDescription: setAddDescription, setLocation: setAddLocation, setEventType: setAddEventType,
+                setDressCode: setAddDressCode, setReservation: setAddReservation, setConfirmation: setAddConfirmation, setCost: setAddCost,
+                setLink: setAddLink, setIsOptional: setAddIsOptional, setStartTime: setAddStartTime, setEndTime: setAddEndTime,
+              }, addLocationRef)}
+            </div>
+
+            {/* Sticky save button */}
+            <div style={{
+              position: "sticky", bottom: 0,
+              padding: "12px 20px 20px",
+              background: th.card || "#fff",
+              borderTop: `1px solid ${th.cardBorder}`
+            }}>
+              <button
+                onClick={addEvent}
+                disabled={loading || !addTitle.trim() || !addDate}
+                style={{
+                  width: "100%", padding: "14px",
+                  background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+                  color: "#fff", border: "none", borderRadius: "12px",
+                  fontSize: "15px", fontWeight: 700, fontFamily: "'Outfit', sans-serif",
+                  cursor: (loading || !addTitle.trim() || !addDate) ? "not-allowed" : "pointer",
+                  opacity: (loading || !addTitle.trim() || !addDate) ? 0.5 : 1,
+                }}
+              >
+                Save Event
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══ EXPORT MENU ═══ */}
       {showExportMenu && (
