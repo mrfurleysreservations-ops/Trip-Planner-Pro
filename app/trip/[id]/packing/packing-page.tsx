@@ -1075,14 +1075,15 @@ export default function PackingPage({
     return (
       <div style={{ minHeight: "100vh", background: th.bg, color: th.text, fontFamily: "'DM Sans', sans-serif" }}>
         {th.vibeBg && <div style={{ position: "fixed", inset: 0, background: th.vibeBg, pointerEvents: "none", zIndex: 0 }} />}
-        <div style={{ background: th.headerBg, padding: "14px 20px", borderBottom: `1px solid ${th.cardBorder}`, position: "relative", zIndex: 2 }}>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", letterSpacing: "-0.02em", margin: 0 }}>{trip.name}</h2>
+        <div style={{ background: th.headerBg, padding: "14px 20px", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", alignItems: "center", gap: "10px", position: "relative", zIndex: 2 }}>
+          <button onClick={() => router.push(`/trip/${trip.id}`)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "4px", color: th.muted }}>←</button>
+          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", color: th.text, margin: 0 }}>Packing</h2>
         </div>
         <TripSubNav tripId={trip.id} theme={th} />
         {/* Person Tabs */}
         <div style={{ display: "flex", gap: "0", padding: "0 16px", background: th.bg, borderBottom: `1px solid ${th.cardBorder}`, overflowX: "auto", scrollbarWidth: "none", position: "relative", zIndex: 1 }}>
           {myFamilyTripMembers.map(m => (
-            <button key={m.id} onClick={() => { setActiveMemberId(m.id); setCurrentEventIdx(0); }} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "6px", padding: "10px 14px", background: "none", border: "none", borderBottom: `3px solid ${m.id === activeMemberId ? accent : "transparent"}`, cursor: "pointer", transition: "all 0.2s" }}>
+            <button key={m.id} onClick={() => { setActiveMemberId(m.id); setCurrentEventIdx(0); setGroupingActiveDay(0); }} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "6px", padding: "10px 14px", background: "none", border: "none", borderBottom: `3px solid ${m.id === activeMemberId ? accent : "transparent"}`, cursor: "pointer", transition: "all 0.2s" }}>
               <span style={{ fontSize: "13px", fontWeight: m.id === activeMemberId ? 700 : 500, color: m.id === activeMemberId ? th.text : th.muted, fontFamily: "'DM Sans', sans-serif" }}>{m.name}</span>
               {m.role === "host" && <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: "8px", background: `${accent}18`, color: accent, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>Host</span>}
             </button>
@@ -1160,18 +1161,14 @@ export default function PackingPage({
       {th.vibeBg && <div style={{ position: "fixed", inset: 0, background: th.vibeBg, pointerEvents: "none", zIndex: 0 }} />}
 
       {/* Header */}
-      <div style={{ background: th.headerBg, padding: "14px 20px", borderBottom: `1px solid ${th.cardBorder}`, position: "relative", zIndex: 2 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", letterSpacing: "-0.02em", margin: 0 }}>{trip.name}</h2>
-            {trip.start_date && trip.end_date && (
-              <span style={{ fontSize: "12px", color: th.muted }}>{formatDate(trip.start_date)} – {formatDate(trip.end_date)} · {trip.location || ""}</span>
-            )}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", background: `${accent}14`, padding: "4px 10px", borderRadius: "20px" }}>
-            <span style={{ fontSize: "13px" }}>{ps.icon}</span>
-            <span style={{ fontSize: "11px", fontWeight: 700, color: accent }}>{ps.label}</span>
-          </div>
+      <div style={{ background: th.headerBg, padding: "14px 20px", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", zIndex: 2 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button onClick={() => router.push(`/trip/${trip.id}`)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "4px", color: th.muted }}>←</button>
+          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", color: th.text, margin: 0 }}>Packing</h2>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", background: `${accent}14`, padding: "4px 10px", borderRadius: "20px" }}>
+          <span style={{ fontSize: "13px" }}>{ps.icon}</span>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: accent }}>{ps.label}</span>
         </div>
       </div>
 
@@ -1180,7 +1177,7 @@ export default function PackingPage({
       {/* Person Tabs */}
       <div style={{ display: "flex", gap: "0", padding: "0 16px", background: th.bg, borderBottom: `1px solid ${th.cardBorder}`, overflowX: "auto", scrollbarWidth: "none", position: "relative", zIndex: 1 }}>
         {myFamilyTripMembers.map(m => (
-          <button key={m.id} onClick={() => { setActiveMemberId(m.id); setCurrentEventIdx(0); }} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "6px", padding: "10px 14px", background: "none", border: "none", borderBottom: `3px solid ${m.id === activeMemberId ? accent : "transparent"}`, cursor: "pointer", transition: "all 0.2s" }}>
+          <button key={m.id} onClick={() => { setActiveMemberId(m.id); setCurrentEventIdx(0); setGroupingActiveDay(0); }} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "6px", padding: "10px 14px", background: "none", border: "none", borderBottom: `3px solid ${m.id === activeMemberId ? accent : "transparent"}`, cursor: "pointer", transition: "all 0.2s" }}>
             <span style={{ fontSize: "13px", fontWeight: m.id === activeMemberId ? 700 : 500, color: m.id === activeMemberId ? th.text : th.muted, fontFamily: "'DM Sans', sans-serif" }}>{m.name}</span>
             {m.role === "host" && <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: "8px", background: `${accent}18`, color: accent, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>Host</span>}
           </button>
@@ -1226,9 +1223,12 @@ export default function PackingPage({
             ) : (
               <>
                 {/* 2a: Instructional header */}
-                <div style={{ padding: "12px 14px", background: `${accent}06`, border: `1px solid ${th.cardBorder}`, borderRadius: "12px", marginBottom: "14px" }}>
-                  <p style={{ fontSize: "12px", color: th.muted, margin: 0, lineHeight: 1.5 }}>
-                    Your events are auto-grouped by day and dress code — events with the same vibe share one outfit. If two groups could share the same outfit, merge them. Otherwise, you're good to go.
+                <div style={{ marginBottom: "16px" }}>
+                  <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "18px", color: th.text, margin: "0 0 4px", lineHeight: 1.3 }}>
+                    Wearing the same outfit to multiple events?
+                  </h3>
+                  <p style={{ fontSize: "14px", fontWeight: 700, color: accent, margin: 0 }}>
+                    Merge those events together.
                   </p>
                 </div>
 
@@ -1239,16 +1239,18 @@ export default function PackingPage({
                   )}
                 </div>
 
-                {/* Day tabs */}
+                {/* Day indicator */}
                 {(() => {
                   const uniqueDates = [...new Set(memberOutfitGroups.map(g => g.date))].sort();
+                  const activeDate = uniqueDates[groupingActiveDay] || uniqueDates[0];
                   return (
-                    <div style={{ display: "flex", gap: "6px", marginBottom: "12px", overflowX: "auto", scrollbarWidth: "none" }}>
-                      {uniqueDates.map((date, idx) => (
-                        <button key={date} onClick={() => setGroupingActiveDay(idx)} style={{ flex: "0 0 auto", padding: "6px 12px", borderRadius: "16px", border: `1px solid ${idx === groupingActiveDay ? accent : th.cardBorder}`, background: idx === groupingActiveDay ? `${accent}14` : "white", color: idx === groupingActiveDay ? accent : th.muted, fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                          {formatDate(date)}
-                        </button>
-                      ))}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: th.text }}>
+                        Day {groupingActiveDay + 1} — {formatDate(activeDate)}
+                      </span>
+                      <span style={{ fontSize: "11px", color: th.muted }}>
+                        {groupingActiveDay + 1} of {uniqueDates.length}
+                      </span>
                     </div>
                   );
                 })()}
@@ -1320,11 +1322,30 @@ export default function PackingPage({
                 {/* Spacer for sticky CTA */}
                 <div style={{ height: "80px" }} />
 
-                {/* Sticky gradient CTA */}
+                {/* Sticky gradient Prev/Next CTA */}
                 <div style={{ position: "fixed", bottom: "56px", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "480px", zIndex: 101, padding: "0 16px 12px", boxSizing: "border-box" as const, background: `linear-gradient(to top, ${th.bg} 70%, transparent)`, pointerEvents: "none" as const }}>
-                  <button onClick={() => setActiveView("walkthrough")} style={{ pointerEvents: "auto" as const, width: "100%", padding: "16px 24px", fontSize: "16px", fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: "#fff", background: `linear-gradient(135deg, ${accent} 0%, ${th.accent2} 100%)`, border: "none", borderRadius: "14px", cursor: "pointer", boxShadow: "0 4px 20px rgba(232,148,58,0.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s ease", minHeight: "52px" }}>
-                    Looks good → Build Outfits
-                  </button>
+                  <div style={{ display: "flex", gap: "10px", pointerEvents: "auto" as const }}>
+                    {/* Prev button — hidden on first day */}
+                    {groupingActiveDay > 0 && (
+                      <button onClick={() => setGroupingActiveDay(groupingActiveDay - 1)} style={{ flex: 1, padding: "16px 24px", fontSize: "16px", fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: accent, background: "white", border: `2px solid ${accent}`, borderRadius: "14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", minHeight: "52px" }}>
+                        ← Prev Day
+                      </button>
+                    )}
+                    {/* Next / Build Outfits button */}
+                    <button onClick={() => {
+                      const uniqueDates = [...new Set(memberOutfitGroups.map(g => g.date))].sort();
+                      if (groupingActiveDay < uniqueDates.length - 1) {
+                        setGroupingActiveDay(groupingActiveDay + 1);
+                      } else {
+                        setActiveView("walkthrough");
+                      }
+                    }} style={{ flex: 1, padding: "16px 24px", fontSize: "16px", fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: "#fff", background: `linear-gradient(135deg, ${accent} 0%, ${th.accent2} 100%)`, border: "none", borderRadius: "14px", cursor: "pointer", boxShadow: "0 4px 20px rgba(232,148,58,0.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", minHeight: "52px" }}>
+                      {(() => {
+                        const uniqueDates = [...new Set(memberOutfitGroups.map(g => g.date))].sort();
+                        return groupingActiveDay < uniqueDates.length - 1 ? "Next Day →" : "Build Outfits →";
+                      })()}
+                    </button>
+                  </div>
                 </div>
               </>
             )}
