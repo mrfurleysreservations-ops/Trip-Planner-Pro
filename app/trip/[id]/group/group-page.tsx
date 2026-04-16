@@ -136,10 +136,12 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
     setLoading(false);
   }, [supabase, trip.id, userId, memberUserIds]);
 
-  const addFamilyMember = useCallback(async (fm: FamilyMember) => {
+  const addFamilyMember = useCallback(async (fm: FamilyMember, isOwnFamily: boolean) => {
     // Skip if already on roster by family_member_id OR by linked user account
     if (memberFamilyMemberIds.has(fm.id)) return;
     if (fm.linked_user_id && memberUserIds.has(fm.linked_user_id)) return;
+    // Own family → auto-accepted (no invite needed), friend's family → pending
+    const memberStatus = isOwnFamily ? "accepted" : "pending";
     setLoading(true);
     try {
       const { error } = await supabase
@@ -149,7 +151,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
           family_member_id: fm.id,
           name: fm.name,
           role: "member",
-          status: "pending",
+          status: memberStatus,
           invited_by: userId,
         });
       if (error) {
@@ -164,7 +166,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
           name: fm.name,
           email: null,
           role: "member",
-          status: "pending",
+          status: memberStatus,
           invited_by: userId,
           invite_token: null,
           created_at: new Date().toISOString(),
@@ -179,6 +181,8 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
 
   const addWholeFamily = useCallback(async (fam: FamilyWithMembers) => {
     setLoading(true);
+    // Own family → auto-accepted (no invite needed), friend's family → pending
+    const memberStatus = fam.is_own ? "accepted" : "pending";
     const toAdd = fam.family_members.filter(
       (fm) => !memberFamilyMemberIds.has(fm.id) && !(fm.linked_user_id && memberUserIds.has(fm.linked_user_id))
     );
@@ -191,7 +195,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
             family_member_id: fm.id,
             name: fm.name,
             role: "member",
-            status: "pending",
+            status: memberStatus,
             invited_by: userId,
           });
         if (error) {
@@ -205,7 +209,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
             name: fm.name,
             email: null,
             role: "member",
-            status: "pending",
+            status: memberStatus,
             invited_by: userId,
             invite_token: null,
             created_at: new Date().toISOString(),
