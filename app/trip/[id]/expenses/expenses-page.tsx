@@ -843,7 +843,8 @@ export default function ExpensesPageComponent({
         {/* Spacer for sticky CTA */}
         <div style={{ height: "80px" }} />
 
-        {/* Sticky gradient CTA */}
+        {/* Sticky gradient CTA — hidden when modal is open */}
+        {!showAddModal && (
         <div style={{
           position: "fixed",
           bottom: "56px",
@@ -879,6 +880,7 @@ export default function ExpensesPageComponent({
             + Add Expense
           </button>
         </div>
+        )}
       </div>
 
       {/* ═══ ADD EXPENSE MODAL ═══ */}

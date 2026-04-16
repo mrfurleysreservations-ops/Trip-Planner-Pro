@@ -598,7 +598,8 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
         {/* Spacer for sticky CTA */}
         <div style={{ height: "80px" }} />
 
-        {/* Sticky gradient CTA */}
+        {/* Sticky gradient CTA — hidden when any modal is open */}
+        {!showAddModal && !selectedNoteId && !showImportModal && (
         <div style={{
           position: "fixed",
           bottom: "56px",
@@ -634,6 +635,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
             + Add Note
           </button>
         </div>
+        )}
       </div>
 
       {/* ═══ ADD NOTE BOTTOM-SHEET MODAL ═══ */}
