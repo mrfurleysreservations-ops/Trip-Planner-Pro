@@ -4,7 +4,7 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES, EVENT_TYPES, DRESS_CODES, TIME_SLOTS, PACKING_CATEGORIES, DRESS_CODE_SUGGESTIONS, getDressCodeEssentials, getDailyEssentials } from "@/lib/constants";
 import { logActivity } from "@/lib/trip-activity";
-import type { Trip, TripMember, ItineraryEvent, EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember } from "@/types/database.types";
+import type { Trip, TripMember, ItineraryEvent, EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment } from "@/types/database.types";
 import type { PackingPageProps } from "./page";
 import TripSubNav from "../trip-sub-nav";
 
@@ -205,19 +205,6 @@ function getOverpackerExtras(dressCode: string | null, gender: string | null): s
   return extras;
 }
 
-// Compartment options for hyper-organizer
-const COMPARTMENT_OPTIONS = [
-  { value: "carry_on", label: "Carry-On", icon: "🧳" },
-  { value: "checked", label: "Checked Bag", icon: "🛄" },
-  { value: "personal", label: "Personal Item", icon: "🎒" },
-  { value: "packing_cube_1", label: "Cube #1", icon: "📦" },
-  { value: "packing_cube_2", label: "Cube #2", icon: "📦" },
-  { value: "packing_cube_3", label: "Cube #3", icon: "📦" },
-  { value: "shoe_bag", label: "Shoe Bag", icon: "👟" },
-  { value: "toiletry_bag", label: "Toiletry Bag", icon: "🧴" },
-  { value: "garment_bag", label: "Garment Bag", icon: "👔" },
-  { value: "on_person", label: "Wearing", icon: "🚶" },
-];
 
 // ─── Main Component ───
 
@@ -226,6 +213,8 @@ export default function PackingPage({
   packingOutfits: initialPackingOutfits, outfitPackingItems: initialOutfitPackingItems,
   outfitGroups: initialOutfitGroups, outfitGroupEvents: initialOutfitGroupEvents,
   userProfile, familyMembers, userId, isHost,
+  packingBags: initialPackingBags, packingBagSections: initialPackingBagSections,
+  packingBagContainers: initialPackingBagContainers, packingItemAssignments: initialPackingItemAssignments,
 }: PackingPageProps) {
   const supabase = createBrowserSupabaseClient();
   const router = useRouter();
@@ -269,7 +258,7 @@ export default function PackingPage({
   const ps = STYLE_DESCRIPTIONS[packingStyle] || STYLE_DESCRIPTIONS.planner;
 
   // ─── State ───
-  const [activeView, setActiveView] = useState<"grouping" | "walkthrough" | "consolidation" | "checklist">(packingStyle === "spontaneous" ? "walkthrough" : "grouping");
+  const [activeView, setActiveView] = useState<"grouping" | "walkthrough" | "checklist">(packingStyle === "spontaneous" ? "walkthrough" : "grouping");
   const [currentEventIdx, setCurrentEventIdx] = useState(0);
   const [showInspoPanel, setShowInspoPanel] = useState(false);
   const autoGroupingRef = useRef(false); // Guard against concurrent autoGroupEvents calls
@@ -293,11 +282,22 @@ export default function PackingPage({
   const [inspoPage, setInspoPage] = useState(1);
   const [inspoHasMore, setInspoHasMore] = useState(false);
   const [uploadingInspo, setUploadingInspo] = useState(false);
-  // Hyper-organizer: compartment assignments (itemId → compartment value)
-  const [compartmentMap, setCompartmentMap] = useState<Record<string, string>>({});
   // Quick Pack: quantity-based packing
   const [quickPackQty, setQuickPackQty] = useState<Record<string, number>>({});
   const [quickPackAdded, setQuickPackAdded] = useState(false);
+
+  // ─── Bag hierarchy state ───
+  const [bags, setBags] = useState<PackingBag[]>(initialPackingBags);
+  const [bagSections, setBagSections] = useState<PackingBagSection[]>(initialPackingBagSections);
+  const [bagContainers, setBagContainers] = useState<PackingBagContainer[]>(initialPackingBagContainers);
+  const [itemAssignments, setItemAssignments] = useState<PackingItemAssignment[]>(initialPackingItemAssignments);
+  const [editingBags, setEditingBags] = useState(false);
+  const [newBagName, setNewBagName] = useState("");
+  const [addingSectionToBag, setAddingSectionToBag] = useState<string | null>(null);
+  const [newSectionName, setNewSectionName] = useState("");
+  const [addingContainerToSection, setAddingContainerToSection] = useState<string | null>(null);
+  const [newContainerName, setNewContainerName] = useState("");
+  const bagSetupRef = useRef<HTMLDivElement>(null);
 
   // ─── Outfit Group state ───
   const [ofGroups, setOfGroups] = useState<OutfitGroup[]>(initialOutfitGroups);
@@ -726,7 +726,13 @@ export default function PackingPage({
     setInspoError(null);
     try {
       const res = await fetch(`/api/unsplash?q=${encodeURIComponent(inspoSearchQuery)}&per_page=9&page=${page}`);
-      if (!res.ok) throw new Error("Failed to fetch");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (body.code === "NO_API_KEY") {
+          throw new Error("NO_API_KEY");
+        }
+        throw new Error("Failed to fetch");
+      }
       const data = await res.json();
       if (page === 1) {
         setInspoImages(data.images || []);
@@ -735,8 +741,12 @@ export default function PackingPage({
       }
       setInspoPage(page);
       setInspoHasMore(page < (data.totalPages || 0));
-    } catch {
-      setInspoError("Couldn't load inspiration images. Try again.");
+    } catch (err) {
+      if (err instanceof Error && err.message === "NO_API_KEY") {
+        setInspoError("Outfit inspiration isn't set up yet. The site owner needs to add an Unsplash API key.");
+      } else {
+        setInspoError("Couldn't load images — check that NEXT_PUBLIC_UNSPLASH_ACCESS_KEY is set in .env.local");
+      }
     } finally {
       setInspoLoading(false);
     }
@@ -948,9 +958,87 @@ export default function PackingPage({
     return groups;
   }, [orgMethod]);
 
+  // ─── Bag CRUD ───
+  const addBag = useCallback(async (name: string) => {
+    if (!name.trim()) return;
+    const { data, error } = await supabase.from("packing_bags").insert({
+      user_id: userId, name: name.trim(), icon: "🧳", bag_type: "carry-on", sort_order: bags.length,
+    }).select().single();
+    if (error || !data) { console.error("addBag error:", error); return; }
+    setBags(prev => [...prev, data as PackingBag]);
+  }, [supabase, userId, bags.length]);
+
+  const addBagSection = useCallback(async (bagId: string, name: string) => {
+    if (!name.trim()) return;
+    const existingSections = bagSections.filter(s => s.bag_id === bagId);
+    const { data, error } = await supabase.from("packing_bag_sections").insert({
+      bag_id: bagId, name: name.trim(), sort_order: existingSections.length,
+    }).select().single();
+    if (error || !data) { console.error("addBagSection error:", error); return; }
+    setBagSections(prev => [...prev, data as PackingBagSection]);
+  }, [supabase, bagSections]);
+
+  const addBagContainer = useCallback(async (sectionId: string, name: string) => {
+    if (!name.trim()) return;
+    const existingContainers = bagContainers.filter(c => c.section_id === sectionId);
+    const { data, error } = await supabase.from("packing_bag_containers").insert({
+      section_id: sectionId, name: name.trim(), sort_order: existingContainers.length,
+    }).select().single();
+    if (error || !data) { console.error("addBagContainer error:", error); return; }
+    setBagContainers(prev => [...prev, data as PackingBagContainer]);
+  }, [supabase, bagContainers]);
+
+  // ─── Bag assignment handler ───
+  const assignItemToBag = useCallback(async (itemId: string, field: "bag_id" | "section_id" | "container_id", value: string | null) => {
+    const existing = itemAssignments.find(a => a.packing_item_id === itemId && a.trip_id === trip.id);
+    const updates: Record<string, string | null> = { [field]: value || null };
+    // Cascade clears
+    if (field === "bag_id") { updates.section_id = null; updates.container_id = null; }
+    if (field === "section_id") { updates.container_id = null; }
+
+    if (existing) {
+      const { error } = await supabase.from("packing_item_assignments").update(updates).eq("id", existing.id);
+      if (error) { console.error("assignItemToBag update error:", error); return; }
+      setItemAssignments(prev => prev.map(a => a.id === existing.id ? { ...a, ...updates } : a));
+    } else {
+      const { data, error } = await supabase.from("packing_item_assignments").insert({
+        packing_item_id: itemId, trip_id: trip.id, ...updates,
+      }).select().single();
+      if (error || !data) { console.error("assignItemToBag insert error:", error); return; }
+      setItemAssignments(prev => [...prev, data as PackingItemAssignment]);
+    }
+
+    // Auto-check as packed when bag is assigned
+    if (field === "bag_id" && value) {
+      const item = items.find(i => i.id === itemId);
+      if (item && !item.is_packed) {
+        await togglePacked(itemId);
+      }
+    }
+  }, [supabase, trip.id, itemAssignments, items, togglePacked]);
+
+  // Helper: get assignment for an item
+  const getAssignment = useCallback((itemId: string) => {
+    return itemAssignments.find(a => a.packing_item_id === itemId && a.trip_id === trip.id);
+  }, [itemAssignments, trip.id]);
+
   // ─── Checklist stats (based on consolidated items, not raw duplicates) ───
   const packedCount = consolidatedItems.filter(e => e.item.is_packed).length;
   const totalCount = consolidatedItems.length;
+  const multiUseCount = consolidatedItems.filter(e => e.eventCount > 1).length;
+  const assignedToBagCount = consolidatedItems.filter(e => getAssignment(e.item.id)?.bag_id).length;
+
+  // Completion state
+  const allPacked = packedCount === totalCount && totalCount > 0;
+  const [showAllSet, setShowAllSet] = useState(false);
+  useEffect(() => {
+    if (allPacked) {
+      const timer = setTimeout(() => setShowAllSet(true), 300);
+      return () => clearTimeout(timer);
+    } else {
+      setShowAllSet(false);
+    }
+  }, [allPacked]);
 
   // ─── Empty state ───
   if (activeMemberEvents.length === 0 && (activeView === "walkthrough" || activeView === "grouping")) {
@@ -1086,9 +1174,9 @@ export default function PackingPage({
           </div>
         ) : (
           <div style={{ display: "flex", gap: "0", padding: "0 16px", margin: "12px 0 0", overflowX: "auto", scrollbarWidth: "none" }}>
-            {(["grouping", "walkthrough", "consolidation", "checklist"] as const).map(v => (
+            {(["grouping", "walkthrough", "checklist"] as const).map(v => (
               <button key={v} onClick={() => setActiveView(v)} style={{ flex: "0 0 auto", padding: "10px 16px", background: "none", border: "none", borderBottom: `3px solid ${activeView === v ? accent : "transparent"}`, cursor: "pointer", fontSize: "13px", fontWeight: activeView === v ? 700 : 500, color: activeView === v ? accent : th.muted, fontFamily: "'DM Sans', sans-serif" }}>
-                {v === "grouping" ? "Group" : v === "walkthrough" ? "Outfits" : v === "consolidation" ? "Consolidate" : "Pack & Go ✓"}
+                {v === "grouping" ? "Group" : v === "walkthrough" ? "Outfits" : "Pack & Go ✓"}
               </button>
             ))}
           </div>
@@ -1107,6 +1195,13 @@ export default function PackingPage({
               </div>
             ) : (
               <>
+                {/* 2a: Instructional header */}
+                <div style={{ padding: "12px 14px", background: `${accent}06`, border: `1px solid ${th.cardBorder}`, borderRadius: "12px", marginBottom: "14px" }}>
+                  <p style={{ fontSize: "12px", color: th.muted, margin: 0, lineHeight: 1.5 }}>
+                    Your events are auto-grouped by day and dress code — events with the same vibe share one outfit. If two groups could share the same outfit, merge them. Otherwise, you're good to go.
+                  </p>
+                </div>
+
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
                   <span style={{ fontSize: "13px", fontWeight: 700 }}>Outfit Groups ({memberOutfitGroups.length})</span>
                   {groupingMergeSource && (
@@ -1172,15 +1267,19 @@ export default function PackingPage({
                           </div>
                         ))}
 
-                        {/* Merge controls */}
-                        {isSelected && !groupingMergeSource && dayGroups.length > 1 && (
-                          <div style={{ padding: "8px 18px", borderTop: `1px solid ${th.cardBorder}`, display: "flex", gap: "6px" }}>
-                            <button onClick={(e) => { e.stopPropagation(); setGroupingMergeSource(group.id); }} style={{ fontSize: "11px", padding: "4px 10px", borderRadius: "8px", background: "#fff3e0", color: "#e65100", border: "none", cursor: "pointer", fontWeight: 700 }}>Merge with…</button>
+                        {/* Action row: merge/split — always visible */}
+                        {isMergeTarget ? (
+                          <div style={{ padding: "8px 18px", borderTop: `1px solid ${th.cardBorder}`, background: `#e6510008` }}>
+                            <button onClick={(e) => { e.stopPropagation(); mergeGroups(groupingMergeSource!, group.id); }} style={{ fontSize: "11px", padding: "6px 12px", borderRadius: "8px", background: "#e65100", color: "white", border: "none", cursor: "pointer", fontWeight: 700, width: "100%" }}>Merge here ↓</button>
                           </div>
-                        )}
-                        {isMergeTarget && (
-                          <div style={{ padding: "8px 18px", borderTop: `1px solid ${th.cardBorder}` }}>
-                            <button onClick={(e) => { e.stopPropagation(); mergeGroups(groupingMergeSource!, group.id); }} style={{ fontSize: "11px", padding: "4px 10px", borderRadius: "8px", background: "#e65100", color: "white", border: "none", cursor: "pointer", fontWeight: 700, width: "100%" }}>Merge into this group</button>
+                        ) : (
+                          <div style={{ padding: "8px 18px", borderTop: `1px solid ${th.cardBorder}`, display: "flex", gap: "8px" }}>
+                            {!groupingMergeSource && dayGroups.length > 1 && (
+                              <button onClick={(e) => { e.stopPropagation(); setGroupingMergeSource(group.id); }} style={{ fontSize: "11px", padding: "4px 10px", borderRadius: "8px", background: "#fff3e0", color: "#e65100", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Merge with…</button>
+                            )}
+                            {groupEvents.length > 1 && !groupingMergeSource && (
+                              <button onClick={(e) => { e.stopPropagation(); splitGroup(group.id, groupEvents[0].id); }} style={{ fontSize: "11px", padding: "4px 10px", borderRadius: "8px", background: "#e3f2fd", color: "#1565c0", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Split</button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1189,7 +1288,7 @@ export default function PackingPage({
                 })()}
 
                 <div style={{ textAlign: "center", marginTop: "16px" }}>
-                  <button onClick={() => setActiveView("walkthrough")} style={{ padding: "10px 24px", background: accent, color: "white", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Start Building Outfits →</button>
+                  <button onClick={() => setActiveView("walkthrough")} style={{ padding: "12px 30px", background: accent, color: "white", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Looks good → Build Outfits</button>
                 </div>
               </>
             )}
@@ -1296,6 +1395,36 @@ export default function PackingPage({
                   </div>
                 </div>
 
+                {/* ─── Inspo panel (moved above items) ─── */}
+                <button onClick={() => { if (!showInspoPanel) fetchInspoImages(); setShowInspoPanel(!showInspoPanel); }} style={{ width: "100%", padding: "12px 18px", background: `${accent}06`, border: "none", borderTop: `1px solid ${th.cardBorder}`, cursor: "pointer", fontSize: "12px", fontWeight: 700, color: accent, fontFamily: "'DM Sans', sans-serif", textAlign: "left" as const }}>
+                  {showInspoPanel ? "Hide Inspo ▲" : "✨ Get Outfit Inspo"}
+                </button>
+
+                {showInspoPanel && (
+                  <div style={{ padding: "14px 18px", borderTop: `1px solid ${th.cardBorder}` }}>
+                    <div style={{ fontSize: "10px", color: th.muted, marginBottom: "8px" }}>Search: {inspoSearchQuery}</div>
+                    {inspoLoading && <div style={{ textAlign: "center", padding: "20px", color: th.muted, fontSize: "12px" }}>Loading inspiration…</div>}
+                    {inspoError && <div style={{ textAlign: "center", padding: "12px", color: "#c62828", fontSize: "12px" }}>{inspoError}</div>}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+                      {inspoImages.map(img => (
+                        <button key={img.id} onClick={() => selectInspoImage(img)} style={{ padding: 0, border: `2px solid transparent`, borderRadius: "8px", cursor: "pointer", overflow: "hidden", background: img.color || "#eee", aspectRatio: "1" }}>
+                          <img src={img.thumb} alt={img.alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        </button>
+                      ))}
+                    </div>
+                    {inspoHasMore && !inspoLoading && (
+                      <button onClick={() => fetchInspoImages(inspoPage + 1)} style={{ width: "100%", padding: "8px", marginTop: "8px", background: "none", border: `1px solid ${th.cardBorder}`, borderRadius: "8px", fontSize: "11px", fontWeight: 600, color: accent, cursor: "pointer" }}>Load More</button>
+                    )}
+                    <div style={{ marginTop: "10px", borderTop: `1px solid ${th.cardBorder}`, paddingTop: "10px" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: accent, cursor: "pointer" }}>
+                        📷 Upload your own
+                        <input type="file" accept="image/*" onChange={e => { if (e.target.files?.[0]) uploadInspoImage(e.target.files[0]); }} style={{ display: "none" }} />
+                      </label>
+                      {uploadingInspo && <span style={{ fontSize: "10px", color: th.muted }}>Uploading…</span>}
+                    </div>
+                  </div>
+                )}
+
                 {/* Saved inspo */}
                 {currentOutfit?.inspo_image_url && (
                   <div style={{ padding: "12px 18px", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", alignItems: "center", gap: "10px" }}>
@@ -1358,15 +1487,6 @@ export default function PackingPage({
                         {multiUseEvents.length > 0 && (
                           <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "8px", background: "#e8f5e9", color: "#2e7d32", fontWeight: 700 }}>↻ ×{multiUseEvents.length + 1}</span>
                         )}
-                        {/* Hyper-organizer: compartment dropdown */}
-                        {packingStyle === "hyper_organizer" && (
-                          <select value={compartmentMap[item.id] || ""} onChange={e => setCompartmentMap(prev => ({ ...prev, [item.id]: e.target.value }))} onClick={e => e.stopPropagation()} style={{ fontSize: "10px", padding: "2px 4px", borderRadius: "4px", border: `1px solid ${th.cardBorder}`, background: "white", color: th.text, cursor: "pointer", maxWidth: "80px" }}>
-                            <option value="">Bag?</option>
-                            {COMPARTMENT_OPTIONS.map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.icon} {opt.label}</option>
-                            ))}
-                          </select>
-                        )}
                         <button onClick={() => deleteItem(item.id, item.name)} style={{ background: "none", border: "none", color: "#e57373", cursor: "pointer", fontSize: "14px", padding: "2px", lineHeight: 1 }}>✕</button>
                       </div>
                     );
@@ -1406,59 +1526,6 @@ export default function PackingPage({
                   </div>
                 )}
 
-                {/* Hyper-organizer: compartment summary */}
-                {packingStyle === "hyper_organizer" && currentEventItems.length > 0 && (
-                  <div style={{ padding: "12px 18px", borderTop: `1px solid ${th.cardBorder}`, background: "#f3e5f5" }}>
-                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#7b1fa2", textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>🗂️ Compartment Summary</span>
-                    <div style={{ marginTop: "6px" }}>
-                      {COMPARTMENT_OPTIONS.filter(opt => currentEventItems.some(i => compartmentMap[i.id] === opt.value)).map(opt => {
-                        const assignedItems = currentEventItems.filter(i => compartmentMap[i.id] === opt.value);
-                        return (
-                          <div key={opt.value} style={{ fontSize: "11px", padding: "2px 0", color: "#4a148c" }}>
-                            {opt.icon} {opt.label}: {assignedItems.map(i => i.name).join(", ")}
-                          </div>
-                        );
-                      })}
-                      {currentEventItems.filter(i => !compartmentMap[i.id]).length > 0 && (
-                        <div style={{ fontSize: "11px", padding: "2px 0", color: th.muted }}>
-                          ⚠️ {currentEventItems.filter(i => !compartmentMap[i.id]).length} items unassigned
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Inspo toggle button */}
-                <button onClick={() => { if (!showInspoPanel) fetchInspoImages(); setShowInspoPanel(!showInspoPanel); }} style={{ width: "100%", padding: "12px 18px", background: `${accent}06`, border: "none", borderTop: `1px solid ${th.cardBorder}`, cursor: "pointer", fontSize: "12px", fontWeight: 700, color: accent, fontFamily: "'DM Sans', sans-serif" }}>
-                  {showInspoPanel ? "Hide Inspo ▲" : "✨ Get Outfit Inspo"}
-                </button>
-
-                {/* Inspo panel */}
-                {showInspoPanel && (
-                  <div style={{ padding: "14px 18px", borderTop: `1px solid ${th.cardBorder}` }}>
-                    <div style={{ fontSize: "10px", color: th.muted, marginBottom: "8px" }}>Search: {inspoSearchQuery}</div>
-                    {inspoLoading && <div style={{ textAlign: "center", padding: "20px", color: th.muted, fontSize: "12px" }}>Loading inspiration…</div>}
-                    {inspoError && <div style={{ textAlign: "center", padding: "12px", color: "#c62828", fontSize: "12px" }}>{inspoError}</div>}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
-                      {inspoImages.map(img => (
-                        <button key={img.id} onClick={() => selectInspoImage(img)} style={{ padding: 0, border: `2px solid transparent`, borderRadius: "8px", cursor: "pointer", overflow: "hidden", background: img.color || "#eee", aspectRatio: "1" }}>
-                          <img src={img.thumb} alt={img.alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                        </button>
-                      ))}
-                    </div>
-                    {inspoHasMore && !inspoLoading && (
-                      <button onClick={() => fetchInspoImages(inspoPage + 1)} style={{ width: "100%", padding: "8px", marginTop: "8px", background: "none", border: `1px solid ${th.cardBorder}`, borderRadius: "8px", fontSize: "11px", fontWeight: 600, color: accent, cursor: "pointer" }}>Load More</button>
-                    )}
-                    {/* Upload own inspo */}
-                    <div style={{ marginTop: "10px", borderTop: `1px solid ${th.cardBorder}`, paddingTop: "10px" }}>
-                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: accent, cursor: "pointer" }}>
-                        📷 Upload your own
-                        <input type="file" accept="image/*" onChange={e => { if (e.target.files?.[0]) uploadInspoImage(e.target.files[0]); }} style={{ display: "none" }} />
-                      </label>
-                      {uploadingInspo && <span style={{ fontSize: "10px", color: th.muted }}>Uploading…</span>}
-                    </div>
-                  </div>
-                )}
               </div>
             ) : currentStepType === "bedtime" ? (
               /* ─── BEDTIME PSEUDO-EVENT ─── */
@@ -1561,107 +1628,20 @@ export default function PackingPage({
               </div>
             ) : null}
 
-            {/* Navigation Buttons */}
-            <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
-              <button disabled={currentEventIdx === 0} onClick={() => setCurrentEventIdx(prev => Math.max(0, prev - 1))} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${th.cardBorder}`, background: "white", fontSize: "13px", fontWeight: 700, cursor: currentEventIdx === 0 ? "not-allowed" : "pointer", opacity: currentEventIdx === 0 ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif" }}>← Back</button>
+            {/* Spacer for sticky nav */}
+            <div style={{ height: "70px" }} />
+
+            {/* Sticky bottom navigation bar */}
+            <div style={{ position: "sticky", bottom: "56px", background: "rgba(255,255,255,0.97)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: `1px solid ${th.cardBorder}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: "10px", zIndex: 10, marginLeft: "-16px", marginRight: "-16px" }}>
+              <button disabled={currentEventIdx === 0} onClick={() => setCurrentEventIdx(prev => Math.max(0, prev - 1))} style={{ padding: "10px 16px", borderRadius: "10px", border: `1px solid ${th.cardBorder}`, background: "white", fontSize: "12px", fontWeight: 700, cursor: currentEventIdx === 0 ? "not-allowed" : "pointer", opacity: currentEventIdx === 0 ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif" }}>← Prev</button>
+              <span style={{ flex: 1, textAlign: "center", fontSize: "12px", fontWeight: 700, color: accent, fontFamily: "'DM Sans', sans-serif" }}>Step {currentEventIdx + 1} of {totalSteps}</span>
               {currentEventIdx < totalSteps - 1 ? (
-                <button onClick={() => setCurrentEventIdx(prev => Math.min(totalSteps - 1, prev + 1))} style={{ flex: 1, padding: "12px", borderRadius: "10px", background: accent, color: "white", border: "none", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                  {currentEventIdx === walkthroughGroups.length - 1 ? "Bedtime →" : currentEventIdx === walkthroughGroups.length ? "Essentials →" : "Next →"}
+                <button onClick={() => setCurrentEventIdx(prev => Math.min(totalSteps - 1, prev + 1))} style={{ padding: "10px 16px", borderRadius: "10px", background: accent, color: "white", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                  Next →
                 </button>
               ) : (
-                <button onClick={() => setActiveView("consolidation")} style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "#2e7d32", color: "white", border: "none", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Done — View Summary ✓</button>
+                <button onClick={() => setActiveView("checklist")} style={{ padding: "10px 16px", borderRadius: "10px", background: "#2e7d32", color: "white", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Pack & Go →</button>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════ */}
-        {/*  VIEW: CONSOLIDATION                                      */}
-        {/* ═══════════════════════════════════════════════════════════ */}
-        {activeView === "consolidation" && (
-          <div style={{ padding: "16px" }}>
-
-            {/* Summary stats */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "16px" }}>
-              <div style={{ background: "white", borderRadius: "12px", border: `1px solid ${th.cardBorder}`, padding: "14px", textAlign: "center" }}>
-                <div style={{ fontSize: "24px", fontWeight: 800, fontFamily: "'Outfit', sans-serif", color: accent }}>{consolidatedItems.length}</div>
-                <div style={{ fontSize: "10px", fontWeight: 700, color: th.muted, textTransform: "uppercase" as const }}>Total Items</div>
-              </div>
-              <div style={{ background: "white", borderRadius: "12px", border: `1px solid ${th.cardBorder}`, padding: "14px", textAlign: "center" }}>
-                <div style={{ fontSize: "24px", fontWeight: 800, fontFamily: "'Outfit', sans-serif", color: "#2e7d32" }}>{consolidatedItems.filter(e => e.eventCount > 1).length}</div>
-                <div style={{ fontSize: "10px", fontWeight: 700, color: th.muted, textTransform: "uppercase" as const }}>Multi-Use</div>
-              </div>
-              <div style={{ background: "white", borderRadius: "12px", border: `1px solid ${th.cardBorder}`, padding: "14px", textAlign: "center" }}>
-                <div style={{ fontSize: "24px", fontWeight: 800, fontFamily: "'Outfit', sans-serif", color: th.text }}>{memberOutfitGroups.length}</div>
-                <div style={{ fontSize: "10px", fontWeight: 700, color: th.muted, textTransform: "uppercase" as const }}>Outfit Groups</div>
-              </div>
-            </div>
-
-            {/* Minimalist: bag capacity gauge */}
-            {packingStyle === "minimalist" && (
-              <div style={{ background: "white", borderRadius: "12px", border: `1px solid ${th.cardBorder}`, padding: "14px", marginBottom: "16px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "12px", fontWeight: 700 }}>🎒 Bag Capacity</span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: consolidatedItems.length > 25 ? "#c62828" : "#2e7d32" }}>{consolidatedItems.length} / 25</span>
-                </div>
-                <div style={{ height: "8px", background: "#f5f5f5", borderRadius: "4px", overflow: "hidden" }}>
-                  <div style={{ height: "100%", background: consolidatedItems.length > 25 ? "#c62828" : consolidatedItems.length > 20 ? "#e65100" : "#2e7d32", width: `${Math.min(100, (consolidatedItems.length / 25) * 100)}%`, borderRadius: "4px", transition: "width 0.3s" }} />
-                </div>
-                {consolidatedItems.length > 25 && (
-                  <div style={{ fontSize: "11px", color: "#c62828", marginTop: "6px" }}>⚠️ Over target! Consider removing {consolidatedItems.length - 25} items.</div>
-                )}
-              </div>
-            )}
-
-            {/* Items grouped */}
-            {Object.entries(groupItems(consolidatedItems)).map(([groupKey, groupEntries]) => {
-              const groupPacked = groupEntries.filter(e => e.item.is_packed).length;
-              const catInfo = PACKING_CATEGORIES.find(c => c.value === groupKey);
-              return (
-                <div key={groupKey} style={{ background: "white", borderRadius: "16px", border: `1px solid ${th.cardBorder}`, overflow: "hidden", marginBottom: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
-                  <div style={{ padding: "14px 18px", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "14px" }}>{catInfo?.icon || "📦"}</span>
-                      <span style={{ fontSize: "13px", fontWeight: 700, textTransform: "capitalize" as const }}>{catInfo?.label || groupKey}</span>
-                    </div>
-                    <span style={{ fontSize: "11px", color: groupPacked === groupEntries.length ? "#2e7d32" : th.muted, fontWeight: 600 }}>{groupPacked}/{groupEntries.length}</span>
-                  </div>
-                  {groupEntries.map((entry, idx) => (
-                    <div key={entry.item.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 18px", borderBottom: idx < groupEntries.length - 1 ? `1px solid ${th.cardBorder}` : "none" }}>
-                      <span style={{ fontSize: "13px", fontWeight: 600, flex: 1 }}>{entry.item.name}</span>
-                      {entry.eventCount > 1 && (
-                        <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "8px", background: "#e8f5e9", color: "#2e7d32", fontWeight: 700 }}>↻ ×{entry.eventCount}</span>
-                      )}
-                      {entry.events.length > 0 && (
-                        <span style={{ fontSize: "9px", color: th.muted }}>{entry.events.map(e => e.title).join(", ")}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-
-            {/* Hyper-organizer: compartment breakdown */}
-            {packingStyle === "hyper_organizer" && Object.keys(compartmentMap).length > 0 && (
-              <div style={{ background: "white", borderRadius: "16px", border: `1px solid ${th.cardBorder}`, overflow: "hidden", marginTop: "16px" }}>
-                <div style={{ padding: "14px 18px", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "14px" }}>🗂️</span>
-                  <span style={{ fontSize: "13px", fontWeight: 700 }}>Bag Breakdown</span>
-                </div>
-                {COMPARTMENT_OPTIONS.filter(opt => consolidatedItems.some(e => compartmentMap[e.item.id] === opt.value)).map(opt => {
-                  const assigned = consolidatedItems.filter(e => compartmentMap[e.item.id] === opt.value);
-                  return (
-                    <div key={opt.value} style={{ padding: "10px 18px", borderBottom: `1px solid ${th.cardBorder}` }}>
-                      <div style={{ fontSize: "12px", fontWeight: 700, color: accent, marginBottom: "4px" }}>{opt.icon} {opt.label} ({assigned.length})</div>
-                      <div style={{ fontSize: "11px", color: th.muted }}>{assigned.map(e => e.item.name).join(", ")}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div style={{ textAlign: "center", marginTop: "16px" }}>
-              <button onClick={() => setActiveView("checklist")} style={{ padding: "12px 30px", background: accent, color: "white", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Ready to Pack →</button>
             </div>
           </div>
         )}
@@ -1671,19 +1651,141 @@ export default function PackingPage({
         {/* ═══════════════════════════════════════════════════════════ */}
         {activeView === "checklist" && (
           <div style={{ padding: "16px" }}>
+            {/* CSS for completion animation */}
+            <style>{`
+              @keyframes checkDraw {
+                0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+                50% { transform: scale(1.2) rotate(0deg); opacity: 1; }
+                100% { transform: scale(1) rotate(0deg); opacity: 1; }
+              }
+              @keyframes fadeUp {
+                0% { opacity: 0; transform: translateY(8px); }
+                100% { opacity: 1; transform: translateY(0); }
+              }
+            `}</style>
+
+            {/* 4e: Completion animation */}
+            {showAllSet && (
+              <div style={{ background: "white", borderRadius: "16px", border: "1px solid #2e7d3230", padding: "24px 18px", marginBottom: "14px", textAlign: "center" }}>
+                <div style={{ animation: "checkDraw 0.5s ease-out forwards", display: "inline-flex", alignItems: "center", justifyContent: "center", width: "48px", height: "48px", borderRadius: "50%", background: "#2e7d32", marginBottom: "10px" }}>
+                  <span style={{ color: "#fff", fontSize: "24px", fontWeight: 900 }}>✓</span>
+                </div>
+                <div style={{ animation: "fadeUp 0.4s ease-out 0.3s both", fontSize: "16px", fontWeight: 800, fontFamily: "'Outfit', sans-serif", color: "#2e7d32" }}>
+                  You're all set!
+                </div>
+                {assignedToBagCount < totalCount && (
+                  <div style={{ animation: "fadeUp 0.4s ease-out 0.6s both", fontSize: "12px", color: th.muted, marginTop: "8px" }}>
+                    Want to organize into bags?{" "}
+                    <span onClick={() => { setEditingBags(true); bagSetupRef.current?.scrollIntoView({ behavior: "smooth" }); }} style={{ color: accent, fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>
+                      Set up your bags ↓
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 4a: Summary stats line */}
+            <div style={{ fontSize: "12px", color: th.muted, marginBottom: "12px", textAlign: "center" }}>
+              {consolidatedItems.length} items · {multiUseCount} multi-use · {memberOutfitGroups.length} outfit groups
+            </div>
 
             {/* Progress bar */}
             <div style={{ background: "white", borderRadius: "12px", border: `1px solid ${th.cardBorder}`, padding: "14px", marginBottom: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                <span style={{ fontSize: "13px", fontWeight: 700 }}>{packedCount === totalCount && totalCount > 0 ? "All packed! 🎉" : `${packedCount} of ${totalCount} packed`}</span>
+                <span style={{ fontSize: "13px", fontWeight: 700 }}>{allPacked ? "All packed! 🎉" : `${packedCount} of ${totalCount} packed`}</span>
                 <span style={{ fontSize: "12px", fontWeight: 700, color: accent }}>{totalCount > 0 ? Math.round((packedCount / totalCount) * 100) : 0}%</span>
               </div>
               <div style={{ height: "8px", background: "#f5f5f5", borderRadius: "4px", overflow: "hidden" }}>
-                <div style={{ height: "100%", background: packedCount === totalCount ? "#2e7d32" : accent, width: `${totalCount > 0 ? (packedCount / totalCount) * 100 : 0}%`, borderRadius: "4px", transition: "width 0.3s" }} />
+                <div style={{ height: "100%", background: allPacked ? "#2e7d32" : accent, width: `${totalCount > 0 ? (packedCount / totalCount) * 100 : 0}%`, borderRadius: "4px", transition: "width 0.3s" }} />
               </div>
             </div>
 
-            {/* Minimalist gauge at top of checklist too */}
+            {/* 4b: Your Bags setup card */}
+            <div ref={bagSetupRef} style={{ background: "white", borderRadius: "16px", border: `1px solid ${th.cardBorder}`, padding: "16px", marginBottom: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>🧳 Your Bags</div>
+                  <div style={{ fontSize: "11px", color: th.muted, marginTop: "2px" }}>Optional — organize where things go</div>
+                </div>
+                <button onClick={() => setEditingBags(!editingBags)} style={{
+                  background: editingBags ? `${accent}18` : "#f5f5f5",
+                  border: `1px solid ${editingBags ? accent : th.cardBorder}`,
+                  borderRadius: "8px", padding: "5px 10px", cursor: "pointer",
+                  color: editingBags ? accent : th.muted, fontSize: "11px", fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+                }}>
+                  {editingBags ? "Done" : "Edit Bags"}
+                </button>
+              </div>
+
+              {/* Bag pills (collapsed state) */}
+              {bags.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {bags.map(bag => {
+                    const bSections = bagSections.filter(s => s.bag_id === bag.id);
+                    const bContainers = bagContainers.filter(c => bSections.some(s => s.id === c.section_id));
+                    return (
+                      <div key={bag.id} style={{ background: "#f8f8f8", border: `1px solid ${th.cardBorder}`, borderRadius: "8px", padding: "6px 10px", fontSize: "12px", fontFamily: "'DM Sans', sans-serif" }}>
+                        <span style={{ marginRight: "4px" }}>{bag.icon}</span>
+                        <span style={{ fontWeight: 600 }}>{bag.name}</span>
+                        <span style={{ color: th.muted, marginLeft: "6px", fontSize: "10px" }}>
+                          {bSections.length}s{bContainers.length > 0 ? ` · ${bContainers.length}c` : ""}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {bags.length === 0 && !editingBags && (
+                <div style={{ fontSize: "12px", color: th.muted, fontStyle: "italic" }}>No bags set up yet</div>
+              )}
+
+              {/* Edit mode (expanded) */}
+              {editingBags && (
+                <div style={{ marginTop: "12px", borderTop: `1px solid ${th.cardBorder}`, paddingTop: "12px" }}>
+                  {bags.map(bag => {
+                    const bSections = bagSections.filter(s => s.bag_id === bag.id).sort((a, b) => a.sort_order - b.sort_order);
+                    return (
+                      <div key={bag.id} style={{ marginBottom: "14px" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 700, fontFamily: "'DM Sans', sans-serif", marginBottom: "4px" }}>{bag.icon} {bag.name}</div>
+                        {bSections.map(section => {
+                          const sContainers = bagContainers.filter(c => c.section_id === section.id).sort((a, b) => a.sort_order - b.sort_order);
+                          return (
+                            <div key={section.id} style={{ marginLeft: "14px", borderLeft: `2px solid ${th.cardBorder}`, paddingLeft: "10px", marginBottom: "4px" }}>
+                              <div style={{ fontSize: "11px", fontWeight: 600, padding: "3px 0", fontFamily: "'DM Sans', sans-serif" }}>{section.name}</div>
+                              {sContainers.map(c => (
+                                <div key={c.id} style={{ marginLeft: "10px", fontSize: "10px", color: th.muted, padding: "2px 0", borderLeft: "2px solid #f0f0f0", paddingLeft: "8px" }}>📦 {c.name}</div>
+                              ))}
+                              {addingContainerToSection === section.id ? (
+                                <div style={{ display: "flex", gap: "4px", marginLeft: "10px", marginTop: "3px" }}>
+                                  <input value={newContainerName} onChange={e => setNewContainerName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { addBagContainer(section.id, newContainerName); setNewContainerName(""); setAddingContainerToSection(null); } if (e.key === "Escape") setAddingContainerToSection(null); }} placeholder="Cube name..." autoFocus style={{ fontSize: "10px", padding: "3px 6px", borderRadius: "4px", border: `1px solid ${th.cardBorder}`, background: "white", flex: 1, fontFamily: "'DM Sans', sans-serif", outline: "none" }} />
+                                  <button onClick={() => { addBagContainer(section.id, newContainerName); setNewContainerName(""); setAddingContainerToSection(null); }} style={{ background: accent, border: "none", borderRadius: "4px", color: "#fff", fontSize: "10px", padding: "3px 8px", cursor: "pointer" }}>Add</button>
+                                </div>
+                              ) : (
+                                <div onClick={() => { setAddingContainerToSection(section.id); setNewContainerName(""); }} style={{ marginLeft: "10px", fontSize: "10px", color: accent, cursor: "pointer", padding: "2px 0" }}>+ cube / pouch</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {addingSectionToBag === bag.id ? (
+                          <div style={{ display: "flex", gap: "4px", marginLeft: "14px", marginTop: "3px" }}>
+                            <input value={newSectionName} onChange={e => setNewSectionName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { addBagSection(bag.id, newSectionName); setNewSectionName(""); setAddingSectionToBag(null); } if (e.key === "Escape") setAddingSectionToBag(null); }} placeholder="Section name..." autoFocus style={{ fontSize: "10px", padding: "3px 6px", borderRadius: "4px", border: `1px solid ${th.cardBorder}`, background: "white", flex: 1, fontFamily: "'DM Sans', sans-serif", outline: "none" }} />
+                            <button onClick={() => { addBagSection(bag.id, newSectionName); setNewSectionName(""); setAddingSectionToBag(null); }} style={{ background: accent, border: "none", borderRadius: "4px", color: "#fff", fontSize: "10px", padding: "3px 8px", cursor: "pointer" }}>Add</button>
+                          </div>
+                        ) : (
+                          <div onClick={() => { setAddingSectionToBag(bag.id); setNewSectionName(""); }} style={{ marginLeft: "14px", fontSize: "10px", color: accent, cursor: "pointer", padding: "3px 0" }}>+ section</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div style={{ display: "flex", gap: "6px", marginTop: "6px", paddingTop: "8px", borderTop: "1px solid #f0f0f0" }}>
+                    <input value={newBagName} onChange={e => setNewBagName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { addBag(newBagName); setNewBagName(""); } }} placeholder="New bag name..." style={{ fontSize: "11px", padding: "5px 8px", borderRadius: "6px", border: `1px solid ${th.cardBorder}`, background: "white", flex: 1, fontFamily: "'DM Sans', sans-serif", outline: "none" }} />
+                    <button onClick={() => { addBag(newBagName); setNewBagName(""); }} style={{ background: accent, border: "none", borderRadius: "6px", color: "#fff", fontSize: "11px", padding: "5px 12px", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap" }}>+ Add Bag</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Minimalist gauge */}
             {packingStyle === "minimalist" && (
               <div style={{ background: "white", borderRadius: "12px", border: `1px solid ${th.cardBorder}`, padding: "10px 14px", marginBottom: "12px", display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ fontSize: "12px" }}>🎒</span>
@@ -1694,7 +1796,7 @@ export default function PackingPage({
               </div>
             )}
 
-            {/* Grouped checklist items */}
+            {/* 4c: Grouped checklist items with bag assignment dropdowns */}
             {Object.entries(groupItems(consolidatedItems)).map(([groupKey, groupEntries]) => {
               const groupPacked = groupEntries.filter(e => e.item.is_packed).length;
               const catInfo = PACKING_CATEGORIES.find(c => c.value === groupKey);
@@ -1713,17 +1815,44 @@ export default function PackingPage({
                   {packingStyle === "spontaneous" ? (
                     <SpontaneousGroup entries={groupEntries} accent={accent} th={th} togglePacked={togglePacked} />
                   ) : (
-                    groupEntries.map((entry, idx) => (
-                      <button key={entry.item.id} onClick={() => togglePacked(entry.item.id)} style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%", padding: "10px 18px", background: entry.item.is_packed ? `${accent}06` : "transparent", border: "none", borderBottom: idx < groupEntries.length - 1 ? `1px solid ${th.cardBorder}` : "none", cursor: "pointer", textAlign: "left" as const, fontFamily: "'DM Sans', sans-serif" }}>
-                        <div style={{ width: "22px", height: "22px", borderRadius: "6px", border: `2px solid ${entry.item.is_packed ? accent : "#d0d0d0"}`, background: entry.item.is_packed ? accent : "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          {entry.item.is_packed && <span style={{ color: "white", fontSize: "12px", fontWeight: 900 }}>✓</span>}
+                    groupEntries.map((entry, idx) => {
+                      const assignment = getAssignment(entry.item.id);
+                      const selectedBag = bags.find(b => b.id === assignment?.bag_id);
+                      const selectedBagSections = selectedBag ? bagSections.filter(s => s.bag_id === selectedBag.id) : [];
+                      const selectedSection = selectedBagSections.find(s => s.id === assignment?.section_id);
+                      const selectedSectionContainers = selectedSection ? bagContainers.filter(c => c.section_id === selectedSection.id) : [];
+                      return (
+                        <div key={entry.item.id} style={{ padding: "8px 18px", borderBottom: idx < groupEntries.length - 1 ? `1px solid ${th.cardBorder}` : "none", background: entry.item.is_packed ? `${accent}04` : "transparent" }}>
+                          {/* Row 1: checkbox + name */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <div onClick={() => togglePacked(entry.item.id)} style={{ width: "22px", height: "22px", borderRadius: "6px", flexShrink: 0, cursor: "pointer", border: `2px solid ${entry.item.is_packed ? accent : "#d0d0d0"}`, background: entry.item.is_packed ? accent : "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              {entry.item.is_packed && <span style={{ color: "white", fontSize: "12px", fontWeight: 900 }}>✓</span>}
+                            </div>
+                            <span style={{ flex: 1, fontSize: "13px", fontWeight: 600, color: entry.item.is_packed ? th.muted : th.text, textDecoration: entry.item.is_packed ? "line-through" : "none", fontFamily: "'DM Sans', sans-serif" }}>{entry.item.name}</span>
+                            {entry.eventCount > 1 && (
+                              <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "8px", background: "#e8f5e9", color: "#2e7d32", fontWeight: 700 }}>↻ ×{entry.eventCount}</span>
+                            )}
+                          </div>
+                          {/* Row 2: bag assignment dropdowns */}
+                          {bags.length > 0 && (
+                            <div style={{ display: "flex", gap: "4px", marginTop: "6px", marginLeft: "32px" }}>
+                              <select value={assignment?.bag_id || ""} onChange={e => assignItemToBag(entry.item.id, "bag_id", e.target.value || null)} style={{ fontSize: "10px", padding: "3px 5px", borderRadius: "4px", border: `1px solid ${th.cardBorder}`, background: "white", color: th.text, cursor: "pointer", minWidth: 0, flex: 1, fontFamily: "'DM Sans', sans-serif" }}>
+                                <option value="">Bag...</option>
+                                {bags.map(b => <option key={b.id} value={b.id}>{b.icon} {b.name}</option>)}
+                              </select>
+                              <select value={assignment?.section_id || ""} onChange={e => assignItemToBag(entry.item.id, "section_id", e.target.value || null)} style={{ fontSize: "10px", padding: "3px 5px", borderRadius: "4px", border: `1px solid ${th.cardBorder}`, background: "white", color: th.text, cursor: "pointer", minWidth: 0, flex: 1, fontFamily: "'DM Sans', sans-serif", opacity: selectedBag ? 1 : 0.35 }} disabled={!selectedBag}>
+                                <option value="">Section...</option>
+                                {selectedBagSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                              </select>
+                              <select value={assignment?.container_id || ""} onChange={e => assignItemToBag(entry.item.id, "container_id", e.target.value || null)} style={{ fontSize: "10px", padding: "3px 5px", borderRadius: "4px", border: `1px solid ${th.cardBorder}`, background: "white", color: th.text, cursor: "pointer", minWidth: 0, flex: 1, fontFamily: "'DM Sans', sans-serif", opacity: selectedSectionContainers.length > 0 ? 1 : 0.35 }} disabled={selectedSectionContainers.length === 0}>
+                                <option value="">Cube...</option>
+                                {selectedSectionContainers.map(c => <option key={c.id} value={c.id}>📦 {c.name}</option>)}
+                              </select>
+                            </div>
+                          )}
                         </div>
-                        <span style={{ flex: 1, fontSize: "13px", fontWeight: 600, color: entry.item.is_packed ? th.muted : th.text, textDecoration: entry.item.is_packed ? "line-through" : "none" }}>{entry.item.name}</span>
-                        {entry.eventCount > 1 && (
-                          <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "8px", background: "#e8f5e9", color: "#2e7d32", fontWeight: 700 }}>↻ ×{entry.eventCount}</span>
-                        )}
-                      </button>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               );
@@ -1748,35 +1877,97 @@ export default function PackingPage({
 
             {/* Overpacker: Just-in-Case Extras */}
             {packingStyle === "overpacker" && (
-
-            <div style={{ marginTop: "16px", background: "white", borderRadius: "16px", border: `1px solid ${th.cardBorder}`, overflow: "hidden" }}>
-              <div style={{ padding: "14px 18px", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "14px" }}>🧳</span>
-                <span style={{ fontSize: "13px", fontWeight: 700 }}>Just-in-Case Extras</span>
-                <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "10px", background: "#fff3e0", color: "#e65100", fontWeight: 700 }}>Backup</span>
+              <div style={{ marginTop: "16px", background: "white", borderRadius: "16px", border: `1px solid ${th.cardBorder}`, overflow: "hidden" }}>
+                <div style={{ padding: "14px 18px", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "14px" }}>🧳</span>
+                  <span style={{ fontSize: "13px", fontWeight: 700 }}>Just-in-Case Extras</span>
+                  <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "10px", background: "#fff3e0", color: "#e65100", fontWeight: 700 }}>Backup</span>
+                </div>
+                {JUST_IN_CASE_EXTRAS.map((extraName, idx) => {
+                  const existingItem = justInCaseItems.find(i => i.name === extraName);
+                  return (
+                    <button key={idx} onClick={async () => {
+                      if (existingItem) {
+                        await togglePacked(existingItem.id);
+                      } else {
+                        await addJustInCaseExtra(extraName);
+                      }
+                    }} style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%", padding: "10px 18px", background: existingItem?.is_packed ? `${accent}06` : "transparent", border: "none", borderBottom: "1px solid #f5f5f5", cursor: "pointer", textAlign: "left" as const, fontFamily: "'DM Sans', sans-serif" }}>
+                      <div style={{ width: "22px", height: "22px", borderRadius: "6px", border: `2px solid ${existingItem?.is_packed ? accent : "#d0d0d0"}`, background: existingItem?.is_packed ? accent : "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {existingItem?.is_packed && <span style={{ color: "white", fontSize: "12px", fontWeight: 900 }}>✓</span>}
+                      </div>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: existingItem?.is_packed ? th.muted : th.text, textDecoration: existingItem?.is_packed ? "line-through" : "none" }}>{extraName}</span>
+                      {!existingItem && <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "8px", background: "#fff3e0", color: "#e65100", fontWeight: 600, marginLeft: "auto" }}>Tap to add</span>}
+                    </button>
+                  );
+                })}
               </div>
-              {JUST_IN_CASE_EXTRAS.map((extraName, idx) => {
-                const existingItem = justInCaseItems.find(i => i.name === extraName);
-                return (
-                  <button key={idx} onClick={async () => {
-                    if (existingItem) {
-                      await togglePacked(existingItem.id);
-                    } else {
-                      await addJustInCaseExtra(extraName);
-                    }
-                  }} style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%", padding: "10px 18px", background: existingItem?.is_packed ? `${accent}06` : "transparent", border: "none", borderBottom: "1px solid #f5f5f5", cursor: "pointer", textAlign: "left" as const, fontFamily: "'DM Sans', sans-serif" }}>
-                    <div style={{ width: "22px", height: "22px", borderRadius: "6px", border: `2px solid ${existingItem?.is_packed ? accent : "#d0d0d0"}`, background: existingItem?.is_packed ? accent : "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {existingItem?.is_packed && <span style={{ color: "white", fontSize: "12px", fontWeight: 900 }}>✓</span>}
-                    </div>
-                    <span style={{ fontSize: "13px", fontWeight: 600, color: existingItem?.is_packed ? th.muted : th.text, textDecoration: existingItem?.is_packed ? "line-through" : "none" }}>{extraName}</span>
-                    {!existingItem && <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "8px", background: "#fff3e0", color: "#e65100", fontWeight: 600, marginLeft: "auto" }}>Tap to add</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+            )}
+
+            {/* 4d: Bag Summary tree */}
+            {(() => {
+              const bagsWithAssignments = bags.map(bag => {
+                const bagItems = consolidatedItems.filter(e => getAssignment(e.item.id)?.bag_id === bag.id);
+                return { ...bag, bagItems, itemCount: bagItems.length };
+              }).filter(b => b.itemCount > 0);
+
+              if (bagsWithAssignments.length === 0) return null;
+
+              return (
+                <div style={{ marginTop: "16px" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 700, fontFamily: "'DM Sans', sans-serif", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span>🗂️</span> Bag Summary
+                  </div>
+                  {bagsWithAssignments.map(bag => {
+                    const bSections = bagSections.filter(s => s.bag_id === bag.id);
+                    return (
+                      <div key={bag.id} style={{ background: "white", borderRadius: "16px", border: `1px solid ${th.cardBorder}`, overflow: "hidden", marginBottom: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
+                        <div style={{ padding: "14px 18px", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "18px" }}>{bag.icon}</span>
+                            <span style={{ fontSize: "13px", fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>{bag.name}</span>
+                          </div>
+                          <span style={{ fontSize: "11px", color: th.muted, fontWeight: 600 }}>{bag.itemCount} items</span>
+                        </div>
+                        {bSections.map(section => {
+                          const sectionItems = bag.bagItems.filter(e => getAssignment(e.item.id)?.section_id === section.id);
+                          if (sectionItems.length === 0) return null;
+                          const sContainers = bagContainers.filter(c => c.section_id === section.id);
+                          return (
+                            <div key={section.id} style={{ padding: "6px 18px 6px 28px", borderBottom: "1px solid #f8f8f8" }}>
+                              <div style={{ fontSize: "11px", fontWeight: 700, color: th.text, marginBottom: "3px", fontFamily: "'DM Sans', sans-serif" }}>{section.name}</div>
+                              {sContainers.map(container => {
+                                const cItems = sectionItems.filter(e => getAssignment(e.item.id)?.container_id === container.id);
+                                if (cItems.length === 0) return null;
+                                return (
+                                  <div key={container.id} style={{ marginLeft: "10px", marginBottom: "3px", borderLeft: "2px solid #f0f0f0", paddingLeft: "8px" }}>
+                                    <div style={{ fontSize: "10px", color: th.muted, fontWeight: 600, marginBottom: "1px" }}>📦 {container.name}</div>
+                                    {cItems.map(e => (
+                                      <div key={e.item.id} style={{ fontSize: "11px", color: th.text, padding: "1px 0", fontFamily: "'DM Sans', sans-serif" }}>{e.item.name}</div>
+                                    ))}
+                                  </div>
+                                );
+                              })}
+                              {sectionItems.filter(e => !getAssignment(e.item.id)?.container_id).map(e => (
+                                <div key={e.item.id} style={{ fontSize: "11px", color: th.text, padding: "1px 0", fontFamily: "'DM Sans', sans-serif" }}>{e.item.name}</div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                        {bag.bagItems.filter(e => !getAssignment(e.item.id)?.section_id).map(e => (
+                          <div key={e.item.id} style={{ padding: "4px 18px", fontSize: "11px", color: th.text, display: "flex", alignItems: "center", gap: "6px", fontFamily: "'DM Sans', sans-serif" }}>
+                            {e.item.name}
+                            <span style={{ fontSize: "9px", color: "#e65100" }}>unsorted</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
 
       {/* Bottom spacer */}
