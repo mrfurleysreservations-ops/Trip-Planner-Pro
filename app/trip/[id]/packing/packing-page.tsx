@@ -757,7 +757,8 @@ export default function PackingPage({
         if (body.code === "NO_API_KEY") {
           throw new Error("NO_API_KEY");
         }
-        throw new Error("Failed to fetch");
+        console.error("Inspo fetch failed:", res.status, body);
+        throw new Error(`API_ERROR_${res.status}`);
       }
       const data = await res.json();
       if (page === 1) {
@@ -770,8 +771,11 @@ export default function PackingPage({
     } catch (err) {
       if (err instanceof Error && err.message === "NO_API_KEY") {
         setInspoError("Outfit inspiration isn't set up yet. The site owner needs to add an Unsplash API key.");
+      } else if (err instanceof Error && err.message.startsWith("API_ERROR_")) {
+        const status = err.message.replace("API_ERROR_", "");
+        setInspoError(`Unsplash returned an error (${status}). Check browser console for details.`);
       } else {
-        setInspoError("Couldn't load images — check that NEXT_PUBLIC_UNSPLASH_ACCESS_KEY is set in .env.local");
+        setInspoError("Couldn't load images. Check your connection and try again.");
       }
     } finally {
       setInspoLoading(false);
@@ -1489,20 +1493,6 @@ export default function PackingPage({
                   </div>
                 )}
 
-                {/* ─── Dress code suggestions ─── */}
-                {currentEventItems.length === 0 && currentEvent.dress_code && (
-                  <div style={{ padding: "12px 18px", borderBottom: `1px solid ${th.cardBorder}`, background: `${accent}04` }}>
-                    <span style={{ fontSize: "11px", fontWeight: 700, color: th.muted, textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>Suggested for {getDressCodeLabel(currentEvent.dress_code)}</span>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
-                      {(getDressCodeEssentials(currentEvent.dress_code, userProfile?.gender || null) || []).map((suggestion, sIdx) => (
-                        <button key={sIdx} onClick={() => addItem(suggestion, inferCategory(suggestion), currentEvent.id)} style={{ padding: "5px 10px", borderRadius: "16px", border: `1px solid ${th.cardBorder}`, background: "white", fontSize: "11px", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: "4px" }}>
-                          <span style={{ fontSize: "10px" }}>{getCatIcon(inferCategory(suggestion))}</span> {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* ─── Items list ─── */}
                 <div>
                   {currentEventItems.map((item, idx) => {
@@ -1540,6 +1530,23 @@ export default function PackingPage({
                     <button onClick={() => setAddingItem(true)} style={{ width: "100%", padding: "12px 18px", background: "none", border: "none", borderTop: currentEventItems.length > 0 ? `1px solid ${th.cardBorder}` : "none", cursor: "pointer", fontSize: "12px", fontWeight: 600, color: accent, fontFamily: "'DM Sans', sans-serif", textAlign: "left" }}>+ Add Item</button>
                   )}
                 </div>
+
+                {/* ─── Dress code suggestions (persistent — below items) ─── */}
+                {currentEvent.dress_code && (
+                  <div style={{ padding: "12px 18px", borderTop: `1px solid ${th.cardBorder}`, background: `${accent}04` }}>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: th.muted, textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>Suggested for {getDressCodeLabel(currentEvent.dress_code)}</span>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
+                      {(getDressCodeEssentials(currentEvent.dress_code, userProfile?.gender || null) || []).map((suggestion, sIdx) => {
+                        const alreadyAdded = currentEventItems.some(i => i.name === suggestion);
+                        return (
+                          <button key={sIdx} onClick={() => { if (!alreadyAdded) addItem(suggestion, inferCategory(suggestion), currentEvent.id); }} disabled={alreadyAdded} style={{ padding: "5px 10px", borderRadius: "16px", border: `1px solid ${alreadyAdded ? "#c8e6c9" : th.cardBorder}`, background: alreadyAdded ? "#e8f5e9" : "white", fontSize: "11px", fontWeight: 600, cursor: alreadyAdded ? "default" : "pointer", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: "4px", color: alreadyAdded ? "#2e7d32" : th.text }}>
+                            <span style={{ fontSize: "10px" }}>{alreadyAdded ? "✓" : getCatIcon(inferCategory(suggestion))}</span> {suggestion}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Overpacker: extra suggestions per event */}
                 {packingStyle === "overpacker" && currentEvent.dress_code && (
@@ -1660,19 +1667,23 @@ export default function PackingPage({
               </div>
             ) : null}
 
-            {/* Spacer for sticky nav */}
-            <div style={{ height: "70px" }} />
+            {/* Spacer for fixed nav */}
+            <div style={{ height: "80px" }} />
+          </div>
+        )}
 
-            {/* Sticky bottom navigation bar */}
-            <div style={{ position: "sticky", bottom: "56px", background: "rgba(255,255,255,0.97)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: `1px solid ${th.cardBorder}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: "10px", zIndex: 10, marginLeft: "-16px", marginRight: "-16px" }}>
-              <button disabled={currentEventIdx === 0} onClick={() => setCurrentEventIdx(prev => Math.max(0, prev - 1))} style={{ padding: "10px 16px", borderRadius: "10px", border: `1px solid ${th.cardBorder}`, background: "white", fontSize: "12px", fontWeight: 700, cursor: currentEventIdx === 0 ? "not-allowed" : "pointer", opacity: currentEventIdx === 0 ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif" }}>← Prev</button>
+        {/* Fixed bottom navigation for walkthrough — outside the scrollable div, same pattern as sticky CTA */}
+        {activeView === "walkthrough" && (
+          <div style={{ position: "fixed", bottom: "56px", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "480px", zIndex: 101, padding: "0 16px 12px", boxSizing: "border-box" as const, background: `linear-gradient(to top, ${th.bg} 70%, transparent)`, pointerEvents: "none" as const }}>
+            <div style={{ pointerEvents: "auto" as const, display: "flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.97)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: "14px", padding: "10px 14px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
+              <button disabled={currentEventIdx === 0} onClick={() => setCurrentEventIdx(prev => Math.max(0, prev - 1))} style={{ padding: "10px 14px", borderRadius: "10px", border: `1px solid ${th.cardBorder}`, background: "white", fontSize: "13px", fontWeight: 700, cursor: currentEventIdx === 0 ? "not-allowed" : "pointer", opacity: currentEventIdx === 0 ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif" }}>← Prev</button>
               <span style={{ flex: 1, textAlign: "center", fontSize: "12px", fontWeight: 700, color: accent, fontFamily: "'DM Sans', sans-serif" }}>Step {currentEventIdx + 1} of {totalSteps}</span>
               {currentEventIdx < totalSteps - 1 ? (
-                <button onClick={() => setCurrentEventIdx(prev => Math.min(totalSteps - 1, prev + 1))} style={{ padding: "10px 16px", borderRadius: "10px", background: accent, color: "white", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                <button onClick={() => setCurrentEventIdx(prev => Math.min(totalSteps - 1, prev + 1))} style={{ padding: "10px 14px", borderRadius: "10px", background: `linear-gradient(135deg, ${accent} 0%, ${th.accent2} 100%)`, color: "white", border: "none", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 2px 10px rgba(232,148,58,0.3)" }}>
                   Next →
                 </button>
               ) : (
-                <button onClick={() => setActiveView("checklist")} style={{ padding: "10px 16px", borderRadius: "10px", background: "#2e7d32", color: "white", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Pack & Go →</button>
+                <button onClick={() => setActiveView("checklist")} style={{ padding: "10px 14px", borderRadius: "10px", background: `linear-gradient(135deg, ${accent} 0%, ${th.accent2} 100%)`, color: "white", border: "none", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 2px 10px rgba(232,148,58,0.3)" }}>Pack & Go →</button>
               )}
             </div>
           </div>
