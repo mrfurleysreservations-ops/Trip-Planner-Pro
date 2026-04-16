@@ -1671,7 +1671,7 @@ export default function ItineraryPage({
                   {/* Day content */}
                   {!isCollapsed && (
                     <div style={{ padding: "8px 0" }}>
-                      {dayEvents.length === 0 && !showAddFormHere && (
+                      {dayEvents.length === 0 && (
                         <div style={{ padding: "20px 16px", color: th.muted, fontSize: 13, fontStyle: "italic" }}>
                           No events planned
                         </div>
