@@ -64,6 +64,29 @@ function formatDate(dateStr: string | null): string {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+// Long-form variant used on the outfit card's day-header strip.
+// Returns e.g. "Friday · April 17" — spelled-out weekday + month so the card
+// reads as an obvious "here's which day you're packing for" label.
+function formatLongDate(dateStr: string | null): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T12:00:00");
+  const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
+  const month = d.toLocaleDateString("en-US", { month: "long" });
+  const day = d.getDate();
+  return `${weekday} · ${month} ${day}`;
+}
+
+// Given an outfit group's date and the trip's start/end dates, return a
+// "Day N of M" label. Falls back to empty when trip dates aren't set yet.
+function tripDayLabel(groupDate: string | null, tripStart: string | null, totalDays: number): string {
+  if (!groupDate || !tripStart || totalDays <= 0) return "";
+  const g = new Date(groupDate + "T12:00:00").getTime();
+  const s = new Date(tripStart + "T12:00:00").getTime();
+  const idx = Math.round((g - s) / (1000 * 60 * 60 * 24)) + 1;
+  if (idx < 1 || idx > totalDays) return ""; // out-of-range → hide rather than lie
+  return `Day ${idx} of ${totalDays}`;
+}
+
 function getTimeSlotLabel(slot: string): string {
   const found = TIME_SLOTS.find(t => t.value === slot);
   return found?.label || slot;
@@ -1505,8 +1528,25 @@ export default function PackingPage({
     const dressCode = group.dress_code || "casual";
     const dcColor = DRESS_CODE_COLORS[dressCode] || accent;
 
+    // Day header: spelled-out weekday + date + trip-day counter so users
+    // scrolling through 27 outfits never have to guess which day a card is for.
+    // Hidden when the group has no date (shouldn't happen in practice but keeps
+    // the card clean for any orphaned groups).
+    const longDate = formatLongDate(group.date);
+    const dayLabel = tripDayLabel(group.date, trip.start_date, tripDays);
+
     return (
       <>
+        {/* Day header strip — warm-neutral divider sitting above the TOD band. */}
+        {longDate && (
+          <div style={{ padding: "6px 14px", background: "#fdf9f1", borderBottom: "1px solid #f0ebe4", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "12px", color: "#2a2a2a" }}>{longDate}</span>
+            {dayLabel && (
+              <span style={{ fontSize: "10px", color: "#b8a68a", letterSpacing: "0.1em", textTransform: "uppercase" as const, fontWeight: 600 }}>{dayLabel}</span>
+            )}
+          </div>
+        )}
+
         {/* Gradient time-of-day band */}
         <div style={{ padding: "9px 16px", background: band.gradient, color: band.textColor, display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" as const }}>
           <span>{band.emoji} {band.label}</span>
