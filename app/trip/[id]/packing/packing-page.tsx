@@ -136,12 +136,63 @@ function weatherForHalf(forecast: ForecastMap, date: string | null, half: DayHal
 }
 
 // ─── Time-of-day band visuals (shared between grouping + outfit cards) ───
-const TOD_BAND_STYLES: Record<TimeOfDay, { gradient: string; textColor: string; chipBg: string; emoji: string; label: string }> = {
-  morning:   { gradient: "linear-gradient(90deg, #f9c876, #e8943a)", textColor: "#fff",    chipBg: "rgba(255,255,255,0.25)",  emoji: "🌅", label: "Morning" },
-  afternoon: { gradient: "linear-gradient(90deg, #e8943a, #c75a2a)", textColor: "#fff",    chipBg: "rgba(255,255,255,0.25)",  emoji: "☀️", label: "Afternoon" },
-  evening:   { gradient: "linear-gradient(90deg, #7c4a9e, #452a66)", textColor: "#fff",    chipBg: "rgba(255,255,255,0.25)",  emoji: "🌆", label: "Evening" },
-  night:     { gradient: "linear-gradient(90deg, #1a2340, #0a1020)", textColor: "#ffd97a", chipBg: "rgba(255,217,122,0.16)", emoji: "🌙", label: "Night" },
+// Colors stored as explicit start/end so multi-TOD groups can blend into a
+// span-aware gradient (e.g. Morning-Afternoon fades sunrise → midday).
+const TOD_BAND_STYLES: Record<TimeOfDay, { startColor: string; endColor: string; textColor: string; chipBg: string; emoji: string; label: string }> = {
+  morning:   { startColor: "#f9c876", endColor: "#e8943a", textColor: "#fff",    chipBg: "rgba(255,255,255,0.25)",  emoji: "🌅", label: "Morning" },
+  afternoon: { startColor: "#e8943a", endColor: "#c75a2a", textColor: "#fff",    chipBg: "rgba(255,255,255,0.25)",  emoji: "☀️", label: "Afternoon" },
+  evening:   { startColor: "#7c4a9e", endColor: "#452a66", textColor: "#fff",    chipBg: "rgba(255,255,255,0.25)",  emoji: "🌆", label: "Evening" },
+  night:     { startColor: "#1a2340", endColor: "#0a1020", textColor: "#ffd97a", chipBg: "rgba(255,217,122,0.16)", emoji: "🌙", label: "Night" },
 };
+
+const TOD_ORDER: TimeOfDay[] = ["morning", "afternoon", "evening", "night"];
+
+// Compute the distinct TODs covered by a group's events, sorted chronologically.
+function spanTodsForEvents(events: ItineraryEvent[], fallback: TimeOfDay): TimeOfDay[] {
+  if (events.length === 0) return [fallback];
+  const present = new Set<TimeOfDay>();
+  for (const e of events) {
+    // Inline bucketing (keeps this a module-scope helper, no closure needed).
+    let tod: TimeOfDay = fallback;
+    if (e.start_time) {
+      const h = parseInt(e.start_time.split(":")[0], 10);
+      if (!isNaN(h)) {
+        if (h >= 5 && h <= 10) tod = "morning";
+        else if (h >= 11 && h <= 15) tod = "afternoon";
+        else if (h >= 16 && h <= 20) tod = "evening";
+        else tod = "night";
+      }
+    } else if (e.time_slot === "morning" || e.time_slot === "afternoon" || e.time_slot === "evening" || e.time_slot === "night") {
+      tod = e.time_slot as TimeOfDay;
+    }
+    present.add(tod);
+  }
+  return TOD_ORDER.filter(t => present.has(t));
+}
+
+// Build a band style (gradient + label + emoji + text colors) for a span of
+// TODs. Blends the earliest TOD's start color → latest TOD's end color, with
+// a mid-stop from any intermediate TOD so 3-TOD spans don't go off-hue.
+function buildBandForSpan(tods: TimeOfDay[]): { gradient: string; label: string; emoji: string; textColor: string; chipBg: string } {
+  const ordered = tods.length > 0 ? tods : (["afternoon"] as TimeOfDay[]);
+  const first = TOD_BAND_STYLES[ordered[0]];
+  const last = TOD_BAND_STYLES[ordered[ordered.length - 1]];
+  const stops: string[] = [first.startColor];
+  if (ordered.length >= 3) {
+    const mid = TOD_BAND_STYLES[ordered[Math.floor(ordered.length / 2)]];
+    stops.push(mid.startColor);
+  }
+  stops.push(last.endColor);
+  const gradient = `linear-gradient(90deg, ${stops.join(", ")})`;
+  const label = ordered.map(t => TOD_BAND_STYLES[t].label).join("-");
+  const emoji = ordered.length === 1 ? first.emoji : `${first.emoji} → ${last.emoji}`;
+  // Night dominates text/chip styling if it's part of the span — else use the
+  // last TOD's (which shares the light-on-dark pattern for morning/afternoon/
+  // evening anyway).
+  const nightInSpan = ordered.includes("night");
+  const styleSource = nightInSpan ? TOD_BAND_STYLES.night : last;
+  return { gradient, label, emoji, textColor: styleSource.textColor, chipBg: styleSource.chipBg };
+}
 
 function getCellFromForecast(forecast: ForecastMap, date: string | null, tod: TimeOfDay): ForecastCell | undefined {
   if (!date) return undefined;
@@ -1296,9 +1347,15 @@ export default function PackingPage({
     rightCounts: string;
   }) {
     const { group, eventsInGroup, rightCounts } = args;
-    const tod = ((group.time_of_day as TimeOfDay) || "afternoon") as TimeOfDay;
-    const band = TOD_BAND_STYLES[tod];
-    const cell = getCellFromForecast(weatherForecast, group.date, tod);
+    const repTod = ((group.time_of_day as TimeOfDay) || "afternoon") as TimeOfDay;
+    // Span label + blended gradient derived from the actual events' times
+    // (falls back to the group's stored TOD when the group is empty).
+    const spanTods = spanTodsForEvents(eventsInGroup, repTod);
+    const band = buildBandForSpan(spanTods);
+    // Weather lookup: prefer the span's first TOD (matches when the outfit
+    // is put on) — falls back to the stored bucket via chipFromGroupMetadata.
+    const weatherLookupTod = spanTods[0] || repTod;
+    const cell = getCellFromForecast(weatherForecast, group.date, weatherLookupTod);
     const chip = chipFromGroupMetadata(group.weather_bucket, cell);
     const dressCode = group.dress_code || "casual";
     const dcColor = DRESS_CODE_COLORS[dressCode] || accent;
