@@ -49,7 +49,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
 
   const [notes, setNotes] = useState<TripNote[]>(initialNotes);
   const [filter, setFilter] = useState<FilterTab>("all");
-  const [scopeFilter, setScopeFilter] = useState<"group" | "personal">("group");
+  const [scopeFilter, setScopeFilter] = useState<"all" | "group" | "personal">("all");
   const [loading, setLoading] = useState(false);
 
   // ─── Modal state ───
@@ -103,7 +103,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
     const note = notes.find((n) => n.id === openNoteId);
     if (note) {
       setFilter("all");
-      setScopeFilter(note.scope);
+      setScopeFilter("all");
       setSelectedNoteId(note.id);
     }
   }, [openNoteId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -121,7 +121,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
 
   // ─── Scope-filtered notes (used for chip counts) ───
   const scopedNotes = useMemo(
-    () => notes.filter((n) => n.scope === scopeFilter),
+    () => (scopeFilter === "all" ? notes : notes.filter((n) => n.scope === scopeFilter)),
     [notes, scopeFilter]
   );
 
@@ -598,7 +598,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
           </button>
         </div>
 
-        {/* Row 2 — Group / Personal pill */}
+        {/* Row 2 — All / Group / Personal pill */}
         <div style={{ display: "flex", justifyContent: "center", padding: "6px 16px 8px" }}>
           <div
             style={{
@@ -608,7 +608,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
               borderRadius: 20,
             }}
           >
-            {(["group", "personal"] as const).map((s) => (
+            {(["all", "group", "personal"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setScopeFilter(s)}
@@ -626,7 +626,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
                   whiteSpace: "nowrap",
                 }}
               >
-                {s === "group" ? "Group" : "Personal"}
+                {s === "all" ? "All" : s === "group" ? "Group" : "Personal"}
               </button>
             ))}
           </div>
@@ -654,6 +654,11 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
               <>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 6, color: th.text }}>No personal notes yet</div>
                 <div>These are only visible to you.</div>
+              </>
+            ) : scopeFilter === "group" && scopedNotes.length === 0 ? (
+              <>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 6, color: th.text }}>No group notes yet</div>
+                <div>Start capturing ideas, restaurants, activities — anything your group discovers while researching the trip.</div>
               </>
             ) : notes.length === 0 ? (
               <>
@@ -740,7 +745,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
             setAddTitle("");
             setAddBody("");
             setAddLink("");
-            setAddScope(scopeFilter); // pre-select scope to match current view
+            setAddScope(scopeFilter === "all" ? "group" : scopeFilter); // pre-select scope to match current view (default to Group when viewing All)
             cancelEdit();
             setShowAddModal(true);
           }}
