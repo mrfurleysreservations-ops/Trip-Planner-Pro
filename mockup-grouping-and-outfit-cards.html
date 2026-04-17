@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Packing — Group + Outfit Cards (Variant D)</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: #efe8e0; color: #1a1a1a; padding: 24px 16px 80px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -0.02em; margin-bottom: 6px; }
+  .sub { color: #6a6a6a; font-size: 14px; margin-bottom: 24px; }
+
+  .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  @media (max-width: 880px) { .columns { grid-template-columns: 1fr; } }
+
+  .col-header { margin-bottom: 14px; }
+  .col-header .tag { display: inline-block; background: #1a1a1a; color: #fff; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; margin-bottom: 8px; }
+  .col-header h2 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 19px; margin-bottom: 4px; }
+  .col-header p { font-size: 12px; color: #6a6a6a; line-height: 1.5; }
+
+  .phone { background: #f5f0eb; border-radius: 24px; padding: 14px 14px 20px; border: 1px solid #e0d8ce; }
+  .day-pill { display: flex; justify-content: space-between; align-items: center; margin: 0 4px 12px; }
+  .day-pill .day { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 14px; }
+  .day-pill .count { font-size: 11px; color: #777; }
+
+  .step-pill { display:flex; align-items:center; justify-content:space-between; margin:0 4px 12px; padding: 8px 12px; background: #fff; border-radius: 12px; border: 1px solid #e8e8e8; }
+  .step-pill .step-label { font-family:'Outfit',sans-serif; font-size:12px; font-weight:700; color:#777; letter-spacing:0.08em; text-transform:uppercase; }
+  .step-pill .step-of { font-size:11px; color:#999; }
+
+  /* Card */
+  .card { background: #fff; border-radius: 16px; border: 1px solid #e8e8e8; overflow: hidden; margin-bottom: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+
+  /* Time-of-day band (shared between both cards) */
+  .tod-band { padding: 9px 16px; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+  .tod-band.morning { background: linear-gradient(90deg, #f9c876, #e8943a); }
+  .tod-band.afternoon { background: linear-gradient(90deg, #e8943a, #c75a2a); }
+  .tod-band.evening { background: linear-gradient(90deg, #7c4a9e, #452a66); }
+  .tod-band.night { background: linear-gradient(90deg, #1a2340, #0a1020); color: #ffd97a; }
+  .tod-band .weather { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; background: rgba(255,255,255,0.25); padding: 3px 9px; border-radius: 12px; }
+  .tod-band.night .weather { background: rgba(255,217,122,0.16); }
+
+  /* Meta row */
+  .meta-row { padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0ebe4; }
+  .meta-row .counts { font-size: 11px; color: #777; }
+  .dresscode { padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .dresscode.casual { background: #e9f5ea; color: #2e7d32; }
+  .dresscode.formal { background: #efe4f5; color: #7b1fa2; }
+  .dresscode.swimwear { background: #e0f3f7; color: #0097a7; }
+  .dresscode.active { background: #fde8e0; color: #c75a2a; }
+
+  /* Timeline event rows (used in both cards) */
+  .evt-tl { padding: 10px 16px; display: flex; align-items: flex-start; position: relative; }
+  .evt-tl::before { content: ''; position: absolute; left: 23px; top: 0; bottom: 0; width: 2px; background: #e8e8e8; }
+  .evt-tl:first-of-type::before { top: 50%; }
+  .evt-tl:last-of-type::before { bottom: 50%; }
+  .evt-tl .evt-dot { width: 10px; height: 10px; border-radius: 50%; background: #e8943a; position: relative; z-index: 1; flex-shrink: 0; margin-left: 7px; margin-right: 14px; margin-top: 4px; border: 2px solid #fff; box-shadow: 0 0 0 1px #e8943a; }
+  .evt-tl .evt-body { flex: 1; min-width: 0; }
+  .evt-tl .evt-title { font-size: 13px; font-weight: 700; }
+  .evt-tl .evt-sub { font-size: 10px; color: #777; margin-top: 2px; }
+  .evt-tl .evt-desc { font-size: 11px; color: #555; margin-top: 4px; line-height: 1.4; }
+
+  /* Action row */
+  .actions { padding: 8px 16px 10px; display: flex; gap: 8px; border-top: 1px solid #f0ebe4; background: #fafafa; }
+  .btn-merge, .btn-split { font-size: 10px; padding: 5px 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; }
+  .btn-merge { background: #fff3e0; color: #e65100; }
+  .btn-split { background: #e3f2fd; color: #1565c0; }
+
+  /* ─── Outfit-specific sections ─── */
+  .section { padding: 12px 16px; border-top: 1px solid #f0ebe4; }
+  .section-label { font-size: 10px; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+
+  .inspo-cta { width:100%; padding:12px 16px; background: rgba(232,148,58,0.06); border: none; border-top:1px solid #f0ebe4; cursor:pointer; font-size:12px; font-weight:700; color:#e8943a; font-family:'DM Sans',sans-serif; text-align:left; }
+
+  .inspo-saved { padding:12px 16px; border-top:1px solid #f0ebe4; display:flex; align-items:center; gap:10px; }
+  .inspo-thumb { width:48px; height:48px; border-radius:8px; background: linear-gradient(135deg,#d8ecdc,#a3d4af); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+  .inspo-saved .lbl { flex:1; }
+  .inspo-saved .lbl .lt { font-size:11px; color:#777; }
+  .inspo-saved .lbl .ll { font-size:12px; font-weight:600; }
+  .inspo-saved .clear { font-size:10px; padding:4px 8px; border-radius:6px; background:#ffebee; color:#c62828; border:none; cursor:pointer; font-weight:700; }
+
+  .item-row { display:flex; align-items:center; gap:10px; padding:10px 16px; border-top:1px solid #f0ebe4; }
+  .item-row .ic { font-size:14px; }
+  .item-row .nm { flex:1; font-size:13px; font-weight:600; }
+  .item-row .cat { font-size:9px; padding:2px 6px; border-radius:8px; background:rgba(232,148,58,0.10); color:#e8943a; font-weight:700; text-transform:uppercase; }
+  .item-row .reuse { font-size:9px; padding:2px 6px; border-radius:8px; background:#e8f5e9; color:#2e7d32; font-weight:700; }
+  .item-row .x { background:none; border:none; color:#e57373; cursor:pointer; font-size:14px; }
+
+  .add-row { width:100%; padding:12px 16px; background:none; border:none; border-top:1px solid #f0ebe4; cursor:pointer; font-size:12px; font-weight:600; color:#e8943a; font-family:'DM Sans',sans-serif; text-align:left; }
+
+  .suggestions { padding:12px 16px; border-top:1px solid #f0ebe4; background: rgba(232,148,58,0.04); }
+  .suggestions .lbl { font-size:11px; font-weight:700; color:#777; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; }
+  .suggestions .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .suggestions .chip { font-size:11px; padding:4px 10px; border-radius:14px; background:#fff; border:1px dashed #e8943a; color:#e8943a; cursor:pointer; }
+
+  /* Bottom CTA */
+  .cta-row { display:flex; gap:8px; margin-top:12px; padding: 0 4px; }
+  .cta-prev { flex:1; padding:14px 18px; font-size:14px; font-weight:700; font-family:'Outfit',sans-serif; color:#e8943a; background:#fff; border:2px solid #e8943a; border-radius:12px; cursor:pointer; }
+  .cta-next { flex:2; padding:14px 18px; font-size:14px; font-weight:700; font-family:'Outfit',sans-serif; color:#fff; background:#e8943a; border:none; border-radius:12px; cursor:pointer; }
+
+  .legend { margin-top: 28px; background: #fff; border-radius: 14px; border: 1px solid #e8e8e8; padding: 16px 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+  .legend h3 { font-family:'Outfit',sans-serif; font-weight:800; font-size:15px; margin-bottom:10px; }
+  .legend ul { margin-left: 20px; font-size: 12px; line-height: 1.7; color:#444; }
+  .legend code { background:#f5f0eb; padding:1px 6px; border-radius:4px; font-size:11px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Group Card + Outfit Card — Variant D</h1>
+  <p class="sub">Same gradient time-of-day band, same weather chip, same dress-code/meta row, same timeline events. The outfit card extends with inspo, items, and suggestions while keeping the visual language intact.</p>
+
+  <div class="columns">
+
+    <!-- ─── LEFT: GROUPING CARD ─── -->
+    <div>
+      <div class="col-header">
+        <span class="tag">Grouping View</span>
+        <h2>Outfit Group Card</h2>
+        <p>What you see when reviewing/merging groups before building outfits. Tap → walks into the outfit card on the right.</p>
+      </div>
+      <div class="phone">
+        <div class="day-pill">
+          <span class="day">Day 2 — Fri, May 22</span>
+          <span class="count">2 of 4</span>
+        </div>
+
+        <!-- Group card -->
+        <div class="card">
+          <div class="tod-band evening">
+            <span>🌆 Evening</span>
+            <span class="weather">☀️ 74°F · clear</span>
+          </div>
+          <div class="meta-row">
+            <span class="dresscode casual">Casual</span>
+            <span class="counts">2 events · 0 items packed</span>
+          </div>
+          <div class="evt-tl">
+            <div class="evt-dot"></div>
+            <div class="evt-body">
+              <div class="evt-title">🍽️ Dinner at The Grey</div>
+              <div class="evt-sub">6:30 PM · Downtown Savannah</div>
+              <div class="evt-desc">Upscale-casual Southern. Jeans + nice top works, no sneakers.</div>
+            </div>
+          </div>
+          <div class="evt-tl">
+            <div class="evt-dot"></div>
+            <div class="evt-body">
+              <div class="evt-title">🍸 Drinks at Artillery</div>
+              <div class="evt-sub">8:30 PM · Bull Street</div>
+              <div class="evt-desc">Cocktail lounge in an old armory. Dim, speakeasy vibe.</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn-merge">Merge with…</button>
+            <button class="btn-split">Split</button>
+          </div>
+        </div>
+
+        <!-- Greyed-out next card -->
+        <div class="card" style="opacity:.5;">
+          <div class="tod-band morning"><span>🌅 Morning</span><span class="weather">☀️ 68°F</span></div>
+          <div class="meta-row"><span class="dresscode active">Active</span><span class="counts">1 event · 0 items</span></div>
+          <div class="evt-tl"><div class="evt-dot"></div><div class="evt-body"><div class="evt-title">🥾 Forsyth Park run</div><div class="evt-sub">7:00 AM</div></div></div>
+        </div>
+
+        <div class="cta-row">
+          <button class="cta-next">Build Outfits →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RIGHT: OUTFIT CARD ─── -->
+    <div>
+      <div class="col-header">
+        <span class="tag">Walkthrough View</span>
+        <h2>Outfit Build Card</h2>
+        <p>Where you actually pack the outfit for the group. Same band/meta/timeline; adds inspo, items, and dress-code suggestions below.</p>
+      </div>
+      <div class="phone">
+        <div class="step-pill">
+          <span class="step-label">Outfit 2 of 4 · Fri, May 22</span>
+          <span class="step-of">●●○○</span>
+        </div>
+
+        <!-- Outfit card -->
+        <div class="card">
+          <div class="tod-band evening">
+            <span>🌆 Evening</span>
+            <span class="weather">☀️ 74°F · clear</span>
+          </div>
+          <div class="meta-row">
+            <span class="dresscode casual">Casual</span>
+            <span class="counts">2 events · 4 items</span>
+          </div>
+
+          <!-- Same timeline events as the group card -->
+          <div class="evt-tl">
+            <div class="evt-dot"></div>
+            <div class="evt-body">
+              <div class="evt-title">🍽️ Dinner at The Grey</div>
+              <div class="evt-sub">6:30 PM · Downtown Savannah</div>
+              <div class="evt-desc">Upscale-casual Southern. Jeans + nice top works, no sneakers.</div>
+            </div>
+          </div>
+          <div class="evt-tl">
+            <div class="evt-dot"></div>
+            <div class="evt-body">
+              <div class="evt-title">🍸 Drinks at Artillery</div>
+              <div class="evt-sub">8:30 PM · Bull Street</div>
+              <div class="evt-desc">Cocktail lounge in an old armory. Dim, speakeasy vibe.</div>
+            </div>
+          </div>
+
+          <!-- Inspo CTA -->
+          <button class="inspo-cta">✨ Get Outfit Inspo</button>
+
+          <!-- Saved inspo -->
+          <div class="inspo-saved">
+            <div class="inspo-thumb">👗</div>
+            <div class="lbl">
+              <div class="lt">Outfit Inspo</div>
+              <div class="ll">Linen blazer + dark jeans</div>
+            </div>
+            <button class="clear">Clear</button>
+          </div>
+
+          <!-- Items list -->
+          <div class="item-row">
+            <span class="ic">👔</span>
+            <span class="nm">Linen blazer</span>
+            <span class="cat">Top</span>
+            <button class="x">✕</button>
+          </div>
+          <div class="item-row">
+            <span class="ic">👖</span>
+            <span class="nm">Dark wash jeans</span>
+            <span class="cat">Bottom</span>
+            <span class="reuse">↻ ×2</span>
+            <button class="x">✕</button>
+          </div>
+          <div class="item-row">
+            <span class="ic">👟</span>
+            <span class="nm">Leather loafers</span>
+            <span class="cat">Shoes</span>
+            <button class="x">✕</button>
+          </div>
+          <div class="item-row">
+            <span class="ic">⌚</span>
+            <span class="nm">Silver watch</span>
+            <span class="cat">Accessory</span>
+            <button class="x">✕</button>
+          </div>
+
+          <button class="add-row">+ Add Item</button>
+
+          <!-- Suggestions -->
+          <div class="suggestions">
+            <div class="lbl">Suggested for Casual</div>
+            <div class="chips">
+              <span class="chip">+ Light jacket</span>
+              <span class="chip">+ Belt</span>
+              <span class="chip">+ Sunglasses</span>
+              <span class="chip">+ Crossbody bag</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cta-row">
+          <button class="cta-prev">← Prev</button>
+          <button class="cta-next">Next Outfit →</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Night example to show TOD variation -->
+  <h1 style="margin-top:40px; font-size:22px;">Night example — same template, different TOD band</h1>
+  <p class="sub">Confirms the gradient adapts cleanly across all four time-of-day buckets.</p>
+  <div class="columns">
+    <div>
+      <div class="phone">
+        <div class="day-pill"><span class="day">Day 3 — Sat, May 23</span><span class="count">4 of 4</span></div>
+        <div class="card">
+          <div class="tod-band night"><span>🌙 Night</span><span class="weather">🌧️ 62°F · rain</span></div>
+          <div class="meta-row"><span class="dresscode formal">Formal</span><span class="counts">1 event · 0 items</span></div>
+          <div class="evt-tl"><div class="evt-dot"></div><div class="evt-body"><div class="evt-title">🥂 Speakeasy gala</div><div class="evt-sub">10:00 PM · Forsyth Mansion</div><div class="evt-desc">Black tie. Coat check available — bring an umbrella.</div></div></div>
+          <div class="actions"><button class="btn-merge">Merge with…</button></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="step-pill"><span class="step-label">Outfit 4 of 4 · Sat, May 23</span><span class="step-of">●●●●</span></div>
+        <div class="card">
+          <div class="tod-band night"><span>🌙 Night</span><span class="weather">🌧️ 62°F · rain</span></div>
+          <div class="meta-row"><span class="dresscode formal">Formal</span><span class="counts">1 event · 6 items</span></div>
+          <div class="evt-tl"><div class="evt-dot"></div><div class="evt-body"><div class="evt-title">🥂 Speakeasy gala</div><div class="evt-sub">10:00 PM · Forsyth Mansion</div><div class="evt-desc">Black tie. Coat check available — bring an umbrella.</div></div></div>
+          <button class="inspo-cta">✨ Get Outfit Inspo</button>
+          <div class="item-row"><span class="ic">🤵</span><span class="nm">Black tuxedo</span><span class="cat">Suit</span><button class="x">✕</button></div>
+          <div class="item-row"><span class="ic">👞</span><span class="nm">Patent oxfords</span><span class="cat">Shoes</span><button class="x">✕</button></div>
+          <div class="item-row"><span class="ic">🎀</span><span class="nm">Bow tie</span><span class="cat">Accessory</span><button class="x">✕</button></div>
+          <div class="item-row"><span class="ic">☂️</span><span class="nm">Umbrella</span><span class="cat">Gear</span><button class="x">✕</button></div>
+          <button class="add-row">+ Add Item</button>
+          <div class="suggestions"><div class="lbl">Suggested for Formal</div><div class="chips"><span class="chip">+ Cufflinks</span><span class="chip">+ Pocket square</span><span class="chip">+ Dress socks</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <h3>What stays consistent across both cards</h3>
+    <ul>
+      <li><strong>Time-of-day gradient band</strong> — identical color, height, typography, weather chip placement.</li>
+      <li><strong>Meta row</strong> — dress-code pill on the left, contextual counts on the right (events+items packed for groups; events+items count for outfits).</li>
+      <li><strong>Timeline event rows</strong> — same dot/line treatment, same icon-prefixed title, same sub-line and description style. The outfit card shows the exact same events as the group card it came from.</li>
+      <li><strong>Card shell</strong> — same <code>16px</code> radius, same border, same shadow.</li>
+    </ul>
+    <h3 style="margin-top:14px;">What's added to the outfit card</h3>
+    <ul>
+      <li><strong>Inspo CTA + saved inspo</strong> — sit just under the timeline.</li>
+      <li><strong>Item rows</strong> — packed items with category chips, reuse pills, and delete.</li>
+      <li><strong>Suggestion chips</strong> — dress-code essentials, dashed border to differentiate from packed items.</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trip Planner Pro — Sticky Layout + Notes Scope Mockup</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #d0d4dc; }
+  body { display: flex; justify-content: center; gap: 24px; padding: 24px 0 40px; min-height: 100vh; flex-wrap: wrap; }
+
+  /* ─── Phone frame ─── */
+  .phone {
+    width: 390px;
+    height: 780px;
+    background: #f2f8fa;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-label {
+    position: absolute; top: -22px; left: 0; right: 0;
+    text-align: center; color: #333; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  /* ─── Sticky top region ─── */
+  .sticky-top {
+    position: sticky; top: 0; z-index: 10;
+    background: #e4f0f4;
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 10px;
+  }
+  .back { background: transparent; border: none; font-size: 20px; cursor: pointer; color: #2188a8; padding: 4px 8px; }
+  .page-title { font-size: 20px; font-weight: 800; color: #1a1a1a; margin: 0; }
+  .hdr-actions { display: flex; gap: 6px; }
+  .hdr-btn {
+    background: rgba(33,136,168,0.1); border: none; color: #2188a8;
+    padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+
+  /* Pill toggle */
+  .pill-bar {
+    display: flex; justify-content: center; padding: 8px 16px 12px;
+  }
+  .pill {
+    display: inline-flex; background: rgba(0,0,0,0.06); border-radius: 999px; padding: 4px;
+  }
+  .pill button {
+    background: transparent; border: none; padding: 7px 18px; border-radius: 999px;
+    font-size: 13px; font-weight: 600; color: #555; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pill button.active { background: #fff; color: #2188a8; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+  /* Day nav (itinerary only) */
+  .day-nav {
+    display: flex; gap: 6px; padding: 4px 16px 12px; overflow-x: auto; scrollbar-width: none;
+  }
+  .day-nav::-webkit-scrollbar { display: none; }
+  .day-chip {
+    flex-shrink: 0; padding: 6px 12px; border-radius: 999px;
+    background: rgba(0,0,0,0.05); font-size: 12px; font-weight: 600; color: #666; border: none; cursor: pointer;
+    white-space: nowrap;
+  }
+  .day-chip.active { background: #2188a8; color: #fff; }
+
+  /* Scrollable body */
+  .body {
+    flex: 1; overflow-y: auto; padding: 14px 16px 80px;
+  }
+
+  /* Cards */
+  .card {
+    background: rgba(255,255,255,0.7); border: 1px solid rgba(33,136,168,0.15);
+    border-radius: 14px; padding: 14px; margin-bottom: 10px;
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+  }
+  .card h3 { margin: 0 0 4px; font-size: 15px; color: #1a1a1a; }
+  .card p { margin: 0; font-size: 13px; color: #666; line-height: 1.4; }
+  .card .meta { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .badge.group { background: rgba(33,136,168,0.15); color: #2188a8; }
+  .badge.personal { background: rgba(156,39,176,0.15); color: #7b1fa2; }
+  .badge.idea { background: rgba(33,136,168,0.1); color: #2188a8; }
+  .badge.finalized { background: #d4edda; color: #155724; }
+  .author { font-size: 11px; color: #999; }
+
+  /* FAB */
+  .fab {
+    position: absolute; bottom: 80px; right: 16px; z-index: 5;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: #2188a8; color: #fff; border: none; font-size: 24px; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(33,136,168,0.4);
+  }
+
+  /* Bottom sub-nav */
+  .sub-nav {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 56px;
+    background: rgba(255,255,255,0.9); backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0,0,0,0.08);
+    display: flex; align-items: center; justify-content: space-around;
+    z-index: 100;
+  }
+  .sub-nav button {
+    background: transparent; border: none; font-size: 10px; font-weight: 600;
+    color: #999; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer;
+  }
+  .sub-nav button.active { color: #2188a8; }
+  .sub-nav button span:first-child { font-size: 18px; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.4); z-index: 200;
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: #fff; width: 100%; max-height: 85%;
+    border-radius: 20px 20px 0 0; padding: 20px; overflow-y: auto;
+    animation: slideUp 0.25s ease-out;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal h2 { margin: 0 0 16px; font-size: 18px; }
+  .modal label { display: block; font-size: 12px; font-weight: 700; color: #555; margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .modal input, .modal textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; font-family: inherit;
+  }
+  .modal textarea { min-height: 80px; resize: vertical; }
+  .scope-chooser { display: flex; gap: 8px; }
+  .scope-chooser button {
+    flex: 1; padding: 12px; border: 2px solid #e0e0e0; background: #fff; border-radius: 12px;
+    font-size: 13px; font-weight: 600; cursor: pointer; color: #666;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .scope-chooser button.active[data-scope="group"] { border-color: #2188a8; color: #2188a8; background: rgba(33,136,168,0.05); }
+  .scope-chooser button.active[data-scope="personal"] { border-color: #7b1fa2; color: #7b1fa2; background: rgba(156,39,176,0.05); }
+  .scope-chooser .icon { font-size: 22px; }
+  .scope-chooser .sub { font-size: 10px; color: #999; font-weight: 500; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+  .modal-actions button {
+    flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .btn-cancel { background: #eee; color: #666; }
+  .btn-save { background: #2188a8; color: #fff; }
+
+  /* Itinerary event card */
+  .event {
+    display: flex; gap: 12px; background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(33,136,168,0.15); border-radius: 14px;
+    padding: 12px; margin-bottom: 10px;
+  }
+  .event-time { font-size: 12px; font-weight: 700; color: #2188a8; min-width: 60px; }
+  .event-body h4 { margin: 0 0 4px; font-size: 14px; }
+  .event-body p { margin: 0; font-size: 12px; color: #666; }
+
+  /* Scroll hint */
+  .scroll-hint {
+    position: absolute; top: 50%; left: -36px; transform: rotate(-90deg); transform-origin: center;
+    color: #666; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+    opacity: 0.6;
+  }
+  @media (max-width: 900px) { .scroll-hint { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- ───────── NOTES TAB MOCKUP ───────── -->
+<div style="position: relative;">
+  <div class="phone-label">Notes — Group view</div>
+  <div class="scroll-hint">↑ Sticky header + pill · body scrolls ↓</div>
+  <div class="phone">
+    <div class="sticky-top">
+      <div class="page-header">
+        <button class="back">←</button>
+        <h1 class="page-title">Notes</h1>
+        <div class="hdr-actions">
+          <button class="hdr-btn">Import</button>
+        </div>
+      </div>
+      <div class="pill-bar">
+        <div class="pill">
+          <button class="active" onclick="toggleScope(this,'group')">Group</button>
+          <button onclick="toggleScope(this,'personal')">Personal</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="body" id="notes-body-group">
+      <div class="card">
+        <h3>Snorkeling tour — Molokini</h3>
+        <p>Tom's uncle says go with Four Winds, they let you jump off the boat.</p>
+        <div class="meta">
+          <span class="badge group">Group</span>
+          <span class="badge idea">Idea</span>
+          <span class="author">· Sarah</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Dinner at Mama's Fish House</h3>
+        <p>Book 60 days out. Sunset reservation = magic.</p>
+        <div class="meta">
+          <span class="badge group">Group</span>
+          <span class="badge finalized">Finalized</span>
+          <span class="author">· Joe</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Road to Hana stops</h3>
+        <p>Twin Falls, Wailua Valley lookout, black sand beach, back by 5pm.</p>
+        <div class="meta">
+          <span class="badge group">Group</span>
+          <span class="badge idea">Idea</span>
+          <span class="author">· Mike</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Luau options</h3>
+        <p>Old Lahaina vs Feast at Lele — Lele is more expensive but smaller groups.</p>
+        <div class="meta">
+          <span class="badge group">Group</span>
+          <span class="badge idea">Idea</span>
+          <span class="author">· Sarah</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Haleakalā sunrise?</h3>
+        <p>Kids would hate the 3am wake-up. Skip.</p>
+        <div class="meta">
+          <span class="badge group">Group</span>
+          <span class="badge idea">Idea</span>
+          <span class="author">· Joe</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Shave ice — Ululani's</h3>
+        <p>Multiple locations. Haleakala snowcap is the pro order.</p>
+        <div class="meta">
+          <span class="badge group">Group</span>
+          <span class="badge idea">Idea</span>
+          <span class="author">· Mike</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="body" id="notes-body-personal" style="display:none;">
+      <div style="background: rgba(156,39,176,0.06); border: 1px solid rgba(156,39,176,0.15); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-size: 12px; color: #7b1fa2;">
+        🔒 Only you can see your personal notes.
+      </div>
+      <div class="card">
+        <h3>Gift ideas for Sarah's bday</h3>
+        <p>She keeps eyeing that Patagonia fleece. Check REI before we leave.</p>
+        <div class="meta">
+          <span class="badge personal">Personal</span>
+          <span class="author">· just you</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Remember to check passports</h3>
+        <p>Kids' passports expire in Sept — might need to renew before any intl trips.</p>
+        <div class="meta">
+          <span class="badge personal">Personal</span>
+          <span class="author">· just you</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Questions for the rental agent</h3>
+        <p>- Boogie boards included?<br>- Parking for 2 cars?<br>- Beach chairs provided?</p>
+        <div class="meta">
+          <span class="badge personal">Personal</span>
+          <span class="author">· just you</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="fab" onclick="openModal()">+</button>
+
+    <div class="sub-nav">
+      <button><span>🗓</span><span>Itinerary</span></button>
+      <button><span>💸</span><span>Expenses</span></button>
+      <button><span>🎒</span><span>Packing</span></button>
+      <button class="active"><span>📝</span><span>Notes</span></button>
+      <button><span>🍽</span><span>Meals</span></button>
+      <button><span>👥</span><span>Group</span></button>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-backdrop" id="modal">
+      <div class="modal">
+        <h2>New note</h2>
+
+        <label>Scope</label>
+        <div class="scope-chooser">
+          <button class="active" data-scope="group" onclick="pickScope(this,'group')">
+            <span class="icon">👥</span>
+            <span>Group</span>
+            <span class="sub">Everyone sees it</span>
+          </button>
+          <button data-scope="personal" onclick="pickScope(this,'personal')">
+            <span class="icon">🔒</span>
+            <span>Personal</span>
+            <span class="sub">Only you see it</span>
+          </button>
+        </div>
+
+        <label>Title</label>
+        <input type="text" placeholder="e.g. Dinner at Mama's Fish House" />
+
+        <label>Notes</label>
+        <textarea placeholder="Details, links, what to remember..."></textarea>
+
+        <label>Link (optional)</label>
+        <input type="text" placeholder="https://..." />
+
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+          <button class="btn-save" onclick="closeModal()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───────── ITINERARY STICKY MOCKUP ───────── -->
+<div style="position: relative;">
+  <div class="phone-label">Itinerary — sticky example</div>
+  <div class="phone">
+    <div class="sticky-top">
+      <div class="page-header">
+        <button class="back">←</button>
+        <h1 class="page-title">Itinerary</h1>
+        <div class="hdr-actions">
+          <button class="hdr-btn">Export</button>
+        </div>
+      </div>
+      <div class="pill-bar">
+        <div class="pill">
+          <button class="active">Calendar</button>
+          <button>List</button>
+        </div>
+      </div>
+      <div class="day-nav">
+        <button class="day-chip">Mon 6/8</button>
+        <button class="day-chip active">Tue 6/9</button>
+        <button class="day-chip">Wed 6/10</button>
+        <button class="day-chip">Thu 6/11</button>
+        <button class="day-chip">Fri 6/12</button>
+        <button class="day-chip">Sat 6/13</button>
+      </div>
+    </div>
+
+    <div class="body">
+      <div style="font-size: 11px; font-weight: 700; color: #2188a8; text-transform: uppercase; letter-spacing: 0.08em; margin: 4px 0 8px;">Morning</div>
+      <div class="event"><div class="event-time">7:30 AM</div><div class="event-body"><h4>Breakfast at condo</h4><p>Coffee + pastries from Sugar Beach Bake Shop</p></div></div>
+      <div class="event"><div class="event-time">9:00 AM</div><div class="event-body"><h4>Molokini snorkel tour</h4><p>Four Winds — meet at Maalaea Harbor slip 80</p></div></div>
+
+      <div style="font-size: 11px; font-weight: 700; color: #2188a8; text-transform: uppercase; letter-spacing: 0.08em; margin: 16px 0 8px;">Afternoon</div>
+      <div class="event"><div class="event-time">1:00 PM</div><div class="event-body"><h4>Lunch — Coconut's Fish Café</h4><p>Fish tacos. Casual.</p></div></div>
+      <div class="event"><div class="event-time">3:00 PM</div><div class="event-body"><h4>Beach time — Wailea</h4><p>Bring boogie boards and reef-safe sunscreen</p></div></div>
+
+      <div style="font-size: 11px; font-weight: 700; color: #2188a8; text-transform: uppercase; letter-spacing: 0.08em; margin: 16px 0 8px;">Evening</div>
+      <div class="event"><div class="event-time">6:30 PM</div><div class="event-body"><h4>Dinner — Mama's Fish House</h4><p>Dress code: resort casual. Reservation confirmed.</p></div></div>
+      <div class="event"><div class="event-time">9:00 PM</div><div class="event-body"><h4>Stargazing on lanai</h4><p>Optional. Kids probably asleep.</p></div></div>
+      <div class="event"><div class="event-time">—</div><div class="event-body"><h4>Filler event 1</h4><p>Scroll down — header stays put.</p></div></div>
+      <div class="event"><div class="event-time">—</div><div class="event-body"><h4>Filler event 2</h4><p>Pill stays put too.</p></div></div>
+      <div class="event"><div class="event-time">—</div><div class="event-body"><h4>Filler event 3</h4><p>Day nav stays put.</p></div></div>
+      <div class="event"><div class="event-time">—</div><div class="event-body"><h4>Filler event 4</h4><p>Keep scrolling…</p></div></div>
+    </div>
+
+    <div class="sub-nav">
+      <button class="active"><span>🗓</span><span>Itinerary</span></button>
+      <button><span>💸</span><span>Expenses</span></button>
+      <button><span>🎒</span><span>Packing</span></button>
+      <button><span>📝</span><span>Notes</span></button>
+      <button><span>🍽</span><span>Meals</span></button>
+      <button><span>👥</span><span>Group</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleScope(btn, scope) {
+    document.querySelectorAll('.pill button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('notes-body-group').style.display = scope === 'group' ? 'block' : 'none';
+    document.getElementById('notes-body-personal').style.display = scope === 'personal' ? 'block' : 'none';
+  }
+  function openModal() { document.getElementById('modal').classList.add('open'); }
+  function closeModal() { document.getElementById('modal').classList.remove('open'); }
+  function pickScope(btn, scope) {
+    document.querySelectorAll('.scope-chooser button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

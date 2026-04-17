@@ -88,7 +88,52 @@ function getEventTimeOfDay(evt: ItineraryEvent): TimeOfDay {
   return "afternoon";
 }
 
-const HARD_SPLIT_DRESS_CODES = new Set(["swimwear", "formal", "active"]);
+// ─── Outfit tier + half-day grouping (grouping V2.1) ───
+// Real packing mirrors real outfit changes. Casual + smart_casual collapse into
+// one "casual family" tier that carries you through the day. Swim/active/formal
+// always split because they're genuinely different outfits. Day splits into
+// Daytime (morning+afternoon) vs Evening (evening+night) since most people
+// change before dinner.
+type OutfitTier = "casual" | "swim" | "active" | "formal";
+type DayHalf = "day" | "eve";
+
+function tierOf(dressCode: string | null | undefined): OutfitTier {
+  if (dressCode === "swimwear") return "swim";
+  if (dressCode === "active") return "active";
+  if (dressCode === "formal") return "formal";
+  return "casual"; // casual, smart_casual, business_casual, outdoor, business, null
+}
+
+function halfOf(tod: TimeOfDay): DayHalf {
+  return (tod === "morning" || tod === "afternoon") ? "day" : "eve";
+}
+
+function halfLabel(half: DayHalf): string {
+  return half === "day" ? "Daytime" : "Evening";
+}
+
+// Severity ranking: rain/snow rank highest so they dominate a half if present.
+const WEATHER_SEVERITY: Record<WeatherBucket, number> = {
+  snowy: 7, rainy: 6, cold: 5, hot_sunny: 4, warm_sunny: 3, mild: 2, unknown: 1,
+};
+
+// For a given (date, half), pick the most "severe" weather bucket across the
+// TODs that fall inside that half. Used so a daytime-casual group gets one
+// coherent weather bucket even though it spans morning + afternoon.
+function weatherForHalf(forecast: ForecastMap, date: string | null, half: DayHalf): WeatherBucket {
+  if (!date) return "unknown";
+  const day = forecast[date];
+  if (!day) return "unknown";
+  const tods: TimeOfDay[] = half === "day" ? ["morning", "afternoon"] : ["evening", "night"];
+  let best: WeatherBucket = "unknown";
+  for (const t of tods) {
+    const cell = day[t] || day["all_day"];
+    if (!cell) continue;
+    const bucket = (cell.bucket || "unknown") as WeatherBucket;
+    if ((WEATHER_SEVERITY[bucket] || 0) > (WEATHER_SEVERITY[best] || 0)) best = bucket;
+  }
+  return best;
+}
 
 // ─── Time-of-day band visuals (shared between grouping + outfit cards) ───
 const TOD_BAND_STYLES: Record<TimeOfDay, { gradient: string; textColor: string; chipBg: string; emoji: string; label: string }> = {
@@ -388,11 +433,30 @@ export default function PackingPage({
   const tripNights = Math.max(1, tripDays - 1);
 
   // ─── Outfit Groups: computed data for active member ───
-  const memberOutfitGroups = useMemo(() =>
-    ofGroups.filter(g => g.trip_member_id === activeMemberId).sort((a, b) => {
+  // Sort by (date, earliest event start_time in that group) so groups appear in
+  // the real chronological order the user will wear them. Falls back to
+  // sort_order when times tie or are missing.
+  const memberOutfitGroups = useMemo(() => {
+    const groupAnchor = new Map<string, string>();
+    ofGroups.forEach(g => {
+      if (g.trip_member_id !== activeMemberId) return;
+      const eventIds = new Set(
+        ofGroupEvents.filter(ge => ge.outfit_group_id === g.id).map(ge => ge.event_id)
+      );
+      const starts = activeMemberEvents
+        .filter(e => eventIds.has(e.id))
+        .map(e => e.start_time || "99:99")
+        .sort();
+      groupAnchor.set(g.id, starts[0] || "99:99");
+    });
+    return ofGroups.filter(g => g.trip_member_id === activeMemberId).sort((a, b) => {
       if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      const at = groupAnchor.get(a.id) || "99:99";
+      const bt = groupAnchor.get(b.id) || "99:99";
+      if (at !== bt) return at < bt ? -1 : 1;
       return a.sort_order - b.sort_order;
-    }), [ofGroups, activeMemberId]);
+    });
+  }, [ofGroups, ofGroupEvents, activeMemberEvents, activeMemberId]);
 
   // Group events by date for the grouping UI
   const eventsByDate = useMemo(() => {
@@ -426,54 +490,91 @@ export default function PackingPage({
       // Incremental: only group events that aren't in any group yet
       if (ungroupedEvents.length === 0) return;
 
-      // Build composite-key buckets (date + TOD + weather + dress code).
-      // Hard-split codes (swimwear/formal/active) get their own group per event.
+      // Composite-key buckets: (date, tier, day-half, weather).
+      //   tier: casual/swim/active/formal — casual + smart_casual collapse into
+      //         the "casual family" because you wear effectively the same outfit.
+      //   half: "day" (morning+afternoon) or "eve" (evening+night) — most people
+      //         change once before dinner.
+      // Hard-split tiers (swim/active/formal) still get their own group per event
+      // because they're genuinely separate outfits.
       const buckets = new Map<string, ItineraryEvent[]>();
-      const bucketMeta = new Map<string, { date: string; tod: TimeOfDay; weather: WeatherBucket; dressCode: string }>();
+      const bucketMeta = new Map<string, {
+        date: string;
+        tier: OutfitTier;
+        half: DayHalf;
+        weather: WeatherBucket;
+        dressCode: string;
+      }>();
 
       ungroupedEvents.forEach(evt => {
         const dressCode = evt.dress_code || "casual";
+        const tier = tierOf(dressCode);
         const tod = getEventTimeOfDay(evt);
-        const cell = getCellFromForecast(weatherForecast, evt.date, tod);
-        const weather: WeatherBucket = cell?.bucket || "unknown";
-        const isHardSplit = HARD_SPLIT_DRESS_CODES.has(dressCode);
+        const half = halfOf(tod);
+        const weather = weatherForHalf(weatherForecast, evt.date, half);
+        const isHardSplit = tier !== "casual";
         const keyTail = isHardSplit ? `__${evt.id}` : "";
-        const key = `${evt.date}__${tod}__${weather}__${dressCode}${keyTail}`;
+        const key = `${evt.date}__${tier}__${half}__${weather}${keyTail}`;
         const bucket = buckets.get(key) || [];
         bucket.push(evt);
         buckets.set(key, bucket);
         if (!bucketMeta.has(key)) {
-          bucketMeta.set(key, { date: evt.date!, tod, weather, dressCode });
+          bucketMeta.set(key, { date: evt.date!, tier, half, weather, dressCode });
         }
+      });
+
+      // Sort buckets by their earliest event so newly created groups get
+      // sort_order values in chronological order (belt + suspenders with the
+      // chronological sort in memberOutfitGroups).
+      const orderedBuckets = [...buckets.entries()].sort((a, b) => {
+        const aEarliest = a[1].map(e => e.start_time || "99:99").sort()[0] || "99:99";
+        const bEarliest = b[1].map(e => e.start_time || "99:99").sort()[0] || "99:99";
+        const metaA = bucketMeta.get(a[0])!;
+        const metaB = bucketMeta.get(b[0])!;
+        if (metaA.date !== metaB.date) return metaA.date < metaB.date ? -1 : 1;
+        return aEarliest < bEarliest ? -1 : aEarliest > bEarliest ? 1 : 0;
       });
 
       const newGroups: OutfitGroup[] = [];
       const newGroupEvents: OutfitGroupEvent[] = [];
       let sortOrder = memberOutfitGroups.length;
 
-      // Helper: find an existing group that matches this bucket, with
-      // unknown weather acting as a wildcard on either side.
-      const findExistingMatch = (date: string, tod: TimeOfDay, weather: WeatherBucket, dressCode: string) => {
-        if (HARD_SPLIT_DRESS_CODES.has(dressCode)) return undefined; // never merge into existing
+      // Find an existing group that matches this bucket; unknown weather is a
+      // wildcard on either side so weather arriving after grouping still fits.
+      const findExistingMatch = (date: string, tier: OutfitTier, half: DayHalf, weather: WeatherBucket) => {
+        if (tier !== "casual") return undefined; // hard-split tiers never merge
         return memberOutfitGroups.find(g => {
           if (g.date !== date) return false;
-          if ((g.dress_code || "casual") !== dressCode) return false;
-          if ((g.time_of_day || "afternoon") !== tod) return false;
+          if (tierOf(g.dress_code) !== tier) return false;
+          const gTod = (g.time_of_day || "afternoon") as TimeOfDay;
+          if (halfOf(gTod) !== half) return false;
           const gw = (g.weather_bucket || "unknown") as WeatherBucket;
-          // Wildcard: unknown matches anything on the same date/TOD/dress
           if (gw === "unknown" || weather === "unknown") return true;
           return gw === weather;
         });
       };
 
-      for (const [key, bucketEvents] of buckets) {
-        const meta = bucketMeta.get(key)!;
-        const { date, tod, weather, dressCode } = meta;
+      const labelFor = (tier: OutfitTier, half: DayHalf, dressCode: string): string => {
+        if (tier === "swim") return "Pool / Swim";
+        if (tier === "active") return "Active";
+        if (tier === "formal") return "Formal";
+        return `${halfLabel(half)} · ${getDressCodeLabel(dressCode) || "Casual"}`;
+      };
 
-        const existingGroup = findExistingMatch(date, tod, weather, dressCode);
+      // Representative TOD stored on the group (for card band styling). Casual
+      // groups span a whole half-day, so pick the half's primary TOD.
+      const repTodFor = (tier: OutfitTier, half: DayHalf, firstTod: TimeOfDay): TimeOfDay => {
+        if (tier !== "casual") return firstTod;
+        return half === "day" ? "afternoon" : "evening";
+      };
+
+      for (const [key, bucketEvents] of orderedBuckets) {
+        const meta = bucketMeta.get(key)!;
+        const { date, tier, half, weather, dressCode } = meta;
+
+        const existingGroup = findExistingMatch(date, tier, half, weather);
 
         if (existingGroup) {
-          // Add events to the existing group
           for (const evt of bucketEvents) {
             const { data: ge } = await supabase.from("outfit_group_events").insert({
               outfit_group_id: existingGroup.id,
@@ -482,15 +583,29 @@ export default function PackingPage({
             if (ge) newGroupEvents.push(ge as OutfitGroupEvent);
           }
         } else {
-          // Create a new group with the new metadata
-          const label = `${getDressCodeLabel(dressCode)} · ${TOD_BAND_STYLES[tod].label}`;
+          const sortedEvents = [...bucketEvents].sort(
+            (x, y) => (x.start_time || "99:99").localeCompare(y.start_time || "99:99")
+          );
+          const firstTod = getEventTimeOfDay(sortedEvents[0]);
+          const todForGroup = repTodFor(tier, half, firstTod);
+          // Store the most-dressy code among the bucket so styling reflects the
+          // "peak" of the outfit (e.g. smart_casual > casual).
+          const DRESS_RANK: Record<string, number> = {
+            formal: 5, business: 4, smart_casual: 3, business_casual: 3,
+            outdoor: 2, casual: 1, active: 1, swimwear: 1,
+          };
+          const peakDressCode = sortedEvents
+            .map(e => e.dress_code || "casual")
+            .reduce((best, dc) => ((DRESS_RANK[dc] || 0) > (DRESS_RANK[best] || 0) ? dc : best), dressCode);
+          const label = labelFor(tier, half, peakDressCode);
+
           const { data: group, error } = await supabase.from("outfit_groups").insert({
             trip_id: trip.id,
             trip_member_id: activeMemberId,
             date,
             label,
-            dress_code: dressCode,
-            time_of_day: tod,
+            dress_code: peakDressCode,
+            time_of_day: todForGroup,
             weather_bucket: weather,
             sort_order: sortOrder++,
           }).select().single();
@@ -498,7 +613,7 @@ export default function PackingPage({
           if (error || !group) continue;
           newGroups.push(group as OutfitGroup);
 
-          for (const evt of bucketEvents) {
+          for (const evt of sortedEvents) {
             const { data: ge } = await supabase.from("outfit_group_events").insert({
               outfit_group_id: group.id,
               event_id: evt.id,
@@ -561,13 +676,17 @@ export default function PackingPage({
     const oldGroup = ofGroups.find(g => g.id === groupId);
     if (!oldGroup) return;
 
-    // Create a new group for the split-off events
+    // Create a new group for the split-off events — carry over the metadata
+    // that drives card styling + re-grouping (time_of_day, weather_bucket) so
+    // the split group renders with the same band/weather chip.
     const { data: newGroup } = await supabase.from("outfit_groups").insert({
       trip_id: trip.id,
       trip_member_id: activeMemberId,
       date: oldGroup.date,
       label: `${oldGroup.label} (split)`,
       dress_code: oldGroup.dress_code,
+      time_of_day: oldGroup.time_of_day,
+      weather_bucket: oldGroup.weather_bucket,
       sort_order: oldGroup.sort_order + 1,
     }).select().single();
 
@@ -588,6 +707,25 @@ export default function PackingPage({
     setOfGroups(prev => [...prev, newGroup as OutfitGroup]);
     setGroupingSelectedId(null);
   }, [supabase, trip.id, activeMemberId, ofGroups, ofGroupEvents, getGroupEvents]);
+
+  // ─── Rebuild groups: nuke this member's groups and let auto-group recreate ───
+  // Useful after the grouping logic changes, or when the user wants a clean
+  // re-pass. Any manual merges/splits are cleared.
+  const rebuildGroups = useCallback(async () => {
+    if (typeof window !== "undefined" && !window.confirm("Rebuild outfit groups for this member? Any splits or merges you've done will be cleared.")) {
+      return;
+    }
+    const memberGroupIds = ofGroups.filter(g => g.trip_member_id === activeMemberId).map(g => g.id);
+    if (memberGroupIds.length > 0) {
+      await supabase.from("outfit_group_events").delete().in("outfit_group_id", memberGroupIds);
+      await supabase.from("outfit_groups").delete().in("id", memberGroupIds);
+    }
+    setOfGroupEvents(prev => prev.filter(ge => !memberGroupIds.includes(ge.outfit_group_id)));
+    setOfGroups(prev => prev.filter(g => !memberGroupIds.includes(g.id)));
+    setGroupingSelectedId(null);
+    setGroupingMergeSource(null);
+    // The useEffect on ungroupedEvents.length will trigger autoGroupEvents next.
+  }, [supabase, ofGroups, activeMemberId]);
 
   // ─── Essentials: auto-calculate quantities ───
   const essentialsDefaults = useMemo(() => {
@@ -1370,11 +1508,16 @@ export default function PackingPage({
                   </p>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", gap: "8px" }}>
                   <span style={{ fontSize: "13px", fontWeight: 700 }}>Outfit Groups ({memberOutfitGroups.length})</span>
-                  {groupingMergeSource && (
-                    <button onClick={() => setGroupingMergeSource(null)} style={{ fontSize: "11px", padding: "4px 10px", background: "#fff3e0", color: "#e65100", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 700 }}>Cancel Merge</button>
-                  )}
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    {groupingMergeSource && (
+                      <button onClick={() => setGroupingMergeSource(null)} style={{ fontSize: "11px", padding: "4px 10px", background: "#fff3e0", color: "#e65100", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 700 }}>Cancel Merge</button>
+                    )}
+                    {!groupingMergeSource && (
+                      <button onClick={rebuildGroups} style={{ fontSize: "11px", padding: "4px 10px", background: "#eef2ff", color: "#3730a3", border: "1px solid #c7d2fe", borderRadius: "8px", cursor: "pointer", fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }} title="Delete and re-create groups using the latest grouping rules">↻ Rebuild</button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Day indicator */}

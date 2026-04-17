@@ -53,9 +53,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing search query (q)" }, { status: 400 });
   }
 
-  const accessKey = process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY;
+  // Server-only env var — no NEXT_PUBLIC_ prefix so it stays out of the client bundle
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY || process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY;
   if (!accessKey) {
-    return NextResponse.json({ error: "Unsplash API key not configured" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unsplash API key not configured", code: "NO_API_KEY" },
+      { status: 500 }
+    );
   }
 
   try {

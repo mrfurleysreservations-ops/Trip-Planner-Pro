@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trip Planner Pro — Unified Tab Layout</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #d6dae2; color: #1a1a1a; }
+  body { padding: 32px 24px 60px; }
+
+  /* ─── Spec banner ─── */
+  .spec {
+    max-width: 1200px; margin: 0 auto 36px; background: #fff; border-radius: 16px; padding: 24px 28px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+  }
+  .spec h1 { margin: 0 0 6px; font-size: 22px; }
+  .spec .sub { color: #666; font-size: 14px; margin-bottom: 18px; }
+  .spec-grid { display: grid; grid-template-columns: 160px 1fr; row-gap: 10px; column-gap: 20px; font-size: 13px; }
+  .spec-grid .lbl { font-weight: 700; color: #2188a8; text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; align-self: center; }
+  .spec-grid .val { color: #333; line-height: 1.5; }
+  .spec-grid code { background: #f2f4f7; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
+  /* ─── Phone grid ─── */
+  .phones {
+    max-width: 1400px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(3, 360px); gap: 28px 32px; justify-content: center;
+  }
+  @media (max-width: 1200px) { .phones { grid-template-columns: repeat(2, 360px); } }
+  @media (max-width: 820px) { .phones { grid-template-columns: 360px; } }
+
+  .phone-wrap { position: relative; padding-top: 28px; }
+  .phone-label {
+    position: absolute; top: 0; left: 0; right: 0;
+    text-align: center; color: #333; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .phone {
+    width: 360px; height: 720px;
+    background: #f2f8fa;
+    border-radius: 28px; overflow: hidden;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+    position: relative; display: flex; flex-direction: column;
+  }
+
+  /* ─── Sticky top region (shared across all tabs) ─── */
+  .sticky-top {
+    position: sticky; top: 0; z-index: 10;
+    background: #e4f0f4; backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px 8px;
+  }
+  .back { background: transparent; border: none; font-size: 20px; cursor: pointer; color: #2188a8; padding: 2px 6px; }
+  .page-title { font-size: 19px; font-weight: 800; margin: 0; }
+  .hdr-actions { display: flex; gap: 6px; }
+  .hdr-btn {
+    background: rgba(33,136,168,0.1); border: none; color: #2188a8;
+    padding: 5px 9px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+
+  /* Pill */
+  .pill-bar { display: flex; justify-content: center; padding: 6px 14px 10px; }
+  .pill { display: inline-flex; background: rgba(0,0,0,0.06); border-radius: 999px; padding: 3px; }
+  .pill button {
+    background: transparent; border: none; padding: 6px 14px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; color: #555; cursor: pointer;
+  }
+  .pill button.active { background: #fff; color: #2188a8; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+  /* Secondary chip row */
+  .chip-row { display: flex; gap: 6px; padding: 2px 14px 10px; overflow-x: auto; scrollbar-width: none; }
+  .chip-row::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0; padding: 5px 11px; border-radius: 999px;
+    background: rgba(0,0,0,0.05); font-size: 11px; font-weight: 600; color: #666; border: none; cursor: pointer;
+    white-space: nowrap;
+  }
+  .chip.active { background: #2188a8; color: #fff; }
+
+  /* Body (scrolls) */
+  .body { flex: 1; overflow-y: auto; padding: 12px 14px 72px; }
+
+  /* Section header inside body */
+  .section-h { font-size: 10px; font-weight: 700; color: #2188a8; text-transform: uppercase; letter-spacing: 0.08em; margin: 4px 0 6px; }
+  .section-h:not(:first-child) { margin-top: 14px; }
+
+  /* Card (universal) */
+  .card {
+    background: rgba(255,255,255,0.75); border: 1px solid rgba(33,136,168,0.15);
+    border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .card-lead { font-size: 11px; font-weight: 700; color: #2188a8; min-width: 52px; }
+  .card-body { flex: 1; min-width: 0; }
+  .card-body h4 { margin: 0 0 3px; font-size: 13px; }
+  .card-body p { margin: 0; font-size: 11px; color: #666; line-height: 1.35; }
+  .badge {
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-right: 4px;
+  }
+  .badge.idea { background: rgba(33,136,168,0.12); color: #2188a8; }
+  .badge.finalized { background: #d4edda; color: #155724; }
+  .badge.group { background: rgba(33,136,168,0.15); color: #2188a8; }
+  .badge.personal { background: rgba(156,39,176,0.15); color: #7b1fa2; }
+  .badge.shared { background: rgba(33,136,168,0.15); color: #2188a8; }
+  .meta-row { margin-top: 5px; font-size: 10px; color: #999; }
+
+  /* Money row */
+  .money { font-size: 14px; font-weight: 800; color: #1a1a1a; min-width: 62px; text-align: right; }
+  .money small { font-size: 10px; font-weight: 600; color: #999; display: block; }
+  .owe-pos { color: #2e7d32; }
+  .owe-neg { color: #c62828; }
+
+  /* Packing checkbox */
+  .pack-row {
+    display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    border-bottom: 1px dashed rgba(0,0,0,0.08);
+  }
+  .pack-row:last-child { border-bottom: none; }
+  .pack-row .chk {
+    width: 18px; height: 18px; border: 2px solid #2188a8; border-radius: 4px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 12px;
+  }
+  .pack-row .chk.on { background: #2188a8; }
+  .pack-row .txt { flex: 1; font-size: 12px; }
+  .pack-row.off .txt { color: #999; text-decoration: line-through; }
+
+  /* Member row */
+  .mem {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; background: rgba(255,255,255,0.75);
+    border: 1px solid rgba(33,136,168,0.15); border-radius: 12px; margin-bottom: 8px;
+  }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+  .mem-body { flex: 1; }
+  .mem-body h4 { margin: 0; font-size: 13px; }
+  .mem-body p { margin: 2px 0 0; font-size: 11px; color: #666; }
+
+  /* FAB */
+  .fab {
+    position: absolute; bottom: 72px; right: 14px; z-index: 5;
+    width: 46px; height: 46px; border-radius: 50%;
+    background: #2188a8; color: #fff; border: none; font-size: 22px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(33,136,168,0.4);
+  }
+
+  /* Bottom sub-nav */
+  .sub-nav {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 54px;
+    background: rgba(255,255,255,0.9); backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0,0,0,0.08);
+    display: flex; align-items: center; justify-content: space-around; z-index: 100;
+  }
+  .sub-nav button {
+    background: transparent; border: none; font-size: 9px; font-weight: 600; color: #999;
+    display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer;
+  }
+  .sub-nav button.active { color: #2188a8; }
+  .sub-nav button span:first-child { font-size: 16px; }
+
+  /* Sticky indicator band (little annotation on each phone) */
+  .stick-anno {
+    font-size: 9px; color: #999; font-style: italic; text-align: center; padding: 4px 0 2px;
+    border-top: 1px dashed rgba(33,136,168,0.3);
+    background: rgba(33,136,168,0.04);
+  }
+
+  /* Color legend */
+  .legend { max-width: 1200px; margin: 32px auto 0; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; font-size: 12px; color: #555; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ───────── SPEC BANNER ───────── -->
+<div class="spec">
+  <h1>Proposed Standard: Trip Tab Layout</h1>
+  <div class="sub">Every tab inside a trip (Itinerary, Expenses, Packing, Notes, Meals, Group) follows this exact skeleton. New tabs added later must conform.</div>
+  <div class="spec-grid">
+    <div class="lbl">1. Sticky header</div>
+    <div class="val"><code>position: sticky; top: 0</code> — back button · page title · up to 2 action buttons (Export, Import, Add, Edit…). Height ≈ 44px.</div>
+    <div class="lbl">2. Sticky pill toggle</div>
+    <div class="val">Primary view switcher, always 2 options, centered, same pill component as today's Calendar/List. Required on every tab.</div>
+    <div class="lbl">3. Sticky chip row (optional)</div>
+    <div class="val">Horizontally scrollable secondary filter (day chips, category chips, person chips). Tab-specific. Still inside sticky region when present.</div>
+    <div class="lbl">4. Scrollable body</div>
+    <div class="val"><code>flex: 1; overflow-y: auto</code> — all content below the sticky region scrolls. Bottom padding <code>72px</code> so last item clears the sub-nav.</div>
+    <div class="lbl">5. Fixed bottom sub-nav</div>
+    <div class="val">Unchanged. 54px, 6 tabs, <code>position: fixed; bottom: 0</code>.</div>
+    <div class="lbl">6. Optional FAB</div>
+    <div class="val">Primary create action, bottom-right, <code>bottom: 72px</code> to clear sub-nav. Only on tabs with a clear "add one" primary action.</div>
+  </div>
+</div>
+
+<div class="phones">
+
+  <!-- ───────── 1. ITINERARY ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">Itinerary</div>
+    <div class="phone">
+      <div class="sticky-top">
+        <div class="page-header">
+          <button class="back">←</button>
+          <h1 class="page-title">Itinerary</h1>
+          <div class="hdr-actions"><button class="hdr-btn">Export</button></div>
+        </div>
+        <div class="pill-bar"><div class="pill"><button class="active">Calendar</button><button>List</button></div></div>
+        <div class="chip-row">
+          <button class="chip">Mon 6/8</button>
+          <button class="chip active">Tue 6/9</button>
+          <button class="chip">Wed 6/10</button>
+          <button class="chip">Thu 6/11</button>
+          <button class="chip">Fri 6/12</button>
+          <button class="chip">Sat 6/13</button>
+        </div>
+        <div class="stick-anno">↑ sticky · body scrolls ↓</div>
+      </div>
+      <div class="body">
+        <div class="section-h">Morning</div>
+        <div class="card"><div class="card-lead">7:30A</div><div class="card-body"><h4>Breakfast at condo</h4><p>Coffee + pastries from Sugar Beach Bake Shop</p></div></div>
+        <div class="card"><div class="card-lead">9:00A</div><div class="card-body"><h4>Molokini snorkel</h4><p>Four Winds · Maalaea Harbor slip 80</p><div class="meta-row"><span class="badge finalized">Booked</span>5 attending</div></div></div>
+        <div class="section-h">Afternoon</div>
+        <div class="card"><div class="card-lead">1:00P</div><div class="card-body"><h4>Lunch — Coconut's Fish Café</h4><p>Casual, fish tacos</p></div></div>
+        <div class="card"><div class="card-lead">3:00P</div><div class="card-body"><h4>Beach — Wailea</h4><p>Reef-safe sunscreen only</p></div></div>
+        <div class="section-h">Evening</div>
+        <div class="card"><div class="card-lead">6:30P</div><div class="card-body"><h4>Mama's Fish House</h4><p>Resort casual dress code</p><div class="meta-row"><span class="badge finalized">Booked</span></div></div></div>
+        <div class="card"><div class="card-lead">9:00P</div><div class="card-body"><h4>Stargazing on lanai</h4><p>Optional</p></div></div>
+        <div class="card"><div class="card-lead">—</div><div class="card-body"><h4>Filler event</h4><p>Scroll to confirm sticky…</p></div></div>
+      </div>
+      <button class="fab">+</button>
+      <div class="sub-nav">
+        <button class="active"><span>🗓</span><span>Itinerary</span></button>
+        <button><span>💸</span><span>Expenses</span></button>
+        <button><span>🎒</span><span>Packing</span></button>
+        <button><span>📝</span><span>Notes</span></button>
+        <button><span>🍽</span><span>Meals</span></button>
+        <button><span>👥</span><span>Group</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── 2. EXPENSES ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">Expenses</div>
+    <div class="phone">
+      <div class="sticky-top">
+        <div class="page-header">
+          <button class="back">←</button>
+          <h1 class="page-title">Expenses</h1>
+          <div class="hdr-actions"><button class="hdr-btn">Export</button></div>
+        </div>
+        <div class="pill-bar"><div class="pill"><button class="active">List</button><button>Summary</button></div></div>
+        <div class="chip-row">
+          <button class="chip active">All</button>
+          <button class="chip">Food</button>
+          <button class="chip">Lodging</button>
+          <button class="chip">Transport</button>
+          <button class="chip">Activities</button>
+          <button class="chip">Other</button>
+        </div>
+        <div class="stick-anno">↑ sticky · body scrolls ↓</div>
+      </div>
+      <div class="body">
+        <div class="section-h">Tue June 9</div>
+        <div class="card">
+          <div class="card-body"><h4>Molokini snorkel tour</h4><p>Paid by Joe · Split 5 ways</p><div class="meta-row"><span class="badge shared">Shared</span>Activities</div></div>
+          <div class="money">$425<small class="owe-neg">you paid</small></div>
+        </div>
+        <div class="card">
+          <div class="card-body"><h4>Mama's Fish House</h4><p>Paid by Sarah · Split 5 ways</p><div class="meta-row"><span class="badge shared">Shared</span>Food</div></div>
+          <div class="money">$310<small class="owe-pos">owe $62</small></div>
+        </div>
+        <div class="section-h">Wed June 10</div>
+        <div class="card">
+          <div class="card-body"><h4>Groceries — Foodland</h4><p>Paid by Mike · Split 3 ways</p><div class="meta-row"><span class="badge shared">Shared</span>Food</div></div>
+          <div class="money">$187<small class="owe-pos">owe $62</small></div>
+        </div>
+        <div class="card">
+          <div class="card-body"><h4>Gas</h4><p>Paid by Joe · Just you</p><div class="meta-row"><span class="badge personal">Personal</span>Transport</div></div>
+          <div class="money">$48<small class="owe-neg">you</small></div>
+        </div>
+        <div class="section-h">Thu June 11</div>
+        <div class="card">
+          <div class="card-body"><h4>Road to Hana lunch</h4><p>Paid by Sarah · Split 5 ways</p><div class="meta-row"><span class="badge shared">Shared</span>Food</div></div>
+          <div class="money">$94<small class="owe-pos">owe $19</small></div>
+        </div>
+        <div class="card"><div class="card-body"><h4>Filler…</h4><p>Scroll to confirm sticky</p></div></div>
+      </div>
+      <button class="fab">+</button>
+      <div class="sub-nav">
+        <button><span>🗓</span><span>Itinerary</span></button>
+        <button class="active"><span>💸</span><span>Expenses</span></button>
+        <button><span>🎒</span><span>Packing</span></button>
+        <button><span>📝</span><span>Notes</span></button>
+        <button><span>🍽</span><span>Meals</span></button>
+        <button><span>👥</span><span>Group</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── 3. PACKING ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">Packing</div>
+    <div class="phone">
+      <div class="sticky-top">
+        <div class="page-header">
+          <button class="back">←</button>
+          <h1 class="page-title">Packing</h1>
+          <div class="hdr-actions"><button class="hdr-btn">Consolidate</button></div>
+        </div>
+        <div class="pill-bar"><div class="pill"><button class="active">By Event</button><button>Master List</button></div></div>
+        <div class="chip-row">
+          <button class="chip active">Joe</button>
+          <button class="chip">Sarah</button>
+          <button class="chip">Mike</button>
+          <button class="chip">Emma</button>
+          <button class="chip">Noah</button>
+        </div>
+        <div class="stick-anno">↑ sticky · body scrolls ↓</div>
+      </div>
+      <div class="body">
+        <div class="section-h">Molokini snorkel — Tue 6/9</div>
+        <div class="card" style="padding:8px 12px; display:block;">
+          <div class="pack-row"><span class="chk on">✓</span><span class="txt">Swim trunks</span></div>
+          <div class="pack-row"><span class="chk on">✓</span><span class="txt">Rash guard</span></div>
+          <div class="pack-row"><span class="chk"></span><span class="txt">Reef-safe sunscreen</span></div>
+          <div class="pack-row"><span class="chk"></span><span class="txt">Goggles</span></div>
+        </div>
+        <div class="section-h">Mama's Fish House — Tue 6/9</div>
+        <div class="card" style="padding:8px 12px; display:block;">
+          <div class="pack-row"><span class="chk on">✓</span><span class="txt">Linen pants</span></div>
+          <div class="pack-row"><span class="chk"></span><span class="txt">Aloha shirt</span></div>
+          <div class="pack-row"><span class="chk"></span><span class="txt">Dress shoes</span></div>
+        </div>
+        <div class="section-h">Beach — Wailea</div>
+        <div class="card" style="padding:8px 12px; display:block;">
+          <div class="pack-row off"><span class="chk on">✓</span><span class="txt">Towel</span></div>
+          <div class="pack-row"><span class="chk"></span><span class="txt">Hat</span></div>
+          <div class="pack-row"><span class="chk"></span><span class="txt">Boogie board</span></div>
+        </div>
+      </div>
+      <button class="fab">+</button>
+      <div class="sub-nav">
+        <button><span>🗓</span><span>Itinerary</span></button>
+        <button><span>💸</span><span>Expenses</span></button>
+        <button class="active"><span>🎒</span><span>Packing</span></button>
+        <button><span>📝</span><span>Notes</span></button>
+        <button><span>🍽</span><span>Meals</span></button>
+        <button><span>👥</span><span>Group</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── 4. NOTES ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">Notes</div>
+    <div class="phone">
+      <div class="sticky-top">
+        <div class="page-header">
+          <button class="back">←</button>
+          <h1 class="page-title">Notes</h1>
+          <div class="hdr-actions"><button class="hdr-btn">Import</button></div>
+        </div>
+        <div class="pill-bar"><div class="pill"><button class="active">Group</button><button>Personal</button></div></div>
+        <div class="chip-row">
+          <button class="chip active">All</button>
+          <button class="chip">Ideas</button>
+          <button class="chip">Finalized</button>
+        </div>
+        <div class="stick-anno">↑ sticky · body scrolls ↓</div>
+      </div>
+      <div class="body">
+        <div class="card" style="display:block;">
+          <h4 style="margin:0 0 3px; font-size:13px;">Snorkeling — Molokini</h4>
+          <p style="margin:0; font-size:11px; color:#666;">Tom's uncle says Four Winds — they let you jump off the boat.</p>
+          <div class="meta-row"><span class="badge group">Group</span><span class="badge idea">Idea</span>· Sarah</div>
+        </div>
+        <div class="card" style="display:block;">
+          <h4 style="margin:0 0 3px; font-size:13px;">Dinner at Mama's</h4>
+          <p style="margin:0; font-size:11px; color:#666;">Book 60 days out. Sunset = magic.</p>
+          <div class="meta-row"><span class="badge group">Group</span><span class="badge finalized">Finalized</span>· Joe</div>
+        </div>
+        <div class="card" style="display:block;">
+          <h4 style="margin:0 0 3px; font-size:13px;">Road to Hana stops</h4>
+          <p style="margin:0; font-size:11px; color:#666;">Twin Falls, Wailua lookout, black sand beach.</p>
+          <div class="meta-row"><span class="badge group">Group</span><span class="badge idea">Idea</span>· Mike</div>
+        </div>
+        <div class="card" style="display:block;">
+          <h4 style="margin:0 0 3px; font-size:13px;">Luau — Old Lahaina vs Feast at Lele</h4>
+          <p style="margin:0; font-size:11px; color:#666;">Lele pricier, smaller groups.</p>
+          <div class="meta-row"><span class="badge group">Group</span><span class="badge idea">Idea</span>· Sarah</div>
+        </div>
+        <div class="card" style="display:block;">
+          <h4 style="margin:0 0 3px; font-size:13px;">Shave ice — Ululani's</h4>
+          <p style="margin:0; font-size:11px; color:#666;">Haleakala snowcap is the pro order.</p>
+          <div class="meta-row"><span class="badge group">Group</span><span class="badge idea">Idea</span>· Mike</div>
+        </div>
+      </div>
+      <button class="fab">+</button>
+      <div class="sub-nav">
+        <button><span>🗓</span><span>Itinerary</span></button>
+        <button><span>💸</span><span>Expenses</span></button>
+        <button><span>🎒</span><span>Packing</span></button>
+        <button class="active"><span>📝</span><span>Notes</span></button>
+        <button><span>🍽</span><span>Meals</span></button>
+        <button><span>👥</span><span>Group</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── 5. MEALS ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">Meals</div>
+    <div class="phone">
+      <div class="sticky-top">
+        <div class="page-header">
+          <button class="back">←</button>
+          <h1 class="page-title">Meals</h1>
+          <div class="hdr-actions"><button class="hdr-btn">Shop List</button></div>
+        </div>
+        <div class="pill-bar"><div class="pill"><button class="active">Calendar</button><button>List</button></div></div>
+        <div class="chip-row">
+          <button class="chip">Mon 6/8</button>
+          <button class="chip active">Tue 6/9</button>
+          <button class="chip">Wed 6/10</button>
+          <button class="chip">Thu 6/11</button>
+          <button class="chip">Fri 6/12</button>
+          <button class="chip">Sat 6/13</button>
+        </div>
+        <div class="stick-anno">↑ sticky · body scrolls ↓</div>
+      </div>
+      <div class="body">
+        <div class="section-h">Breakfast</div>
+        <div class="card"><div class="card-lead">7:30A</div><div class="card-body"><h4>Condo — pastries + fruit</h4><p>Joe on coffee duty</p></div></div>
+        <div class="section-h">Lunch</div>
+        <div class="card"><div class="card-lead">1:00P</div><div class="card-body"><h4>Coconut's Fish Café</h4><p>Eat out · Casual</p></div></div>
+        <div class="section-h">Dinner</div>
+        <div class="card"><div class="card-lead">6:30P</div><div class="card-body"><h4>Mama's Fish House</h4><p>Reservation · Resort casual</p><div class="meta-row"><span class="badge finalized">Booked</span></div></div></div>
+        <div class="section-h">Snacks</div>
+        <div class="card"><div class="card-lead">—</div><div class="card-body"><h4>Shave ice run</h4><p>Ululani's after beach</p></div></div>
+        <div class="card"><div class="card-lead">—</div><div class="card-body"><h4>Filler meal</h4><p>Scroll to confirm sticky</p></div></div>
+      </div>
+      <button class="fab">+</button>
+      <div class="sub-nav">
+        <button><span>🗓</span><span>Itinerary</span></button>
+        <button><span>💸</span><span>Expenses</span></button>
+        <button><span>🎒</span><span>Packing</span></button>
+        <button><span>📝</span><span>Notes</span></button>
+        <button class="active"><span>🍽</span><span>Meals</span></button>
+        <button><span>👥</span><span>Group</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── 6. GROUP ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">Group</div>
+    <div class="phone">
+      <div class="sticky-top">
+        <div class="page-header">
+          <button class="back">←</button>
+          <h1 class="page-title">Group</h1>
+          <div class="hdr-actions"><button class="hdr-btn">Invite</button></div>
+        </div>
+        <div class="pill-bar"><div class="pill"><button class="active">Members</button><button>Invitations</button></div></div>
+        <div class="chip-row">
+          <button class="chip active">All</button>
+          <button class="chip">Adults</button>
+          <button class="chip">Kids</button>
+        </div>
+        <div class="stick-anno">↑ sticky · body scrolls ↓</div>
+      </div>
+      <div class="body">
+        <div class="section-h">Host</div>
+        <div class="mem">
+          <div class="avatar" style="background:#2188a8;">J</div>
+          <div class="mem-body"><h4>Joe (you)</h4><p>Host · accepted</p></div>
+        </div>
+        <div class="section-h">Members</div>
+        <div class="mem">
+          <div class="avatar" style="background:#7b1fa2;">S</div>
+          <div class="mem-body"><h4>Sarah</h4><p>Adult · accepted</p></div>
+        </div>
+        <div class="mem">
+          <div class="avatar" style="background:#2e7d32;">M</div>
+          <div class="mem-body"><h4>Mike</h4><p>Adult · accepted</p></div>
+        </div>
+        <div class="mem">
+          <div class="avatar" style="background:#e67e22;">E</div>
+          <div class="mem-body"><h4>Emma</h4><p>Kid (8)</p></div>
+        </div>
+        <div class="mem">
+          <div class="avatar" style="background:#c62828;">N</div>
+          <div class="mem-body"><h4>Noah</h4><p>Kid (5)</p></div>
+        </div>
+        <div class="mem">
+          <div class="avatar" style="background:#888;">R</div>
+          <div class="mem-body"><h4>Ryan</h4><p>Adult · pending</p></div>
+        </div>
+      </div>
+      <div class="sub-nav">
+        <button><span>🗓</span><span>Itinerary</span></button>
+        <button><span>💸</span><span>Expenses</span></button>
+        <button><span>🎒</span><span>Packing</span></button>
+        <button><span>📝</span><span>Notes</span></button>
+        <button><span>🍽</span><span>Meals</span></button>
+        <button class="active"><span>👥</span><span>Group</span></button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <span><span class="swatch" style="background:#2188a8;"></span> Primary accent (shared / group)</span>
+  <span><span class="swatch" style="background:#7b1fa2;"></span> Personal (creator-only)</span>
+  <span><span class="swatch" style="background:#155724;"></span> Finalized / booked</span>
+  <span><span class="swatch" style="background:#2e7d32;"></span> Positive money (you're owed)</span>
+  <span><span class="swatch" style="background:#c62828;"></span> Negative money (you owe)</span>
+</div>
+
+</body>
+</html>

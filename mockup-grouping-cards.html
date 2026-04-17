@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Packing — Group Card Drafts</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: #efe8e0; color: #1a1a1a; padding: 24px 16px 80px; }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  h1 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -0.02em; margin-bottom: 6px; }
+  .sub { color: #6a6a6a; font-size: 14px; margin-bottom: 24px; }
+
+  /* Logic callout */
+  .logic {
+    background: #fff; border: 1px solid #e8e8e8; border-radius: 16px; padding: 18px 20px; margin-bottom: 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  .logic h2 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 17px; margin-bottom: 10px; }
+  .logic ol { margin-left: 20px; font-size: 13px; line-height: 1.6; color: #333; }
+  .logic code { background: #f5f0eb; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
+  /* Grid of variants */
+  .variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; }
+  .variant { }
+  .variant-header { margin-bottom: 12px; }
+  .variant-header .tag { display: inline-block; background: #1a1a1a; color: #fff; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; margin-bottom: 8px; }
+  .variant-header h3 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px; margin-bottom: 4px; }
+  .variant-header p { font-size: 12px; color: #6a6a6a; line-height: 1.5; }
+
+  /* Phone frame */
+  .phone { background: #f5f0eb; border-radius: 24px; padding: 14px 14px 20px; border: 1px solid #e0d8ce; }
+  .day-pill { display: flex; justify-content: space-between; align-items: center; margin: 0 4px 12px; }
+  .day-pill .day { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 14px; }
+  .day-pill .count { font-size: 11px; color: #777; }
+
+  /* Base card */
+  .card { background: #fff; border-radius: 16px; border: 1px solid #e8e8e8; overflow: hidden; margin-bottom: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+
+  /* Chips & pills */
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; background: #f5f0eb; color: #333; }
+  .chip.weather { background: #fff4d6; color: #8a5a00; }
+  .chip.weather.cold { background: #e4f1ff; color: #1f4a8a; }
+  .chip.weather.rain { background: #e8edf5; color: #3d4a6b; }
+  .chip.tod { background: #fce9dd; color: #b84a10; }
+  .chip.tod.evening { background: #ece0f2; color: #5e2a8a; }
+  .chip.tod.night { background: #292a3a; color: #ffd97a; }
+  .chip.tod.morning { background: #fff4d6; color: #8a5a00; }
+
+  .dresscode { padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .dresscode.casual { background: #e9f5ea; color: #2e7d32; }
+  .dresscode.formal { background: #efe4f5; color: #7b1fa2; }
+  .dresscode.swimwear { background: #e0f3f7; color: #0097a7; }
+  .dresscode.active { background: #fde8e0; color: #c75a2a; }
+
+  .muted { color: #777; font-size: 11px; }
+
+  /* Event row */
+  .evt { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-top: 1px solid #f0ebe4; }
+  .evt-title { font-size: 12px; font-weight: 600; flex: 1; }
+  .evt-time { font-size: 10px; color: #777; }
+
+  .actions { padding: 8px 16px 10px; display: flex; gap: 8px; border-top: 1px solid #f0ebe4; background: #fafafa; }
+  .btn-merge, .btn-split { font-size: 10px; padding: 4px 9px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; }
+  .btn-merge { background: #fff3e0; color: #e65100; }
+  .btn-split { background: #e3f2fd; color: #1565c0; }
+
+  /* ─── Variant A: Stacked Events ─── */
+  .vA .card-head { padding: 12px 16px 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; border-bottom: 1px solid #f0ebe4; }
+  .vA .chips-left { display: flex; gap: 6px; flex-wrap: wrap; }
+  .vA .evt .icon { font-size: 14px; }
+  .vA .evt-desc { font-size: 11px; color: #777; display: block; margin-top: 2px; line-height: 1.4; }
+  .vA .evt-body { flex: 1; min-width: 0; }
+
+  /* ─── Variant B: Hero Event ─── */
+  .vB .card-head { padding: 14px 16px 12px; display: flex; gap: 12px; align-items: flex-start; }
+  .vB .thumb { width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+  .vB .thumb.casual { background: linear-gradient(135deg, #d8ecdc, #a3d4af); }
+  .vB .thumb.formal { background: linear-gradient(135deg, #e9d7f1, #c7a0d6); }
+  .vB .thumb.swimwear { background: linear-gradient(135deg, #d5eef4, #8bd0dd); }
+  .vB .thumb.active { background: linear-gradient(135deg, #fae0d0, #ee9b75); }
+  .vB .title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .vB .title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.2; }
+  .vB .time { font-size: 11px; color: #777; margin-bottom: 6px; }
+  .vB .desc { font-size: 11px; color: #555; line-height: 1.45; margin-bottom: 8px; }
+  .vB .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .vB .more-events { padding: 8px 16px; border-top: 1px solid #f0ebe4; font-size: 11px; color: #777; background: #faf6f1; cursor: pointer; }
+  .vB .more-events strong { color: #1a1a1a; font-weight: 700; }
+
+  /* ─── Variant C: Minimal Chip Header ─── */
+  .vC .card-head { padding: 10px 16px; display: flex; gap: 6px; align-items: center; border-bottom: 1px solid #f0ebe4; background: #fafafa; flex-wrap: wrap; justify-content: space-between; }
+  .vC .chips-left { display: flex; gap: 6px; flex-wrap: wrap; }
+  .vC .evt { padding: 10px 16px; align-items: flex-start; }
+  .vC .evt-body { flex: 1; }
+  .vC .evt-title { font-size: 13px; font-weight: 700; font-family: 'Outfit', sans-serif; }
+  .vC .evt-meta { font-size: 10px; color: #777; margin: 2px 0 4px; }
+  .vC .evt-desc { font-size: 11px; color: #555; line-height: 1.4; }
+  .vC .evt-icon { font-size: 18px; margin-top: 2px; }
+
+  /* ─── Variant D: Timeline Band ─── */
+  .vD .tod-band { padding: 8px 16px; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+  .vD .tod-band.morning { background: linear-gradient(90deg, #f9c876, #e8943a); }
+  .vD .tod-band.afternoon { background: linear-gradient(90deg, #e8943a, #c75a2a); }
+  .vD .tod-band.evening { background: linear-gradient(90deg, #7c4a9e, #452a66); }
+  .vD .tod-band.night { background: linear-gradient(90deg, #1a2340, #0a1020); color: #ffd97a; }
+  .vD .tod-band .weather { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 12px; }
+  .vD .meta-row { padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0ebe4; }
+  .vD .meta-row .dresscode { }
+  .vD .meta-row .counts { font-size: 11px; color: #777; }
+  .vD .evt { padding: 10px 16px; position: relative; }
+  .vD .evt::before { content: ''; position: absolute; left: 24px; top: 0; bottom: 0; width: 2px; background: #e8e8e8; }
+  .vD .evt:last-of-type::before { bottom: 50%; }
+  .vD .evt:first-of-type::before { top: 50%; }
+  .vD .evt-dot { width: 10px; height: 10px; border-radius: 50%; background: #e8943a; position: relative; z-index: 1; flex-shrink: 0; margin-left: 7px; margin-right: 14px; border: 2px solid #fff; }
+  .vD .evt-body { flex: 1; }
+  .vD .evt-title { font-size: 13px; font-weight: 700; }
+  .vD .evt-sub { font-size: 10px; color: #777; margin-top: 2px; }
+  .vD .evt-desc { font-size: 11px; color: #555; margin-top: 4px; line-height: 1.4; }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Packing Groups — Card Layout Drafts</h1>
+  <p class="sub">Four visual directions. Each uses the new grouping logic (time of day → weather → event → dress code). Pick one to build, or cherry-pick elements across them.</p>
+
+  <div class="logic">
+    <h2>Proposed grouping logic</h2>
+    <ol>
+      <li><strong>Time of day</strong> — splits first. Buckets: morning (5a–11a), afternoon (11a–4p), evening (4p–9p), night (9p–5a). Derived from <code>start_time</code>, falls back to <code>time_slot</code>.</li>
+      <li><strong>Weather</strong> — splits next. Buckets: hot/sunny, warm/sunny, mild, cold, rainy, snowy. Per-date, per-time-of-day if forecast supports it.</li>
+      <li><strong>Event compatibility</strong> — swimwear, formal, and active dress codes never cross-group with others, even if other factors match.</li>
+      <li><strong>Dress code</strong> — the final merge filter. Same code = same group.</li>
+    </ol>
+    <p style="margin-top: 10px; font-size: 12px; color: #555;">Grouping key = <code>date + time_of_day + weather_bucket + dress_code</code>. One key = one card.</p>
+  </div>
+
+  <div class="variants">
+
+    <!-- ─── VARIANT A ─── -->
+    <div class="variant vA">
+      <div class="variant-header">
+        <span class="tag">Variant A</span>
+        <h3>Stacked events, chip header</h3>
+        <p>All events in the group are visible. Time-of-day + weather chips live at the top alongside the dress-code pill. Each event row shows title, time, and description.</p>
+      </div>
+      <div class="phone">
+        <div class="day-pill">
+          <span class="day">Day 2 — Fri, May 22</span>
+          <span class="count">2 of 4</span>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="chips-left">
+              <span class="chip tod evening">🌆 Evening</span>
+              <span class="chip weather">☀️ 74°F · clear</span>
+            </div>
+            <span class="dresscode casual">Casual</span>
+          </div>
+          <div class="evt">
+            <span class="icon">🍽️</span>
+            <div class="evt-body">
+              <div><span class="evt-title">Dinner at The Grey</span></div>
+              <span class="evt-time">6:30 PM · Downtown Savannah</span>
+              <span class="evt-desc">Upscale-casual Southern. Jeans + nice top works, no sneakers.</span>
+            </div>
+          </div>
+          <div class="evt">
+            <span class="icon">🍸</span>
+            <div class="evt-body">
+              <div><span class="evt-title">Drinks at Artillery</span></div>
+              <span class="evt-time">8:30 PM · Bull Street</span>
+              <span class="evt-desc">Cocktail lounge in an old armory. Dim, speakeasy vibe.</span>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn-merge">Merge with…</button>
+            <button class="btn-split">Split</button>
+          </div>
+        </div>
+        <div class="card" style="opacity:.55">
+          <div class="card-head">
+            <div class="chips-left">
+              <span class="chip tod morning">🌅 Morning</span>
+              <span class="chip weather">☀️ 68°F</span>
+            </div>
+            <span class="dresscode active">Active</span>
+          </div>
+          <div class="evt"><span class="icon">🥾</span><div class="evt-body"><div><span class="evt-title">Forsyth Park run</span></div><span class="evt-time">7:00 AM</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── VARIANT B ─── -->
+    <div class="variant vB">
+      <div class="variant-header">
+        <span class="tag">Variant B</span>
+        <h3>Hero event + color thumbnail</h3>
+        <p>Colored style-swatch thumbnail on the left (keyed to dress code). Primary event gets the title, time, and description. Extra events in the group collapse into a tap-to-expand row.</p>
+      </div>
+      <div class="phone">
+        <div class="day-pill">
+          <span class="day">Day 2 — Fri, May 22</span>
+          <span class="count">2 of 4</span>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="thumb casual">👕</div>
+            <div style="flex:1; min-width:0;">
+              <div class="title-row">
+                <span class="title">Dinner at The Grey</span>
+                <span class="dresscode casual">Casual</span>
+              </div>
+              <div class="time">6:30 PM</div>
+              <div class="desc">Upscale-casual Southern. Jeans + nice top works, no sneakers.</div>
+              <div class="chips">
+                <span class="chip tod evening">🌆 Evening</span>
+                <span class="chip weather">☀️ 74°F</span>
+              </div>
+            </div>
+          </div>
+          <div class="more-events">+ <strong>1 more event</strong> in this outfit · Drinks at Artillery (8:30 PM) ▾</div>
+          <div class="actions">
+            <button class="btn-merge">Merge with…</button>
+            <button class="btn-split">Split</button>
+          </div>
+        </div>
+        <div class="card" style="opacity:.55">
+          <div class="card-head">
+            <div class="thumb active">🥾</div>
+            <div style="flex:1;">
+              <div class="title-row"><span class="title">Forsyth Park run</span><span class="dresscode active">Active</span></div>
+              <div class="time">7:00 AM</div>
+              <div class="chips"><span class="chip tod morning">🌅 Morning</span><span class="chip weather">☀️ 68°F</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── VARIANT C ─── -->
+    <div class="variant vC">
+      <div class="variant-header">
+        <span class="tag">Variant C</span>
+        <h3>Minimal chip header, event-centric body</h3>
+        <p>No group title at all. The header is purely meta (time, weather, dress code). Events with icons, times, and descriptions are the main content.</p>
+      </div>
+      <div class="phone">
+        <div class="day-pill">
+          <span class="day">Day 2 — Fri, May 22</span>
+          <span class="count">2 of 4</span>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="chips-left">
+              <span class="chip tod evening">🌆 Evening</span>
+              <span class="chip weather">☀️ 74°F</span>
+            </div>
+            <span class="dresscode casual">Casual</span>
+          </div>
+          <div class="evt">
+            <span class="evt-icon">🍽️</span>
+            <div class="evt-body">
+              <div class="evt-title">Dinner at The Grey</div>
+              <div class="evt-meta">6:30 PM · Downtown Savannah</div>
+              <div class="evt-desc">Upscale-casual Southern. Jeans + nice top works, no sneakers.</div>
+            </div>
+          </div>
+          <div class="evt" style="border-top: 1px solid #f0ebe4;">
+            <span class="evt-icon">🍸</span>
+            <div class="evt-body">
+              <div class="evt-title">Drinks at Artillery</div>
+              <div class="evt-meta">8:30 PM · Bull Street</div>
+              <div class="evt-desc">Cocktail lounge in an old armory. Dim, speakeasy vibe.</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn-merge">Merge with…</button>
+            <button class="btn-split">Split</button>
+          </div>
+        </div>
+        <div class="card" style="opacity:.55">
+          <div class="card-head">
+            <div class="chips-left"><span class="chip tod morning">🌅 Morning</span><span class="chip weather">☀️ 68°F</span></div>
+            <span class="dresscode active">Active</span>
+          </div>
+          <div class="evt"><span class="evt-icon">🥾</span><div class="evt-body"><div class="evt-title">Forsyth Park run</div><div class="evt-meta">7:00 AM</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── VARIANT D ─── -->
+    <div class="variant vD">
+      <div class="variant-header">
+        <span class="tag">Variant D</span>
+        <h3>Timeline band + gradient header</h3>
+        <p>Colored gradient strip at the top conveys time of day at a glance (morning = warm, night = dark). Weather sits inside the strip. Events render as a vertical timeline below.</p>
+      </div>
+      <div class="phone">
+        <div class="day-pill">
+          <span class="day">Day 2 — Fri, May 22</span>
+          <span class="count">2 of 4</span>
+        </div>
+        <div class="card">
+          <div class="tod-band evening">
+            <span>🌆 Evening</span>
+            <span class="weather">☀️ 74°F · clear</span>
+          </div>
+          <div class="meta-row">
+            <span class="dresscode casual">Casual</span>
+            <span class="counts">2 events · 0 items packed</span>
+          </div>
+          <div class="evt" style="display:flex; align-items:flex-start;">
+            <div class="evt-dot"></div>
+            <div class="evt-body">
+              <div class="evt-title">🍽️ Dinner at The Grey</div>
+              <div class="evt-sub">6:30 PM · Downtown Savannah</div>
+              <div class="evt-desc">Upscale-casual Southern. Jeans + nice top works, no sneakers.</div>
+            </div>
+          </div>
+          <div class="evt" style="display:flex; align-items:flex-start;">
+            <div class="evt-dot"></div>
+            <div class="evt-body">
+              <div class="evt-title">🍸 Drinks at Artillery</div>
+              <div class="evt-sub">8:30 PM · Bull Street</div>
+              <div class="evt-desc">Cocktail lounge in an old armory. Dim, speakeasy vibe.</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn-merge">Merge with…</button>
+            <button class="btn-split">Split</button>
+          </div>
+        </div>
+        <div class="card" style="opacity:.55">
+          <div class="tod-band morning"><span>🌅 Morning</span><span class="weather">☀️ 68°F</span></div>
+          <div class="meta-row"><span class="dresscode active">Active</span><span class="counts">1 event · 0 items</span></div>
+          <div class="evt" style="display:flex; align-items:flex-start;"><div class="evt-dot"></div><div class="evt-body"><div class="evt-title">🥾 Forsyth Park run</div><div class="evt-sub">7:00 AM</div></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="margin-top: 32px; background:#fff; padding:18px 20px; border-radius:16px; border:1px solid #e8e8e8; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
+    <h2 style="font-family:'Outfit',sans-serif; font-weight:800; font-size:17px; margin-bottom:10px;">Quick comparison</h2>
+    <table style="width:100%; border-collapse: collapse; font-size: 13px;">
+      <thead>
+        <tr style="background:#faf6f1;"><th style="text-align:left; padding:8px; border-bottom:1px solid #e8e8e8;">Factor</th><th style="text-align:left; padding:8px; border-bottom:1px solid #e8e8e8;">A · Stacked</th><th style="text-align:left; padding:8px; border-bottom:1px solid #e8e8e8;">B · Hero</th><th style="text-align:left; padding:8px; border-bottom:1px solid #e8e8e8;">C · Minimal</th><th style="text-align:left; padding:8px; border-bottom:1px solid #e8e8e8;">D · Timeline</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:8px; border-bottom:1px solid #f0ebe4;">Scannable at a glance</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">✓</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">✓✓</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">✓✓</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">✓✓✓</td></tr>
+        <tr><td style="padding:8px; border-bottom:1px solid #f0ebe4;">Handles multi-event groups</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">✓✓✓</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">needs expand</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">✓✓✓</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">✓✓✓</td></tr>
+        <tr><td style="padding:8px; border-bottom:1px solid #f0ebe4;">Visual punch</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">neutral</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">warm</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">clean</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">bold</td></tr>
+        <tr><td style="padding:8px; border-bottom:1px solid #f0ebe4;">Effort to build</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">low</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">medium</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">low</td><td style="padding:8px; border-bottom:1px solid #f0ebe4;">medium</td></tr>
+        <tr><td style="padding:8px;">Vertical space per card</td><td style="padding:8px;">medium</td><td style="padding:8px;">medium</td><td style="padding:8px;">medium</td><td style="padding:8px;">tallest</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

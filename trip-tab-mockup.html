@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Trip Tab Nav — Bottom Sticky Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #f5f0eb;
+    color: #222;
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* === TOP HEADER BAR (dashboard-style) === */
+  .top-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    height: 52px;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid #e5e5e5;
+    padding: 0 16px;
+  }
+  .top-bar .back-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px 8px 4px 0;
+    color: #555;
+  }
+  .top-bar .title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: #222;
+    flex: 1;
+  }
+  .top-bar .actions {
+    display: flex;
+    gap: 8px;
+  }
+  .top-bar .actions button {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  /* === TRIP HEADER CARD === */
+  .trip-header {
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 20px 16px 16px;
+  }
+  .trip-type-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #fff;
+    background: #e8943a;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+  }
+  .trip-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: #222;
+    margin-bottom: 4px;
+  }
+  .trip-dates {
+    font-size: 13px;
+    color: #888;
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+  .trip-stats {
+    display: flex;
+    gap: 16px;
+  }
+  .trip-stat {
+    font-size: 12px;
+    color: #666;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* === TAB CONTENT AREA === */
+  .tab-content {
+    padding: 16px;
+    padding-bottom: 80px; /* space for bottom nav */
+    min-height: calc(100vh - 200px);
+  }
+  .content-card {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e0e0e0;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+  .content-card:hover { border-color: #ccc; }
+  .content-card .card-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .content-card .card-subtitle {
+    font-size: 13px;
+    color: #888;
+    font-weight: 500;
+  }
+  .content-card .card-detail {
+    font-size: 13px;
+    color: #666;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+  .day-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #e8943a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    margin-top: 8px;
+  }
+
+  /* ============================================
+     BOTTOM STICKY TAB NAV — THE NEW DESIGN
+     Matches dashboard tab-bar style but fixed
+     to bottom like wizard nav
+     ============================================ */
+  .bottom-tab-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    z-index: 100;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 56px;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid #e5e5e5;
+    padding: 0 4px;
+  }
+  .bottom-tab-nav .tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 100%;
+    border: none;
+    background: none;
+    cursor: pointer;
+    position: relative;
+    border-top: 3px solid transparent;
+    transition: all 0.2s ease;
+    padding: 0;
+    min-width: 0; /* prevents overflow */
+  }
+  .bottom-tab-nav .tab-btn.active {
+    border-top-color: #e8943a;
+  }
+  .bottom-tab-nav .tab-btn .tab-icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+  .bottom-tab-nav .tab-btn .tab-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .bottom-tab-nav .tab-btn.active .tab-label {
+    color: #e8943a;
+    font-weight: 700;
+  }
+
+  /* === COMPARISON TOGGLE === */
+  .toggle-bar {
+    position: fixed;
+    top: 53px;
+    left: 0;
+    right: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    z-index: 90;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f5f0eb;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .toggle-bar button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #ddd;
+    background: #fff;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-bar button.selected {
+    background: #e8943a;
+    color: #fff;
+    border-color: #e8943a;
+  }
+
+  /* === ANNOTATIONS === */
+  .annotation {
+    position: fixed;
+    z-index: 200;
+    background: #1a1a2e;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 10px;
+    line-height: 1.4;
+    max-width: 220px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    pointer-events: none;
+  }
+  .annotation::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: #1a1a2e;
+    transform: rotate(45deg);
+  }
+  .annotation.bottom-callout::after {
+    bottom: -5px;
+    left: 50%;
+    margin-left: -6px;
+  }
+  .annotation.top-callout::after {
+    top: -5px;
+    left: 50%;
+    margin-left: -6px;
+  }
+  .annotation .highlight { color: #e8943a; font-weight: 800; }
+
+  /* Pulse animation for callouts */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  .annotation { animation: pulse 2s ease-in-out infinite; }
+
+  .screen-label {
+    text-align: center;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 12px 0 6px;
+    background: #f5f0eb;
+  }
+</style>
+</head>
+<body>
+
+<!-- Screen Label -->
+<div class="screen-label">Proposed: Trip Detail View</div>
+
+<!-- Top Bar -->
+<div class="top-bar">
+  <button class="back-btn">←</button>
+  <span class="title">Yellowstone Adventure</span>
+  <div class="actions">
+    <button>✏️</button>
+    <button>📤</button>
+  </div>
+</div>
+
+<!-- Trip Header -->
+<div class="trip-header">
+  <div class="trip-type-badge">🏕️ Camping</div>
+  <div class="trip-name">Yellowstone Adventure</div>
+  <div class="trip-dates">Jun 15 – Jun 22, 2026 · 7 nights</div>
+  <div class="trip-stats">
+    <span class="trip-stat">👥 4 travelers</span>
+    <span class="trip-stat">🧳 12 items packed</span>
+    <span class="trip-stat">💰 $1,240 est.</span>
+  </div>
+</div>
+
+<!-- Tab Content (Itinerary shown as example) -->
+<div class="tab-content" id="tabContent">
+  <div class="day-label">Day 1 — Mon, Jun 15</div>
+  <div class="content-card">
+    <div class="card-title">🚗 Drive to Yellowstone</div>
+    <div class="card-subtitle">8:00 AM – 2:00 PM</div>
+    <div class="card-detail">6-hour drive from Salt Lake City. Stop at Idaho Falls for lunch.</div>
+  </div>
+  <div class="content-card">
+    <div class="card-title">⛺ Check in at Canyon Campground</div>
+    <div class="card-subtitle">3:00 PM</div>
+    <div class="card-detail">Site #42 — reserved. Set up camp before sunset.</div>
+  </div>
+
+  <div class="day-label">Day 2 — Tue, Jun 16</div>
+  <div class="content-card">
+    <div class="card-title">🌋 Old Faithful & Geyser Basin</div>
+    <div class="card-subtitle">9:00 AM – 4:00 PM</div>
+    <div class="card-detail">Walk the boardwalk loop. Next eruption predicted ~10:15 AM.</div>
+  </div>
+  <div class="content-card">
+    <div class="card-title">🍖 Campfire Dinner</div>
+    <div class="card-subtitle">6:30 PM</div>
+    <div class="card-detail">Burgers & corn on the grill. S'mores for dessert.</div>
+  </div>
+
+  <div class="day-label">Day 3 — Wed, Jun 17</div>
+  <div class="content-card">
+    <div class="card-title">🥾 Grand Canyon of Yellowstone Hike</div>
+    <div class="card-subtitle">7:30 AM – 1:00 PM</div>
+    <div class="card-detail">Uncle Tom's Trail to Lower Falls. Bring layers — morning temps in the 40s.</div>
+  </div>
+  <div class="content-card">
+    <div class="card-title">🛒 Restock supplies</div>
+    <div class="card-subtitle">3:00 PM</div>
+    <div class="card-detail">Canyon Village general store. Ice, firewood, water.</div>
+  </div>
+</div>
+
+<!-- =============================================
+     BOTTOM STICKY TAB NAV — All tabs visible,
+     compact like dashboard, fixed to bottom
+     like wizard
+     ============================================= -->
+<nav class="bottom-tab-nav" id="bottomNav">
+  <button class="tab-btn active" data-tab="itinerary" onclick="switchTab(this)">
+    <span class="tab-icon">📅</span>
+    <span class="tab-label">Itinerary</span>
+  </button>
+  <button class="tab-btn" data-tab="expenses" onclick="switchTab(this)">
+    <span class="tab-icon">💰</span>
+    <span class="tab-label">Expenses</span>
+  </button>
+  <button class="tab-btn" data-tab="packing" onclick="switchTab(this)">
+    <span class="tab-icon">🧳</span>
+    <span class="tab-label">Packing</span>
+  </button>
+  <button class="tab-btn" data-tab="notes" onclick="switchTab(this)">
+    <span class="tab-icon">📝</span>
+    <span class="tab-label">Notes</span>
+  </button>
+  <button class="tab-btn" data-tab="meals" onclick="switchTab(this)">
+    <span class="tab-icon">🍽️</span>
+    <span class="tab-label">Meals</span>
+  </button>
+  <button class="tab-btn" data-tab="group" onclick="switchTab(this)">
+    <span class="tab-icon">👥</span>
+    <span class="tab-label">Group</span>
+  </button>
+</nav>
+
+<!-- Annotations -->
+<div class="annotation bottom-callout" style="bottom: 68px; left: 50%; transform: translateX(-50%);">
+  ✅ All <span class="highlight">6 tabs visible</span> — no scrolling needed.<br>
+  Fixed to bottom like wizard nav.
+</div>
+
+<script>
+function switchTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const tab = btn.dataset.tab;
+  const content = document.getElementById('tabContent');
+
+  const mockContent = {
+    itinerary: `
+      <div class="day-label">Day 1 — Mon, Jun 15</div>
+      <div class="content-card">
+        <div class="card-title">🚗 Drive to Yellowstone</div>
+        <div class="card-subtitle">8:00 AM – 2:00 PM</div>
+        <div class="card-detail">6-hour drive from Salt Lake City. Stop at Idaho Falls for lunch.</div>
+      </div>
+      <div class="content-card">
+        <div class="card-title">⛺ Check in at Canyon Campground</div>
+        <div class="card-subtitle">3:00 PM</div>
+        <div class="card-detail">Site #42 — reserved. Set up camp before sunset.</div>
+      </div>
+      <div class="day-label">Day 2 — Tue, Jun 16</div>
+      <div class="content-card">
+        <div class="card-title">🌋 Old Faithful & Geyser Basin</div>
+        <div class="card-subtitle">9:00 AM – 4:00 PM</div>
+        <div class="card-detail">Walk the boardwalk loop. Next eruption predicted ~10:15 AM.</div>
+      </div>
+    `,
+    expenses: `
+      <div class="content-card">
+        <div class="card-title">⛽ Gas (estimated)</div>
+        <div class="card-subtitle">$180 · Transportation</div>
+      </div>
+      <div class="content-card">
+        <div class="card-title">🏕️ Canyon Campground</div>
+        <div class="card-subtitle">$210 · Accommodation</div>
+      </div>
+      <div class="content-card">
+        <div class="card-title">🛒 Groceries & Supplies</div>
+        <div class="card-subtitle">$320 · Food</div>
+      </div>
+    `,
+    packing: `
+      <div class="content-card">
+        <div class="card-title">🎒 Hiking Pack</div>
+        <div class="card-subtitle">6 of 8 items packed</div>
+      </div>
+      <div class="content-card">
+        <div class="card-title">⛺ Camp Gear</div>
+        <div class="card-subtitle">4 of 4 items packed</div>
+      </div>
+      <div class="content-card">
+        <div class="card-title">👕 Clothing</div>
+        <div class="card-subtitle">2 of 5 items packed</div>
+      </div>
+    `,
+    notes: `
+      <div class="content-card">
+        <div class="card-title">📝 Reservation Confirmations</div>
+        <div class="card-detail">Campground confirmation #YNP-8842. Check-in after 2 PM.</div>
+      </div>
+      <div class="content-card">
+        <div class="card-title">📝 Bear Safety Reminders</div>
+        <div class="card-detail">Store all food in bear boxes. Never approach wildlife within 100 yards.</div>
+      </div>
+    `,
+    meals: `
+      <div class="day-label">Day 1 — Mon, Jun 15</div>
+      <div class="content-card">
+        <div class="card-title">🍔 Lunch — Idaho Falls Diner</div>
+        <div class="card-subtitle">12:00 PM · en route</div>
+      </div>
+      <div class="content-card">
+        <div class="card-title">🌭 Dinner — Hot dogs at camp</div>
+        <div class="card-subtitle">7:00 PM · Canyon Campground</div>
+      </div>
+    `,
+    group: `
+      <div class="content-card">
+        <div class="card-title">👤 Joe (you)</div>
+        <div class="card-subtitle">Organizer</div>
+      </div>
+      <div class="content-card">
+        <div class="card-title">👤 Sarah</div>
+        <div class="card-subtitle">Confirmed · bringing tent</div>
+      </div>
+      <div class="content-card">
+        <div class="card-title">👤 Mike</div>
+        <div class="card-subtitle">Confirmed · bringing grill</div>
+      </div>
+      <div class="content-card">
+        <div class="card-title">👤 Rachel</div>
+        <div class="card-subtitle">Pending invite</div>
+      </div>
+    `,
+  };
+
+  content.innerHTML = mockContent[tab] || '<div class="content-card"><div class="card-title">Coming soon</div></div>';
+}
+</script>
+</body>
+</html>

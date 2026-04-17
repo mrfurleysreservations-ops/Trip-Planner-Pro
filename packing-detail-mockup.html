@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Packing — Deep Dive Mockup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+    color: #1a1a1a;
+  }
+  h1 { color: #fff; text-align: center; margin-bottom: 6px; font-size: 22px; }
+  h1 small { display: block; font-weight: 400; font-size: 13px; opacity: .85; margin-top: 4px; }
+  .legend {
+    max-width: 900px;
+    margin: 0 auto 24px;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.6;
+    backdrop-filter: blur(10px);
+  }
+  .legend b { color: #fff; }
+  .legend code { background: rgba(0,0,0,.25); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+  .phones {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; }
+  .phone-label {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-align: center;
+    opacity: .95;
+  }
+  .phone-label span { display: block; font-weight: 400; opacity: .8; font-size: 11px; margin-top: 2px; }
+  .phone {
+    width: 340px;
+    height: 680px;
+    background: #000;
+    border-radius: 40px;
+    padding: 10px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    position: relative;
+  }
+  .screen {
+    width: 100%;
+    height: 100%;
+    background: #f5f5f7;
+    border-radius: 32px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* STICKY SECTION (preserved from standard skeleton) */
+  .sticky-region {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #fff;
+    border-bottom: 1px solid #e5e5ea;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 10px;
+  }
+  .header .back { color: #007aff; font-size: 15px; cursor: pointer; }
+  .header .title { font-size: 17px; font-weight: 600; }
+  .header .actions { display: flex; gap: 8px; }
+  .header .actions span {
+    width: 28px; height: 28px; display: grid; place-items: center;
+    background: #f2f2f7; border-radius: 50%; font-size: 14px; cursor: pointer;
+  }
+
+  .pill-row { display: flex; justify-content: center; padding: 0 16px 12px; }
+  .pill {
+    background: #e5e5ea;
+    border-radius: 20px;
+    padding: 3px;
+    display: flex;
+    gap: 2px;
+  }
+  .pill button {
+    border: 0; background: transparent; padding: 7px 18px;
+    border-radius: 18px; font-size: 13px; font-weight: 500; cursor: pointer;
+    color: #333;
+  }
+  .pill button.active {
+    background: #fff;
+    color: #ff6b35;
+    box-shadow: 0 1px 3px rgba(0,0,0,.12);
+  }
+
+  .chip-row {
+    display: flex; gap: 8px; padding: 0 16px 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .chip-row::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 14px;
+    background: #f2f2f7;
+    font-size: 12px;
+    font-weight: 500;
+    color: #3c3c43;
+    cursor: pointer;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .chip.active { background: #ff6b35; color: #fff; }
+  .chip.host::before { content: '👑'; font-size: 11px; }
+  .chip.kid::before { content: '🧒'; font-size: 11px; }
+
+  /* SCROLLABLE BODY */
+  .body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px 80px;
+  }
+
+  /* BY-EVENT VIEW */
+  .day-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: #8e8e93;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin: 6px 4px 10px;
+  }
+  .day-header:not(:first-child) { margin-top: 18px; }
+  .event-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    border-left: 3px solid #ff6b35;
+  }
+  .event-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .event-name { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+  .event-time { font-size: 11px; color: #ff6b35; font-weight: 600; background: #fff3ee; padding: 2px 7px; border-radius: 8px; }
+  .dress-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    background: #f2f2f7;
+    color: #636366;
+    padding: 2px 7px;
+    border-radius: 5px;
+    margin-bottom: 8px;
+    letter-spacing: .3px;
+  }
+  .dress-tag.formal { background: #e5e5ea; color: #1a1a1a; }
+  .dress-tag.active { background: #e0f7e9; color: #0a7a42; }
+  .dress-tag.beach { background: #ffe9db; color: #c44a1b; }
+
+  /* Outfit block */
+  .outfit-block {
+    background: #faf8ff;
+    border: 1px dashed #c4b5e0;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  .outfit-person {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: #5e3aa6;
+    text-transform: uppercase; letter-spacing: .5px;
+    margin-bottom: 6px;
+  }
+  .outfit-person .avatar {
+    width: 18px; height: 18px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 10px;
+    background: #5e3aa6; color: #fff; font-weight: 600;
+  }
+  .outfit-person .avatar.sarah { background: #d53f8c; }
+  .outfit-person .avatar.mike { background: #0ea5e9; }
+  .outfit-person .avatar.emma { background: #f59e0b; }
+  .outfit-items {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .outfit-piece {
+    background: #fff;
+    border: 1px solid #e5e5ea;
+    border-radius: 6px;
+    font-size: 11px;
+    padding: 3px 7px;
+    color: #4a4a4a;
+  }
+  .outfit-piece.missing {
+    border: 1px solid #ff9500;
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  /* Items block */
+  .items-block { }
+  .items-head {
+    font-size: 11px; font-weight: 600; color: #8e8e93;
+    letter-spacing: .3px; margin-bottom: 6px;
+    display: flex; justify-content: space-between;
+  }
+  .items-head .count { color: #ff6b35; font-weight: 700; }
+  .item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 2px;
+    border-bottom: 1px solid #f2f2f7;
+    font-size: 13px;
+  }
+  .item:last-child { border-bottom: 0; }
+  .item .check {
+    width: 18px; height: 18px; border: 1.5px solid #c7c7cc;
+    border-radius: 4px; flex-shrink: 0;
+    display: grid; place-items: center;
+    font-size: 12px; color: #fff;
+  }
+  .item.packed .check { background: #34c759; border-color: #34c759; }
+  .item.packed .name { text-decoration: line-through; color: #8e8e93; }
+  .item .name { flex: 1; color: #1a1a1a; }
+  .item .owner {
+    font-size: 9px; font-weight: 700; color: #fff;
+    padding: 2px 5px; border-radius: 4px; letter-spacing: .2px;
+  }
+  .item .owner.joe { background: #5e3aa6; }
+  .item .owner.sarah { background: #d53f8c; }
+  .item .owner.mike { background: #0ea5e9; }
+  .item .owner.emma { background: #f59e0b; }
+  .item .owner.shared { background: #636366; }
+
+  /* PROGRESS BAR (master list) */
+  .progress-card {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 12px rgba(255,107,53,.25);
+  }
+  .progress-card .top {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 10px;
+  }
+  .progress-card .who { font-size: 13px; opacity: .9; }
+  .progress-card .who b { font-size: 16px; display: block; opacity: 1; }
+  .progress-card .stat { font-size: 22px; font-weight: 700; }
+  .progress-card .stat small { font-size: 11px; opacity: .85; font-weight: 400; }
+  .bar { height: 6px; background: rgba(255,255,255,.3); border-radius: 3px; overflow: hidden; }
+  .bar .fill { height: 100%; background: #fff; border-radius: 3px; width: 58%; }
+
+  /* Category sections */
+  .cat-section { margin-bottom: 14px; }
+  .cat-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 2px 6px;
+    font-size: 12px; font-weight: 700; color: #1a1a1a;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .cat-head .ic { margin-right: 6px; }
+  .cat-head .num { font-weight: 500; color: #8e8e93; font-size: 11px; }
+  .cat-body {
+    background: #fff;
+    border-radius: 12px;
+    padding: 4px 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  .item-master {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 2px;
+    border-bottom: 1px solid #f2f2f7;
+    font-size: 13px;
+  }
+  .item-master:last-child { border-bottom: 0; }
+  .item-master .check {
+    width: 20px; height: 20px; border: 1.5px solid #c7c7cc;
+    border-radius: 4px; flex-shrink: 0;
+    display: grid; place-items: center;
+    font-size: 12px; color: #fff;
+  }
+  .item-master.packed .check { background: #34c759; border-color: #34c759; }
+  .item-master.packed .name { text-decoration: line-through; color: #8e8e93; }
+  .item-master .name { flex: 1; }
+  .item-master .for {
+    font-size: 10px; color: #8e8e93;
+    display: block;
+    margin-top: 1px;
+  }
+
+  /* FAB & subnav */
+  .fab {
+    position: absolute;
+    right: 16px;
+    bottom: 82px;
+    width: 50px; height: 50px;
+    background: #ff6b35;
+    color: #fff;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 24px; font-weight: 300;
+    box-shadow: 0 4px 16px rgba(255,107,53,.4);
+    cursor: pointer;
+  }
+  .subnav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: #fff;
+    border-top: 1px solid #e5e5ea;
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0 14px;
+    border-bottom-left-radius: 32px;
+    border-bottom-right-radius: 32px;
+  }
+  .subnav .tab {
+    display: flex; flex-direction: column; align-items: center;
+    font-size: 10px; color: #8e8e93; gap: 2px;
+  }
+  .subnav .tab.active { color: #ff6b35; font-weight: 600; }
+  .subnav .tab .icon { font-size: 18px; }
+
+  .explainer {
+    max-width: 900px;
+    margin: 24px auto 0;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.65;
+    backdrop-filter: blur(10px);
+  }
+  .explainer h3 { font-size: 14px; margin-bottom: 6px; }
+  .explainer h3:not(:first-child) { margin-top: 14px; }
+  .explainer ul { list-style: none; padding-left: 0; }
+  .explainer li { padding-left: 18px; position: relative; margin-bottom: 5px; }
+  .explainer li::before { content: '→'; position: absolute; left: 0; color: #ffd37a; }
+</style>
+</head>
+<body>
+
+<h1>Packing — Groups, Outfits & Pack-and-Go
+  <small>nothing lost from the itinerary-first model · same skeleton as the other tabs</small>
+</h1>
+
+<div class="legend">
+  <b>What's preserved from CLAUDE.md:</b> <code>packing_items</code> (event-linked, per person) · <code>packing_outfits</code> (per event, per person) · flow = <b>Pack by Event → Consolidate (Master List) → Go</b>. No wardrobe/suitcase tables — scope stays per-trip.
+  <br><br>
+  <b>Two views, one data source.</b> The same items appear in both — "By Event" groups them by <i>when you need them</i>, "Master List" groups them by <i>where they go in the suitcase</i>.
+</div>
+
+<div class="phones">
+
+  <!-- ===== PHONE 1: BY EVENT (ALL people, host view) ===== -->
+  <div class="phone-wrap">
+    <div class="phone-label">By Event · viewing "All"
+      <span>host sees every person's outfit stacked per event</span>
+    </div>
+    <div class="phone">
+      <div class="screen">
+
+        <div class="sticky-region">
+          <div class="header">
+            <span class="back">‹ Trip</span>
+            <span class="title">Packing</span>
+            <div class="actions"><span>⚙︎</span></div>
+          </div>
+          <div class="pill-row">
+            <div class="pill">
+              <button class="active">By Event</button>
+              <button>Master List</button>
+            </div>
+          </div>
+          <div class="chip-row">
+            <div class="chip active">All (4)</div>
+            <div class="chip host">Joe</div>
+            <div class="chip">Sarah</div>
+            <div class="chip kid">Mike</div>
+            <div class="chip kid">Emma</div>
+          </div>
+        </div>
+
+        <div class="body">
+
+          <div class="day-header">Mon · Apr 20 · Day 1</div>
+
+          <div class="event-card">
+            <div class="event-head">
+              <div class="event-name">Beach Day</div>
+              <div class="event-time">2:00 PM</div>
+            </div>
+            <div class="dress-tag beach">BEACH · CASUAL</div>
+
+            <!-- Outfits stacked for each opted-in person -->
+            <div class="outfit-block">
+              <div class="outfit-person"><span class="avatar">J</span>Joe's Outfit</div>
+              <div class="outfit-items">
+                <div class="outfit-piece">Swim trunks</div>
+                <div class="outfit-piece">T-shirt</div>
+                <div class="outfit-piece">Sandals</div>
+              </div>
+            </div>
+            <div class="outfit-block">
+              <div class="outfit-person"><span class="avatar sarah">S</span>Sarah's Outfit</div>
+              <div class="outfit-items">
+                <div class="outfit-piece">One-piece</div>
+                <div class="outfit-piece">Cover-up</div>
+                <div class="outfit-piece missing">Sun hat (needed)</div>
+              </div>
+            </div>
+            <div class="outfit-block">
+              <div class="outfit-person"><span class="avatar emma">E</span>Emma's Outfit</div>
+              <div class="outfit-items">
+                <div class="outfit-piece">Rash guard</div>
+                <div class="outfit-piece">Swim shorts</div>
+                <div class="outfit-piece">Water shoes</div>
+              </div>
+            </div>
+
+            <div class="items-block">
+              <div class="items-head"><span>SHARED ITEMS</span><span class="count">3 / 5</span></div>
+              <div class="item packed"><span class="check">✓</span><span class="name">Sunscreen SPF 50</span><span class="owner shared">SHARED</span></div>
+              <div class="item packed"><span class="check">✓</span><span class="name">Beach towels (4)</span><span class="owner shared">SHARED</span></div>
+              <div class="item"><span class="check"></span><span class="name">Cooler</span><span class="owner shared">SHARED</span></div>
+              <div class="item packed"><span class="check">✓</span><span class="name">Emma's floaties</span><span class="owner emma">EMMA</span></div>
+              <div class="item"><span class="check"></span><span class="name">Frisbee</span><span class="owner mike">MIKE</span></div>
+            </div>
+          </div>
+
+          <div class="event-card">
+            <div class="event-head">
+              <div class="event-name">Dinner · Osteria Romana</div>
+              <div class="event-time">7:30 PM</div>
+            </div>
+            <div class="dress-tag formal">SMART CASUAL · RESERVATION</div>
+
+            <div class="outfit-block">
+              <div class="outfit-person"><span class="avatar">J</span>Joe's Outfit</div>
+              <div class="outfit-items">
+                <div class="outfit-piece">Button-up shirt</div>
+                <div class="outfit-piece">Chinos</div>
+                <div class="outfit-piece">Loafers</div>
+              </div>
+            </div>
+            <div class="outfit-block">
+              <div class="outfit-person"><span class="avatar sarah">S</span>Sarah's Outfit</div>
+              <div class="outfit-items">
+                <div class="outfit-piece">Black dress</div>
+                <div class="outfit-piece">Heels</div>
+                <div class="outfit-piece">Wrap</div>
+              </div>
+            </div>
+
+            <div class="items-block">
+              <div class="items-head"><span>ITEMS</span><span class="count">1 / 2</span></div>
+              <div class="item packed"><span class="check">✓</span><span class="name">Reservation confirm</span><span class="owner joe">JOE</span></div>
+              <div class="item"><span class="check"></span><span class="name">Small gift for host</span><span class="owner shared">SHARED</span></div>
+            </div>
+          </div>
+
+          <div class="day-header">Tue · Apr 21 · Day 2</div>
+
+          <div class="event-card">
+            <div class="event-head">
+              <div class="event-name">Hiking · Cinque Terre</div>
+              <div class="event-time">9:00 AM</div>
+            </div>
+            <div class="dress-tag active">ACTIVE · 4-HOUR TRAIL</div>
+            <div class="outfit-block">
+              <div class="outfit-person"><span class="avatar">J</span>Joe's Outfit</div>
+              <div class="outfit-items">
+                <div class="outfit-piece">Hiking shirt</div>
+                <div class="outfit-piece">Shorts</div>
+                <div class="outfit-piece">Trail shoes</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="fab">+</div>
+        <div class="subnav">
+          <div class="tab"><span class="icon">📅</span>Itinerary</div>
+          <div class="tab"><span class="icon">💰</span>Expenses</div>
+          <div class="tab active"><span class="icon">🎒</span>Packing</div>
+          <div class="tab"><span class="icon">📝</span>Notes</div>
+          <div class="tab"><span class="icon">👥</span>Group</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===== PHONE 2: MASTER LIST (single person — Emma, a kid) ===== -->
+  <div class="phone-wrap">
+    <div class="phone-label">Master List · viewing "Emma"
+      <span>host helping pack a kid's suitcase — consolidated & checkable</span>
+    </div>
+    <div class="phone">
+      <div class="screen">
+
+        <div class="sticky-region">
+          <div class="header">
+            <span class="back">‹ Trip</span>
+            <span class="title">Packing</span>
+            <div class="actions"><span>⚙︎</span></div>
+          </div>
+          <div class="pill-row">
+            <div class="pill">
+              <button>By Event</button>
+              <button class="active">Master List</button>
+            </div>
+          </div>
+          <div class="chip-row">
+            <div class="chip">All (4)</div>
+            <div class="chip host">Joe</div>
+            <div class="chip">Sarah</div>
+            <div class="chip kid">Mike</div>
+            <div class="chip kid active">Emma</div>
+          </div>
+        </div>
+
+        <div class="body">
+
+          <div class="progress-card">
+            <div class="top">
+              <div class="who">Packing for<br><b>Emma</b></div>
+              <div class="stat">11/19<small> items</small></div>
+            </div>
+            <div class="bar"><div class="fill" style="width:58%"></div></div>
+          </div>
+
+          <div class="cat-section">
+            <div class="cat-head">
+              <span><span class="ic">👕</span>Clothing</span>
+              <span class="num">5 / 8</span>
+            </div>
+            <div class="cat-body">
+              <div class="item-master packed">
+                <span class="check">✓</span>
+                <div style="flex:1">
+                  <span class="name">Rash guard</span>
+                  <span class="for">for · Beach Day</span>
+                </div>
+              </div>
+              <div class="item-master packed">
+                <span class="check">✓</span>
+                <div style="flex:1">
+                  <span class="name">Swim shorts</span>
+                  <span class="for">for · Beach Day</span>
+                </div>
+              </div>
+              <div class="item-master packed">
+                <span class="check">✓</span>
+                <div style="flex:1">
+                  <span class="name">Sundress (×2)</span>
+                  <span class="for">for · Dinner, Farewell</span>
+                </div>
+              </div>
+              <div class="item-master">
+                <span class="check"></span>
+                <div style="flex:1">
+                  <span class="name">Hiking pants</span>
+                  <span class="for">for · Cinque Terre hike</span>
+                </div>
+              </div>
+              <div class="item-master">
+                <span class="check"></span>
+                <div style="flex:1">
+                  <span class="name">Light jacket</span>
+                  <span class="for">base layer (all days)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cat-section">
+            <div class="cat-head">
+              <span><span class="ic">👟</span>Shoes</span>
+              <span class="num">2 / 3</span>
+            </div>
+            <div class="cat-body">
+              <div class="item-master packed">
+                <span class="check">✓</span>
+                <div style="flex:1">
+                  <span class="name">Water shoes</span>
+                  <span class="for">for · Beach Day</span>
+                </div>
+              </div>
+              <div class="item-master packed">
+                <span class="check">✓</span>
+                <div style="flex:1">
+                  <span class="name">Sandals</span>
+                  <span class="for">for · Dinner</span>
+                </div>
+              </div>
+              <div class="item-master">
+                <span class="check"></span>
+                <div style="flex:1">
+                  <span class="name">Trail sneakers</span>
+                  <span class="for">for · Cinque Terre hike</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cat-section">
+            <div class="cat-head">
+              <span><span class="ic">🧴</span>Toiletries</span>
+              <span class="num">3 / 5</span>
+            </div>
+            <div class="cat-body">
+              <div class="item-master packed"><span class="check">✓</span><div style="flex:1"><span class="name">Kid toothbrush</span></div></div>
+              <div class="item-master packed"><span class="check">✓</span><div style="flex:1"><span class="name">Detangle spray</span></div></div>
+              <div class="item-master packed"><span class="check">✓</span><div style="flex:1"><span class="name">Hair ties</span></div></div>
+              <div class="item-master"><span class="check"></span><div style="flex:1"><span class="name">Sunscreen (kid)</span><span class="for">mineral, face-safe</span></div></div>
+              <div class="item-master"><span class="check"></span><div style="flex:1"><span class="name">Band-aids</span></div></div>
+            </div>
+          </div>
+
+          <div class="cat-section">
+            <div class="cat-head">
+              <span><span class="ic">🧸</span>Kid Extras</span>
+              <span class="num">1 / 3</span>
+            </div>
+            <div class="cat-body">
+              <div class="item-master packed"><span class="check">✓</span><div style="flex:1"><span class="name">Floaties</span><span class="for">for · Beach Day</span></div></div>
+              <div class="item-master"><span class="check"></span><div style="flex:1"><span class="name">Tablet + charger</span><span class="for">for · plane</span></div></div>
+              <div class="item-master"><span class="check"></span><div style="flex:1"><span class="name">Stuffed bunny</span><span class="for">bedtime</span></div></div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="fab">+</div>
+        <div class="subnav">
+          <div class="tab"><span class="icon">📅</span>Itinerary</div>
+          <div class="tab"><span class="icon">💰</span>Expenses</div>
+          <div class="tab active"><span class="icon">🎒</span>Packing</div>
+          <div class="tab"><span class="icon">📝</span>Notes</div>
+          <div class="tab"><span class="icon">👥</span>Group</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="explainer">
+  <h3>How "Groups · Outfits · Pack-and-Go" work together</h3>
+  <ul>
+    <li><b>Person chip row</b> is the group filter. <b>All</b> shows every household member stacked (host/parent view — good for coordinating kids). Tap one person to see just their stuff.</li>
+    <li><b>Outfits</b> live inside each event card in By-Event view. One outfit per event per person (matches <code>packing_outfits</code> table). A piece marked orange = missing from their suitcase and will auto-add to Master List.</li>
+    <li><b>Items</b> (non-outfit gear — sunscreen, reservation, floaties) sit below the outfits in the event card, colour-tagged by owner. "SHARED" items count once, not per-person.</li>
+    <li><b>Master List</b> is the auto-consolidated suitcase for the selected person. Each item shows which event(s) it came from, so nothing gets packed "just in case" — every item has a reason.</li>
+    <li><b>Pack-and-Go</b> = the checkbox. Check it when the item is in the bag. The progress card ("11 of 19") rolls up live. On travel day you can switch to a "Going today" filter (future enhancement) to see only items needed before leaving the house.</li>
+  </ul>
+
+  <h3>Host / family-member permissions</h3>
+  <ul>
+    <li><b>Host (Joe)</b> can view and edit any member's packing — essential for packing a kid's bag. That's why the chip row includes everyone by default.</li>
+    <li><b>Adult members (Sarah)</b> see their own packing + shared items. They can optionally view others' if the host enables it.</li>
+    <li><b>Kids (Mike, Emma)</b> don't have their own logins — their packing is managed by a parent. The 🧒 icon in the chip flags "this person is a dependent."</li>
+    <li><b>Opt-in is per event</b> (<code>event_participants</code>) — if Sarah opts out of hiking, her outfit block doesn't appear on that event card and trail-shoes won't land in her Master List.</li>
+  </ul>
+
+  <h3>What's <i>not</i> lost from the previous design</h3>
+  <ul>
+    <li>Event-driven packing ✓ &nbsp; Outfit-per-event ✓ &nbsp; Consolidation into one master suitcase ✓</li>
+    <li>Shared vs. personal items ✓ &nbsp; Per-person suitcase progress ✓ &nbsp; Missing-piece warnings ✓</li>
+    <li>Opt-in/opt-out per event cascades to packing ✓ &nbsp; Host can edit family packing ✓</li>
+  </ul>
+
+  <h3>Open questions before I cut the build prompt</h3>
+  <ul>
+    <li>The Master List progress bar — roll-up per person only, or also a trip-wide "household" progress when "All" is selected?</li>
+    <li>For the "All" chip in Master List, do you want one merged list (every item from every person) or stacked per-person sections? (Merged is faster to skim, stacked is better for a shared suitcase.)</li>
+    <li>The "missing piece" orange badge on outfits — should tapping it auto-add the item to Master List, or just flag it and leave adding manual?</li>
+  </ul>
+</div>
+
+</body>
+</html>

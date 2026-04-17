@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Packing V3 — Header + Group Tab Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: #f5f0eb; color: #1a1a1a; max-width: 420px; margin: 0 auto; min-height: 100vh; position: relative; overflow-x: hidden; }
+
+  /* ─── Shared ─── */
+  .accent { color: #e8943a; }
+  .accent2 { color: #c75a2a; }
+  .muted { color: #777; }
+  .card { background: #fff; border-radius: 16px; border: 1px solid #e8e8e8; overflow: hidden; margin-bottom: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+
+  /* ─── Page Header (new pattern) ─── */
+  .page-header {
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(12px);
+    padding: 14px 16px;
+    border-bottom: 1px solid #e8e8e8;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid #e8e8e8;
+    background: #fff;
+    cursor: pointer;
+    font-size: 18px;
+    color: #1a1a1a;
+    flex-shrink: 0;
+  }
+  .page-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+
+  /* ─── Person Tabs ─── */
+  .person-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 16px;
+    background: #f5f0eb;
+    border-bottom: 1px solid #e8e8e8;
+    overflow-x: auto;
+  }
+  .person-tab {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #777;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .person-tab.active {
+    border-bottom-color: #e8943a;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  .host-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 8px;
+    background: #e8943a18;
+    color: #e8943a;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* ─── View Tabs ─── */
+  .view-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 16px;
+    margin: 12px 0 0;
+    overflow-x: auto;
+  }
+  .view-tab {
+    flex: 0 0 auto;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #777;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .view-tab.active {
+    border-bottom-color: #e8943a;
+    font-weight: 700;
+    color: #e8943a;
+  }
+
+  /* ─── Merge CTA header ─── */
+  .merge-header {
+    padding: 20px 16px 16px;
+    text-align: center;
+  }
+  .merge-header h2 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    line-height: 1.35;
+    color: #1a1a1a;
+    margin-bottom: 6px;
+  }
+  .merge-header p {
+    font-size: 12px;
+    color: #777;
+    line-height: 1.5;
+  }
+
+  /* ─── Day navigation ─── */
+  .day-nav {
+    display: flex;
+    gap: 6px;
+    padding: 0 16px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+  }
+  .day-pill {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    border-radius: 16px;
+    border: 1px solid #e8943a;
+    background: #e8943a14;
+    color: #e8943a;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .day-pill.inactive {
+    border-color: #e8e8e8;
+    background: #fff;
+    color: #777;
+  }
+
+  /* ─── Group card ─── */
+  .group-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e8e8e8;
+    overflow: hidden;
+    margin: 0 16px 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  .group-header {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .dc-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .group-event {
+    padding: 8px 18px 8px 44px;
+    border-top: 1px solid #e8e8e8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .group-actions {
+    padding: 8px 18px;
+    border-top: 1px solid #e8e8e8;
+    display: flex;
+    gap: 8px;
+  }
+  .merge-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: #fff3e0;
+    color: #e65100;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .split-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: #e3f2fd;
+    color: #1565c0;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ─── Sticky CTA ─── */
+  .sticky-cta-wrapper {
+    position: fixed;
+    bottom: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 420px;
+    z-index: 101;
+    padding: 0 16px 12px;
+    background: linear-gradient(to top, #f5f0eb 70%, transparent);
+    pointer-events: none;
+  }
+  .sticky-cta-bar {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(12px);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  }
+  .cta-prev, .cta-next {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .cta-prev {
+    border: 1px solid #e8e8e8;
+    background: #fff;
+    color: #1a1a1a;
+  }
+  .cta-prev.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .cta-next {
+    border: none;
+    color: #fff;
+    background: linear-gradient(135deg, #e8943a 0%, #c75a2a 100%);
+    box-shadow: 0 2px 10px rgba(232,148,58,0.3);
+  }
+  .cta-center {
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #e8943a;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ─── Bottom Nav ─── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 420px;
+    height: 56px;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid #e8e8e8;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    z-index: 200;
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #777;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .nav-item.active { color: #e8943a; }
+  .nav-icon { font-size: 18px; }
+
+  /* ─── Section divider ─── */
+  .section-divider {
+    text-align: center;
+    padding: 40px 20px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #c75a2a;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-top: 2px dashed #e8e8e8;
+    margin-top: 40px;
+  }
+
+  .spacer { height: 140px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!--  SCREEN 1: DASHBOARD with back pattern             -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section-divider" style="margin-top: 0; border: none;">Screen 1 — Dashboard</div>
+
+<div class="page-header">
+  <div class="page-title">Dashboard</div>
+</div>
+<div style="padding: 16px;">
+  <div class="card" style="padding: 18px; cursor: pointer;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 24px;">🏖️</span>
+      <div>
+        <div style="font-weight: 700; font-size: 15px; font-family: 'Outfit', sans-serif;">Beach Weekend</div>
+        <div style="font-size: 11px; color: #777;">Jun 12–14 · Cancún</div>
+      </div>
+      <span style="margin-left: auto; font-size: 14px; color: #777;">→</span>
+    </div>
+  </div>
+  <div style="font-size: 11px; color: #777; text-align: center; margin-top: 8px;">Tap a trip to open the Trip Hub</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!--  SCREEN 2: TRIP HUB with back → Dashboard          -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section-divider">Screen 2 — Trip Hub</div>
+
+<div class="page-header">
+  <div class="back-btn">←</div>
+  <div>
+    <div class="page-title">Beach Weekend</div>
+    <div style="font-size: 11px; color: #777;">Jun 12–14 · Cancún</div>
+  </div>
+</div>
+<div style="padding: 16px; font-size: 12px; color: #777; text-align: center;">
+  ← goes to Dashboard<br><br>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center;">
+    <div class="card" style="padding: 14px; cursor: pointer;"><div style="font-size: 20px;">📅</div><div style="font-size: 11px; font-weight: 600; margin-top: 4px;">Itinerary</div></div>
+    <div class="card" style="padding: 14px; cursor: pointer;"><div style="font-size: 20px;">💰</div><div style="font-size: 11px; font-weight: 600; margin-top: 4px;">Expenses</div></div>
+    <div class="card" style="padding: 14px; cursor: pointer; border: 2px solid #e8943a;"><div style="font-size: 20px;">👜</div><div style="font-size: 11px; font-weight: 600; margin-top: 4px; color: #e8943a;">Packing</div></div>
+    <div class="card" style="padding: 14px; cursor: pointer;"><div style="font-size: 20px;">📝</div><div style="font-size: 11px; font-weight: 600; margin-top: 4px;">Notes</div></div>
+    <div class="card" style="padding: 14px; cursor: pointer;"><div style="font-size: 20px;">🍽️</div><div style="font-size: 11px; font-weight: 600; margin-top: 4px;">Meals</div></div>
+    <div class="card" style="padding: 14px; cursor: pointer;"><div style="font-size: 20px;">👥</div><div style="font-size: 11px; font-weight: 600; margin-top: 4px;">Group</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!--  SCREEN 3: PACKING — Group Tab (the main mockup)   -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section-divider">Screen 3 — Packing (Group Tab)</div>
+
+<!-- New header: "Packing" + back arrow -->
+<div class="page-header">
+  <div class="back-btn">←</div>
+  <div class="page-title">Packing</div>
+</div>
+
+<!-- Person tabs (family members — clickable) -->
+<div class="person-tabs">
+  <button class="person-tab active">
+    Joe <span class="host-badge">Host</span>
+  </button>
+  <button class="person-tab">
+    Sarah
+  </button>
+  <button class="person-tab">
+    Tommy
+  </button>
+</div>
+
+<!-- Packing style badge -->
+<div style="margin: 12px 16px 0; padding: 10px 14px; background: #e8943a0a; border: 1px solid #e8e8e8; border-radius: 12px;">
+  <span style="font-size: 11px; color: #777;">📋 Planner Mode — Each event gets a mapped outfit based on dress code</span>
+</div>
+
+<!-- View tabs -->
+<div class="view-tabs">
+  <button class="view-tab active">Group</button>
+  <button class="view-tab">Outfits</button>
+  <button class="view-tab">Pack & Go ✓</button>
+</div>
+
+<!-- ─── BIG BOLD MERGE HEADER ─── -->
+<div class="merge-header">
+  <h2>Wearing the same outfit to multiple events?<br>Merge those events together.</h2>
+  <p>Your events are auto-grouped by day and dress code. If two groups could share one outfit, merge them.</p>
+</div>
+
+<!-- Day pills -->
+<div class="day-nav">
+  <button class="day-pill">Fri, Jun 12</button>
+  <button class="day-pill inactive">Sat, Jun 13</button>
+  <button class="day-pill inactive">Sun, Jun 14</button>
+</div>
+
+<!-- Group cards for Day 1 -->
+<div class="group-card">
+  <div class="group-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 14px;">🍽️</span>
+      <div>
+        <div style="font-size: 13px; font-weight: 700;">Smart Casual — Fri, Jun 12</div>
+        <div style="font-size: 11px; color: #777;">2 events · 0 items</div>
+      </div>
+    </div>
+    <span class="dc-badge" style="background: #0097a718; color: #0097a7;">Smart Casual</span>
+  </div>
+  <div class="group-event">
+    <span style="font-size: 11px;">🍽️</span>
+    <span style="font-weight: 600;">Welcome Dinner</span>
+    <span style="font-size: 10px; color: #777; margin-left: auto;">Evening · 7:00 PM</span>
+  </div>
+  <div class="group-event">
+    <span style="font-size: 11px;">🍹</span>
+    <span style="font-weight: 600;">Cocktail Hour</span>
+    <span style="font-size: 10px; color: #777; margin-left: auto;">Evening · 9:00 PM</span>
+  </div>
+  <div class="group-actions">
+    <button class="split-btn">Split</button>
+  </div>
+</div>
+
+<div class="group-card">
+  <div class="group-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 14px;">🏖️</span>
+      <div>
+        <div style="font-size: 13px; font-weight: 700;">Casual — Fri, Jun 12</div>
+        <div style="font-size: 11px; color: #777;">1 event · 0 items</div>
+      </div>
+    </div>
+    <span class="dc-badge" style="background: #4caf5018; color: #4caf50;">Casual</span>
+  </div>
+  <div class="group-event">
+    <span style="font-size: 11px;">🏊</span>
+    <span style="font-weight: 600;">Pool Afternoon</span>
+    <span style="font-size: 10px; color: #777; margin-left: auto;">Afternoon · 2:00 PM</span>
+  </div>
+  <div class="group-actions">
+    <button class="merge-btn">Merge with…</button>
+  </div>
+</div>
+
+<!-- ─── STICKY CTA: Prev / Day X of Y / Next ─── -->
+<div class="sticky-cta-wrapper" style="position: relative; bottom: auto; left: auto; transform: none; margin-top: 20px;">
+  <div class="sticky-cta-bar">
+    <button class="cta-prev disabled">← Prev</button>
+    <span class="cta-center">Day 1 of 3</span>
+    <button class="cta-next">Next →</button>
+  </div>
+</div>
+
+<div style="padding: 10px 16px; font-size: 11px; color: #777; text-align: center;">
+  ↑ This bar is fixed at bottom above nav.<br>
+  Prev/Next steps through days.<br>
+  On the last day, "Next →" becomes<br>
+  <strong style="color: #e8943a;">"Build Outfits →"</strong> and advances to the Outfits tab.
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!--  SCREEN 4: OTHER TAB EXAMPLES (Itinerary, Meals)   -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section-divider">Same Pattern — Every Tab</div>
+
+<div class="page-header">
+  <div class="back-btn">←</div>
+  <div class="page-title">Itinerary</div>
+</div>
+<div style="padding: 16px; text-align: center; font-size: 12px; color: #777;">
+  ← goes to Trip Hub<br>
+  Content for itinerary below...
+</div>
+
+<div class="page-header" style="margin-top: 16px;">
+  <div class="back-btn">←</div>
+  <div class="page-title">Meals</div>
+</div>
+<div style="padding: 16px; text-align: center; font-size: 12px; color: #777;">
+  ← goes to Trip Hub<br>
+  Content for meals below...
+</div>
+
+<div class="page-header" style="margin-top: 16px;">
+  <div class="back-btn">←</div>
+  <div class="page-title">Group</div>
+</div>
+<div style="padding: 16px; text-align: center; font-size: 12px; color: #777;">
+  ← goes to Trip Hub<br>
+  Content for group below...
+</div>
+
+<div style="padding: 20px 16px; text-align: center; font-size: 12px; color: #777; line-height: 1.6;">
+  <strong>Summary of header pattern:</strong><br>
+  Every tab page: <code>[← ] Page Name</code><br>
+  Back always goes to Trip Hub.<br>
+  Trip Hub back goes to Dashboard.<br>
+  No trip name/dates/location repeated on sub-pages.
+</div>
+
+<div class="spacer"></div>
+
+<!-- Bottom nav (static for mockup) -->
+<div class="bottom-nav">
+  <div class="nav-item"><span class="nav-icon">📅</span>Itinerary</div>
+  <div class="nav-item"><span class="nav-icon">💰</span>Expenses</div>
+  <div class="nav-item active"><span class="nav-icon">👜</span>Packing</div>
+  <div class="nav-item"><span class="nav-icon">📝</span>Notes</div>
+  <div class="nav-item"><span class="nav-icon">🍽️</span>Meals</div>
+  <div class="nav-item"><span class="nav-icon">👥</span>Group</div>
+</div>
+
+</body>
+</html>
