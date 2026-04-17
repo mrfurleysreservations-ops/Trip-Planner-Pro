@@ -508,18 +508,31 @@ export default function PackingPage({
 
   // ─── Events for active member ───
   const activeMemberEvents = useMemo(() => {
+    // Host + the host's own family (wife, kids — anyone linked via
+    // family_member_id) are treated as auto-attending every trip event. No
+    // opt-in dance for them; it's your family, they're going. Genuine outside
+    // invitees (separate user accounts, no family link) still use the
+    // event_participants opt-in filter.
+    const am = members.find(m => m.id === activeMemberId);
+    const isFamily = Boolean(am && (am.user_id === userId || am.family_member_id));
+
+    const datedEvents = events.filter(e => e.date);
+    const sorter = (a: ItineraryEvent, b: ItineraryEvent) => {
+      if (a.date !== b.date) return a.date! < b.date! ? -1 : 1;
+      const slotOrder: Record<string, number> = { morning: 0, afternoon: 1, evening: 2 };
+      return (slotOrder[a.time_slot] || 0) - (slotOrder[b.time_slot] || 0);
+    };
+
+    if (isFamily) {
+      return [...datedEvents].sort(sorter);
+    }
+
     const memberParticipations = participants.filter(
       p => p.trip_member_id === activeMemberId && p.status === "attending"
     );
     const attendingEventIds = new Set(memberParticipations.map(p => p.event_id));
-    return events
-      .filter(e => e.date && attendingEventIds.has(e.id))
-      .sort((a, b) => {
-        if (a.date !== b.date) return a.date! < b.date! ? -1 : 1;
-        const slotOrder: Record<string, number> = { morning: 0, afternoon: 1, evening: 2 };
-        return (slotOrder[a.time_slot] || 0) - (slotOrder[b.time_slot] || 0);
-      });
-  }, [events, participants, activeMemberId]);
+    return datedEvents.filter(e => attendingEventIds.has(e.id)).sort(sorter);
+  }, [events, participants, activeMemberId, members, userId]);
 
   // ─── Trip duration for Quick Pack ───
   const tripDays = useMemo(() => {
