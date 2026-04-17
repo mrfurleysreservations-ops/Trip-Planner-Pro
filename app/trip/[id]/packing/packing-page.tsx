@@ -588,11 +588,25 @@ export default function PackingPage({
   }, [ofGroupEvents, activeMemberEvents]);
 
   // ─── Auto-group events by dress code per day ───
-  // ─── Find events that aren't in ANY outfit group yet ───
+  // ─── Find events that aren't in this member's outfit groups yet ───
+  // outfit_groups are per-member. "Ungrouped for this member" means the event
+  // isn't in any outfit_group owned by activeMemberId — an event can be grouped
+  // for the host but still ungrouped for Claire, and we need to group it for
+  // her too. Filtering only by `ofGroupEvents` (cross-member) was the bug that
+  // caused family members to land on an empty "Re-Group Events" state: once
+  // the host was grouped, every event id was considered "grouped" and the
+  // auto-group effect never fired for anyone else.
   const ungroupedEvents = useMemo(() => {
-    const groupedEventIds = new Set(ofGroupEvents.map(ge => ge.event_id));
-    return activeMemberEvents.filter(e => !groupedEventIds.has(e.id));
-  }, [activeMemberEvents, ofGroupEvents]);
+    const memberGroupIds = new Set(
+      ofGroups.filter(g => g.trip_member_id === activeMemberId).map(g => g.id)
+    );
+    const groupedForMember = new Set(
+      ofGroupEvents
+        .filter(ge => memberGroupIds.has(ge.outfit_group_id))
+        .map(ge => ge.event_id)
+    );
+    return activeMemberEvents.filter(e => !groupedForMember.has(e.id));
+  }, [activeMemberEvents, ofGroupEvents, ofGroups, activeMemberId]);
 
   const autoGroupEvents = useCallback(async () => {
     if (autoGroupingRef.current) return;
