@@ -478,6 +478,10 @@ export default function PackingPage({
   const [activeSlot, setActiveSlot] = useState<SlotKey | null>(null);
   const [overrideConfirm, setOverrideConfirm] = useState<SlotKey | null>(null);
   const [dressSlotOverrides, setDressSlotOverrides] = useState<Record<string, boolean>>({});
+  // Event timeline rows sit above the slot grid on the outfit card. Default
+  // to collapsed so the 2×3 grid is the first thing in view — users can tap
+  // the dress-code row to expand event details when they want them.
+  const [timelineExpanded, setTimelineExpanded] = useState(false);
 
   // ─── Events for active member ───
   const activeMemberEvents = useMemo(() => {
@@ -959,13 +963,15 @@ export default function PackingPage({
     return null;
   }, [outfits, activeMemberId, currentOutfitGroup, currentEvent]);
 
-  // Reset inspo panel when event changes
+  // Reset inspo panel + timeline expansion when event or member changes.
+  // Each new outfit card lands collapsed so the slot grid is above the fold.
   useEffect(() => {
     setInspoImages([]);
     setInspoPage(1);
     setInspoHasMore(false);
     setInspoError(null);
     setShowInspoPanel(false);
+    setTimelineExpanded(false);
   }, [currentEventIdx, activeMemberId]);
 
   // Load just-in-case items (event_id = null)
@@ -1476,8 +1482,16 @@ export default function PackingPage({
     group: OutfitGroup;
     eventsInGroup: ItineraryEvent[];
     rightCounts: string;
+    // When provided, the meta row becomes a tappable expand/collapse target
+    // and the event timeline rows are hidden in the collapsed state so the
+    // slot grid below is visible without scrolling. Legacy call sites that
+    // omit these behave as before (timeline always expanded).
+    collapsible?: boolean;
+    expanded?: boolean;
+    onToggleExpanded?: () => void;
   }) {
-    const { group, eventsInGroup, rightCounts } = args;
+    const { group, eventsInGroup, rightCounts, collapsible, expanded, onToggleExpanded } = args;
+    const showTimeline = !collapsible || expanded;
     const repTod = ((group.time_of_day as TimeOfDay) || "afternoon") as TimeOfDay;
     // Span label + blended gradient derived from the actual events' times
     // (falls back to the group's stored TOD when the group is empty).
@@ -1499,14 +1513,25 @@ export default function PackingPage({
           <span style={{ fontSize: "11px", fontWeight: 600, letterSpacing: 0, textTransform: "none" as const, background: band.chipBg, padding: "3px 9px", borderRadius: "12px" }}>{chip}</span>
         </div>
 
-        {/* Meta row: dress-code pill + counts */}
-        <div style={{ padding: "10px 16px", borderBottom: "1px solid #f0ebe4", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {/* Meta row: dress-code pill + counts. Doubles as the expand/collapse
+            handle when collapsible — chevron rotates to signal state. */}
+        <div
+          onClick={collapsible && onToggleExpanded ? onToggleExpanded : undefined}
+          role={collapsible ? "button" : undefined}
+          aria-expanded={collapsible ? Boolean(expanded) : undefined}
+          style={{ padding: "10px 16px", borderBottom: "1px solid #f0ebe4", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: collapsible ? "pointer" : "default", userSelect: "none" as const }}
+        >
           <span style={{ padding: "3px 10px", borderRadius: "12px", fontSize: "10px", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.05em", background: `${dcColor}18`, color: dcColor }}>{getDressCodeLabel(dressCode)}</span>
-          <span style={{ fontSize: "11px", color: "#777" }}>{rightCounts}</span>
+          <span style={{ fontSize: "11px", color: "#777", display: "flex", alignItems: "center", gap: "6px" }}>
+            {rightCounts}
+            {collapsible && (
+              <span aria-hidden style={{ display: "inline-block", fontSize: "10px", color: "#999", transform: expanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>▶</span>
+            )}
+          </span>
         </div>
 
-        {/* Timeline event rows */}
-        {eventsInGroup.map((evt, idx) => {
+        {/* Timeline event rows — hidden when collapsed */}
+        {showTimeline && eventsInGroup.map((evt, idx) => {
           const isFirst = idx === 0;
           const isLast = idx === eventsInGroup.length - 1;
           const subParts: string[] = [];
@@ -1883,11 +1908,17 @@ export default function PackingPage({
               /* ─── STANDARD: Event Outfit Card (Variant D) ─── */
               <div style={{ background: "white", borderRadius: "16px", border: `1px solid ${th.cardBorder}`, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
 
-                {/* Shared scaffolding: TOD band + meta row + timeline */}
+                {/* Shared scaffolding: TOD band + meta row + timeline.
+                    Timeline is collapsed by default on the outfit card so
+                    the slot grid is the first thing users see. Tap the meta
+                    row (dress code / counts) to expand event details. */}
                 {renderCardScaffolding({
                   group: currentOutfitGroup,
                   eventsInGroup: currentGroupEvents,
                   rightCounts: `${currentGroupEvents.length} event${currentGroupEvents.length !== 1 ? "s" : ""} · ${currentEventItems.length} item${currentEventItems.length !== 1 ? "s" : ""}`,
+                  collapsible: true,
+                  expanded: timelineExpanded,
+                  onToggleExpanded: () => setTimelineExpanded(e => !e),
                 })}
 
                 {/* ─── "Wear same outfit as…" reuse dropdown (above inspo per Variant D) ─── */}
