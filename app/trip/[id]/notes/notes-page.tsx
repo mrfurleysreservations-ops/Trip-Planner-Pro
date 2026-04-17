@@ -49,6 +49,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
 
   const [notes, setNotes] = useState<TripNote[]>(initialNotes);
   const [filter, setFilter] = useState<FilterTab>("all");
+  const [scopeFilter, setScopeFilter] = useState<"group" | "personal">("group");
   const [loading, setLoading] = useState(false);
 
   // ─── Modal state ───
@@ -59,12 +60,14 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
   const [addTitle, setAddTitle] = useState("");
   const [addBody, setAddBody] = useState("");
   const [addLink, setAddLink] = useState("");
+  const [addScope, setAddScope] = useState<"group" | "personal">("group");
 
   // ─── Edit state ───
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
   const [editLink, setEditLink] = useState("");
+  const [editScope, setEditScope] = useState<"group" | "personal">("group");
 
   // ─── Delete confirmation (inside modal) ───
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -100,6 +103,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
     const note = notes.find((n) => n.id === openNoteId);
     if (note) {
       setFilter("all");
+      setScopeFilter(note.scope);
       setSelectedNoteId(note.id);
     }
   }, [openNoteId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -115,11 +119,17 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
 
   const currentUserName = memberNameMap[userId] || "Someone";
 
-  // ─── Filtered notes ───
+  // ─── Scope-filtered notes (used for chip counts) ───
+  const scopedNotes = useMemo(
+    () => notes.filter((n) => n.scope === scopeFilter),
+    [notes, scopeFilter]
+  );
+
+  // ─── Filtered notes (scope first, then status) ───
   const filteredNotes = useMemo(() => {
-    if (filter === "all") return notes;
-    return notes.filter((n) => n.status === filter);
-  }, [notes, filter]);
+    if (filter === "all") return scopedNotes;
+    return scopedNotes.filter((n) => n.status === filter);
+  }, [scopedNotes, filter]);
 
   // ─── Can edit: note creator or host ───
   const canEdit = useCallback((note: TripNote) => {
@@ -141,6 +151,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
         body: addBody.trim() || null,
         link_url: addLink.trim() || null,
         status: "idea",
+        scope: addScope,
         sort_order: minSort,
       })
       .select()
@@ -156,13 +167,14 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
       setShowAddModal(false);
     }
     setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, addTitle, addBody, addLink, notes]);
+  }, [supabase, trip.id, userId, currentUserName, addTitle, addBody, addLink, addScope, notes]);
 
   const startEdit = useCallback((note: TripNote) => {
     setEditingId(note.id);
     setEditTitle(note.title);
     setEditBody(note.body || "");
     setEditLink(note.link_url || "");
+    setEditScope(note.scope);
   }, []);
 
   const cancelEdit = useCallback(() => {
@@ -170,17 +182,21 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
     setEditTitle("");
     setEditBody("");
     setEditLink("");
+    setEditScope("group");
   }, []);
 
   const saveEdit = useCallback(async () => {
     if (!editingId || !editTitle.trim()) return;
     setLoading(true);
+    const previousNote = notes.find((n) => n.id === editingId);
+    const scopeChanged = previousNote ? previousNote.scope !== editScope : false;
     const { error } = await supabase
       .from("trip_notes")
       .update({
         title: editTitle.trim(),
         body: editBody.trim() || null,
         link_url: editLink.trim() || null,
+        scope: editScope,
         updated_at: new Date().toISOString(),
       })
       .eq("id", editingId);
@@ -189,18 +205,28 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
     } else {
       setNotes((prev) => prev.map((n) =>
         n.id === editingId
-          ? { ...n, title: editTitle.trim(), body: editBody.trim() || null, link_url: editLink.trim() || null, updated_at: new Date().toISOString() }
+          ? { ...n, title: editTitle.trim(), body: editBody.trim() || null, link_url: editLink.trim() || null, scope: editScope, updated_at: new Date().toISOString() }
           : n
       ));
       logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "edited", entityType: "note", entityName: editTitle.trim(), entityId: editingId, linkPath: `/trip/${trip.id}/notes?note=${editingId}` });
+      if (scopeChanged) {
+        logActivity(supabase, {
+          tripId: trip.id, userId, userName: currentUserName,
+          action: "updated", entityType: "note",
+          entityName: `${editTitle.trim()} → ${editScope === "personal" ? "Personal" : "Group"}`,
+          entityId: editingId,
+          linkPath: `/trip/${trip.id}/notes?note=${editingId}`,
+        });
+      }
       // Stay in modal but exit edit mode
       setEditingId(null);
       setEditTitle("");
       setEditBody("");
       setEditLink("");
+      setEditScope("group");
     }
     setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, editingId, editTitle, editBody, editLink, cancelEdit]);
+  }, [supabase, trip.id, userId, currentUserName, editingId, editTitle, editBody, editLink, editScope, notes]);
 
   const deleteNote = useCallback(async (noteId: string) => {
     setLoading(true);
@@ -497,13 +523,122 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
       {th.vibeBg && <div style={{ position: "fixed", inset: 0, background: th.vibeBg, pointerEvents: "none", zIndex: 0 }} />}
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {/* Header */}
-      <div style={{ background: th.headerBg, padding: "14px 20px", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", position: "relative", zIndex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <button onClick={() => router.push(`/trip/${trip.id}`)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "4px", color: th.muted }}>←</button>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", color: th.text, margin: 0 }}>
+      {/* ═══ STICKY TOP SHELL (header + scope pill + status chips) ═══ */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 20,
+          background: th.headerBg,
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: `1px solid ${th.cardBorder}`,
+        }}
+      >
+        {/* Row 1 — Back + title + Import */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 16px 8px",
+            gap: 8,
+          }}
+        >
+          <button
+            onClick={() => router.push(`/trip/${trip.id}`)}
+            aria-label="Back to trip hub"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: `${th.accent}1a`,
+              border: `1.5px solid ${th.accent}40`,
+              color: th.accent,
+              fontSize: 22,
+              fontWeight: 700,
+              cursor: "pointer",
+              padding: 0,
+              transition: "all 0.15s",
+            }}
+          >
+            ←
+          </button>
+          <h2
+            style={{
+              flex: 1,
+              margin: "0 0 0 10px",
+              fontFamily: "'Outfit', sans-serif",
+              fontWeight: 800,
+              fontSize: 20,
+              color: th.text,
+            }}
+          >
             Notes
           </h2>
+          <button
+            onClick={() => { resetImport(); setShowImportModal(true); }}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: `1.5px solid ${th.accent}`,
+              background: "none",
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 700,
+              color: th.accent,
+              fontFamily: "'DM Sans', sans-serif",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Import
+          </button>
+        </div>
+
+        {/* Row 2 — Group / Personal pill */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "6px 16px 8px" }}>
+          <div
+            style={{
+              display: "inline-flex",
+              background: th.card,
+              border: `1.5px solid ${th.cardBorder}`,
+              borderRadius: 20,
+            }}
+          >
+            {(["group", "personal"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setScopeFilter(s)}
+                style={{
+                  background: scopeFilter === s ? th.accent : "transparent",
+                  border: "none",
+                  padding: "8px 18px",
+                  borderRadius: 20,
+                  fontSize: 13,
+                  fontWeight: scopeFilter === s ? 700 : 500,
+                  color: scopeFilter === s ? "#fff" : th.muted,
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: "all 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {s === "group" ? "Group" : "Personal"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Row 3 — All / Ideas / Finalized chips (scoped counts) */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "0 16px 10px" }}>
+          <div style={{ display: "flex", gap: 6, background: `${th.accent}0a`, borderRadius: 24, padding: 3 }}>
+            <button style={filterTabStyle(filter === "all")} onClick={() => setFilter("all")}>All ({scopedNotes.length})</button>
+            <button style={filterTabStyle(filter === "idea")} onClick={() => setFilter("idea")}>Ideas ({scopedNotes.filter((n) => n.status === "idea").length})</button>
+            <button style={filterTabStyle(filter === "finalized")} onClick={() => setFilter("finalized")}>Finalized ({scopedNotes.filter((n) => n.status === "finalized").length})</button>
+          </div>
         </div>
       </div>
 
@@ -511,40 +646,22 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
 
       <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px", position: "relative", zIndex: 1 }}>
 
-        {/* ═══ FILTER TABS + ADD BUTTON ═══ */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <div style={{ display: "flex", gap: 6, background: `${th.accent}0a`, borderRadius: 24, padding: 3 }}>
-            <button style={filterTabStyle(filter === "all")} onClick={() => setFilter("all")}>All ({notes.length})</button>
-            <button style={filterTabStyle(filter === "idea")} onClick={() => setFilter("idea")}>Ideas ({notes.filter((n) => n.status === "idea").length})</button>
-            <button style={filterTabStyle(filter === "finalized")} onClick={() => setFilter("finalized")}>Finalized ({notes.filter((n) => n.status === "finalized").length})</button>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={() => { resetImport(); setShowImportModal(true); }}
-              style={{
-                padding: "10px 16px", borderRadius: 10,
-                border: `1.5px solid ${th.accent}`, background: "none",
-                cursor: "pointer", fontSize: 13, fontWeight: 700,
-                color: th.accent, fontFamily: "'DM Sans', sans-serif",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Import
-            </button>
-          </div>
-        </div>
-
         {/* ═══ NOTES LIST ═══ */}
         {filteredNotes.length === 0 && (
           <div style={{ textAlign: "center", padding: 48, color: th.muted, fontSize: 14 }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>📝</div>
-            {notes.length === 0 ? (
+            {scopeFilter === "personal" && scopedNotes.length === 0 ? (
+              <>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 6, color: th.text }}>No personal notes yet</div>
+                <div>These are only visible to you.</div>
+              </>
+            ) : notes.length === 0 ? (
               <>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 6, color: th.text }}>No notes yet</div>
                 <div>Start capturing ideas, restaurants, activities — anything your group discovers while researching the trip.</div>
               </>
             ) : (
-              <div>No {filter === "idea" ? "open ideas" : "finalized notes"} found.</div>
+              <div>No {filter === "idea" ? "open ideas" : filter === "finalized" ? "finalized notes" : "notes"} found.</div>
             )}
           </div>
         )}
@@ -572,7 +689,24 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
                     {note.title}
                   </span>
                 </div>
-                <StatusBadge status={note.status} convertedTo={note.converted_to} accent={th.accent} />
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      padding: "2px 8px",
+                      borderRadius: 10,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                      background: note.scope === "personal" ? "rgba(156,39,176,0.15)" : `${th.accent}26`,
+                      color: note.scope === "personal" ? "#7b1fa2" : th.accent,
+                    }}
+                  >
+                    {note.scope === "personal" ? "Personal" : "Group"}
+                  </span>
+                  <StatusBadge status={note.status} convertedTo={note.converted_to} accent={th.accent} />
+                </div>
               </div>
 
               {/* Body preview */}
@@ -595,48 +729,45 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
           );
         })}
 
-        {/* Spacer for sticky CTA */}
+        {/* Spacer so the FAB never overlaps the last card */}
         <div style={{ height: "80px" }} />
+      </div>
 
-        {/* Sticky gradient CTA — hidden when any modal is open */}
-        {!showAddModal && !selectedNoteId && !showImportModal && (
-        <div style={{
-          position: "fixed",
-          bottom: "56px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "100%",
-          maxWidth: "480px",
-          zIndex: 101,
-          padding: "0 16px 12px",
-          boxSizing: "border-box" as const,
-          background: `linear-gradient(to top, ${th.bg} 70%, transparent)`,
-          pointerEvents: "none" as const
-        }}>
-          <button onClick={() => { setShowAddModal(true); cancelEdit(); }} style={{
-            pointerEvents: "auto" as const,
-            width: "100%",
-            padding: "16px 24px",
-            fontSize: "16px",
-            fontWeight: 700,
-            fontFamily: "'Outfit', sans-serif",
-            color: "#fff",
+      {/* ═══ FAB — hidden when any modal is open ═══ */}
+      {!showAddModal && !selectedNoteId && !showImportModal && (
+        <button
+          onClick={() => {
+            setAddTitle("");
+            setAddBody("");
+            setAddLink("");
+            setAddScope(scopeFilter); // pre-select scope to match current view
+            cancelEdit();
+            setShowAddModal(true);
+          }}
+          aria-label="Add note"
+          style={{
+            position: "fixed",
+            bottom: 72,
+            right: 16,
+            zIndex: 50,
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
             background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+            color: "#fff",
             border: "none",
-            borderRadius: "14px",
+            fontSize: 28,
+            fontWeight: 300,
             cursor: "pointer",
-            boxShadow: "0 4px 20px rgba(232,148,58,0.35)",
+            boxShadow: `0 4px 20px ${th.accent}60`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: "8px",
-            minHeight: "52px"
-          }}>
-            + Add Note
-          </button>
-        </div>
-        )}
-      </div>
+          }}
+        >
+          +
+        </button>
+      )}
 
       {/* ═══ ADD NOTE BOTTOM-SHEET MODAL ═══ */}
       {showAddModal && (
@@ -674,6 +805,40 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
 
             {/* Form body */}
             <div style={{ padding: "16px 20px 24px" }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: th.muted, margin: "4px 0 6px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                Scope
+              </label>
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                {(["group", "personal"] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setAddScope(s)}
+                    style={{
+                      flex: 1,
+                      padding: 12,
+                      border: `2px solid ${addScope === s ? th.accent : th.cardBorder}`,
+                      background: addScope === s ? `${th.accent}0d` : "#fff",
+                      borderRadius: 12,
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: addScope === s ? th.accent : th.muted,
+                      fontFamily: "'DM Sans', sans-serif",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <span style={{ fontSize: 22 }}>{s === "group" ? "👥" : "🔒"}</span>
+                    <span>{s === "group" ? "Group" : "Personal"}</span>
+                    <span style={{ fontSize: 10, color: th.muted, fontWeight: 500 }}>
+                      {s === "group" ? "Everyone sees it" : "Only you see it"}
+                    </span>
+                  </button>
+                ))}
+              </div>
               <input
                 value={addTitle}
                 onChange={(e) => setAddTitle(e.target.value)}
@@ -786,6 +951,40 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
               {/* ─── EDIT MODE ─── */}
               {editingId === selectedNote.id ? (
                 <>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: th.muted, margin: "4px 0 6px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    Scope
+                  </label>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                    {(["group", "personal"] as const).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setEditScope(s)}
+                        style={{
+                          flex: 1,
+                          padding: 12,
+                          border: `2px solid ${editScope === s ? th.accent : th.cardBorder}`,
+                          background: editScope === s ? `${th.accent}0d` : "#fff",
+                          borderRadius: 12,
+                          cursor: "pointer",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: editScope === s ? th.accent : th.muted,
+                          fontFamily: "'DM Sans', sans-serif",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        <span style={{ fontSize: 22 }}>{s === "group" ? "👥" : "🔒"}</span>
+                        <span>{s === "group" ? "Group" : "Personal"}</span>
+                        <span style={{ fontSize: 10, color: th.muted, fontWeight: 500 }}>
+                          {s === "group" ? "Everyone sees it" : "Only you see it"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                   <input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}

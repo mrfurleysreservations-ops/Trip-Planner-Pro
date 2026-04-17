@@ -265,6 +265,7 @@ export interface Database {
           link_url: string | null;
           photo_url: string | null;
           status: string;
+          scope: "group" | "personal";
           converted_to: string | null;
           event_id: string | null;
           sort_order: number;
@@ -280,6 +281,7 @@ export interface Database {
           link_url?: string | null;
           photo_url?: string | null;
           status?: string;
+          scope?: "group" | "personal";
           converted_to?: string | null;
           event_id?: string | null;
           sort_order?: number;
