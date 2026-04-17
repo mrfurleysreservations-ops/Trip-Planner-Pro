@@ -1713,71 +1713,71 @@ export default function ItineraryPage({
                       )}
 
                       {dayEvents.map((ev) => {
-                        const typeConfig = getEventTypeConfig(ev.event_type);
-                        const evParts = participantsByEvent[ev.id] || [];
-                        const attendingCount = evParts.filter((p) => p.status === "attending").length;
                         return (
                           <div
                             key={ev.id}
                             onClick={() => setExpandedId(expandedId === ev.id ? null : ev.id)}
                             style={{
-                              display: "flex", alignItems: "center", gap: 10,
-                              padding: "10px 16px", margin: "4px 8px",
-                              background: th.card, border: `1px solid ${th.cardBorder}`,
-                              borderRadius: 12, cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 14,
+                              padding: "18px 18px", margin: "8px 4px",
+                              background: "#fff", border: `1px solid ${th.cardBorder}`,
+                              borderRadius: 14, cursor: "pointer",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                               transition: "all 0.15s",
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = th.accent; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = th.cardBorder; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = th.accent; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.06)"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = th.cardBorder; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.03)"; }}
                           >
                             {/* Time */}
-                            <span style={{ fontSize: 12, fontWeight: 600, color: th.muted, minWidth: 70, flexShrink: 0 }}>
+                            <span style={{
+                              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14,
+                              color: th.text, minWidth: 76, flexShrink: 0, lineHeight: 1.15,
+                            }}>
                               {ev.start_time ? formatTime12h(ev.start_time) : (TIME_SLOTS.find((s) => s.value === ev.time_slot)?.label || ev.time_slot)}
                             </span>
-                            {/* Icon */}
-                            <span style={{ fontSize: 16, flexShrink: 0 }}>{typeConfig.icon}</span>
                             {/* Title */}
-                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <span style={{
+                              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 17,
+                              color: th.text, flex: 1,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              letterSpacing: "-0.01em",
+                            }}>
                               {ev.title}
                             </span>
-                            {/* Location */}
-                            {ev.location && (
-                              <span style={{ fontSize: 12, color: th.muted, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 0 }}>
-                                📍 {ev.location}
-                              </span>
+                            {/* Cash button */}
+                            {eventExpenseTotals[ev.id] ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); router.push(`/trip/${trip.id}/expenses`); }}
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: 4,
+                                  padding: "8px 14px", borderRadius: 999,
+                                  fontWeight: 700, fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+                                  border: "none", cursor: "pointer", flexShrink: 0,
+                                  minHeight: 34,
+                                  background: "#d4edda", color: "#155724",
+                                }}
+                              >
+                                💰 ${eventExpenseTotals[ev.id].toFixed(0)}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/trip/${trip.id}/expenses?fromEvent=${ev.id}&title=${encodeURIComponent(ev.title)}&date=${ev.date || ""}`);
+                                }}
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: 4,
+                                  padding: "8px 14px", borderRadius: 999,
+                                  fontWeight: 700, fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+                                  cursor: "pointer", flexShrink: 0,
+                                  minHeight: 34,
+                                  background: `${th.accent}14`, color: th.accent,
+                                  border: `1.5px dashed ${th.accent}59`,
+                                }}
+                              >
+                                ＋ $
+                              </button>
                             )}
-                            {/* Badges */}
-                            <span style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                              {eventExpenseTotals[ev.id] ? (
-                                <span
-                                  onClick={(e) => { e.stopPropagation(); router.push(`/trip/${trip.id}/expenses`); }}
-                                  style={{
-                                    display: "inline-block", padding: "2px 8px", borderRadius: 10,
-                                    fontSize: "10px", fontWeight: 700, letterSpacing: "0.04em",
-                                    background: "#d4edda", color: "#155724", cursor: "pointer",
-                                  }}
-                                >
-                                  💰 ${eventExpenseTotals[ev.id].toFixed(0)}
-                                </span>
-                              ) : (
-                                <span
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push(`/trip/${trip.id}/expenses?fromEvent=${ev.id}&title=${encodeURIComponent(ev.title)}&date=${ev.date || ""}`);
-                                  }}
-                                  style={{
-                                    display: "inline-block", padding: "2px 8px", borderRadius: 10,
-                                    fontSize: "10px", fontWeight: 600, letterSpacing: "0.04em",
-                                    background: `${th.accent}08`, color: th.muted, cursor: "pointer",
-                                    opacity: 0.6,
-                                  }}
-                                >
-                                  💰 Add
-                                </span>
-                              )}
-                              {ev.dress_code && <DressCodeBadge code={ev.dress_code} accent={th.accent} />}
-                              {ev.is_optional ? <OptionalBadge /> : <RequiredBadge />}
-                            </span>
                           </div>
                         );
                       })}
