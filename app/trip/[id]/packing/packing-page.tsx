@@ -1600,7 +1600,23 @@ export default function PackingPage({
   }
 
   // ─── Empty state ───
+  // Two distinct causes, two distinct messages:
+  //   (A) The trip itself has no events yet        → "Build your itinerary first"
+  //   (B) The trip has events, but THIS member     → "{Name} isn't opted in yet"
+  //       isn't opted into any of them               (prompts host to add them in Itinerary)
+  // Both land on the same CTA (Go to Itinerary) but the copy points the user
+  // at the right thing to do next.
   if (activeMemberEvents.length === 0 && (activeView === "walkthrough" || activeView === "grouping")) {
+    const tripHasEvents = events.length > 0;
+    const memberFirstName = (activeMember?.name || "").split(" ")[0] || "This person";
+    const title = tripHasEvents
+      ? `${memberFirstName} isn't opted into any events yet`
+      : "Build your itinerary first";
+    const body = tripHasEvents
+      ? `The trip has events — ${memberFirstName} just hasn't been opted in yet. Head to the itinerary, tap an event, and add ${memberFirstName} to the participants.`
+      : "Packing is driven by your events. Add events to the itinerary and opt in participants — then come back here to plan outfits.";
+    const emoji = tripHasEvents ? "🙋" : "📅";
+
     return (
       <div style={{ minHeight: "100vh", background: th.bg, color: th.text, fontFamily: "'DM Sans', sans-serif" }}>
         {th.vibeBg && <div style={{ position: "fixed", inset: 0, background: th.vibeBg, pointerEvents: "none", zIndex: 0 }} />}
@@ -1609,7 +1625,7 @@ export default function PackingPage({
           <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", color: th.text, margin: 0 }}>Packing</h2>
         </div>
         <TripSubNav tripId={trip.id} theme={th} />
-        {/* Person Tabs */}
+        {/* Person Tabs — stay clickable so Joe can jump back to a member who IS opted in. */}
         <div style={{ display: "flex", gap: "0", padding: "0 16px", background: th.bg, borderBottom: `1px solid ${th.cardBorder}`, overflowX: "auto", scrollbarWidth: "none", position: "relative", zIndex: 1 }}>
           {myFamilyTripMembers.map(m => (
             <button key={m.id} onClick={() => { setActiveMemberId(m.id); setCurrentEventIdx(0); setGroupingActiveDay(0); }} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "6px", padding: "10px 14px", background: "none", border: "none", borderBottom: `3px solid ${m.id === activeMemberId ? accent : "transparent"}`, cursor: "pointer", transition: "all 0.2s" }}>
@@ -1619,9 +1635,9 @@ export default function PackingPage({
           ))}
         </div>
         <div style={{ padding: "60px 20px", maxWidth: "500px", margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>📅</div>
-          <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "18px", marginBottom: "8px" }}>Build your itinerary first</h3>
-          <p style={{ color: th.muted, fontSize: "13px", marginBottom: "20px" }}>Packing is driven by your events. Add events to the itinerary and opt in participants — then come back here to plan outfits.</p>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>{emoji}</div>
+          <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "18px", marginBottom: "8px" }}>{title}</h3>
+          <p style={{ color: th.muted, fontSize: "13px", marginBottom: "20px" }}>{body}</p>
           <button onClick={() => router.push(`/trip/${trip.id}/itinerary`)} style={{ padding: "10px 24px", background: accent, color: "white", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Go to Itinerary →</button>
         </div>
       </div>
