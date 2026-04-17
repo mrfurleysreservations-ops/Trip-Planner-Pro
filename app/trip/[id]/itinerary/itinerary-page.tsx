@@ -1307,7 +1307,7 @@ export default function ItineraryPage({
             display: "flex", justifyContent: "center", padding: "12px 20px 0",
           }}>
             <div style={{
-              display: "inline-flex", borderRadius: 20, overflow: "hidden",
+              display: "inline-flex", borderRadius: 20,
               border: `1.5px solid ${th.cardBorder}`, background: th.card,
             }}>
               {(["calendar", "list"] as const).map((mode) => {
@@ -1320,9 +1320,11 @@ export default function ItineraryPage({
                       padding: "8px 18px", border: "none", cursor: "pointer",
                       fontFamily: "'DM Sans', sans-serif", fontSize: "13px",
                       fontWeight: active ? 700 : 500,
+                      borderRadius: 20,
                       background: active ? th.accent : "transparent",
                       color: active ? "#fff" : th.muted,
-                      transition: "all 0.2s",
+                      transition: "all 0.15s",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {mode === "calendar" ? "📅 Calendar" : "📋 List"}
