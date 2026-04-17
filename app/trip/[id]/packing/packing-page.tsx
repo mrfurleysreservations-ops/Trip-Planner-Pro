@@ -1737,54 +1737,104 @@ export default function PackingPage({
     <div style={{ minHeight: "100vh", background: th.bg, color: th.text, fontFamily: "'DM Sans', sans-serif" }}>
       {th.vibeBg && <div style={{ position: "fixed", inset: 0, background: th.vibeBg, pointerEvents: "none", zIndex: 0 }} />}
 
-      {/* Header */}
-      <div style={{ background: th.headerBg, padding: "14px 20px", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", zIndex: 2 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <button onClick={() => router.push(`/trip/${trip.id}`)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "4px", color: th.muted }}>←</button>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", color: th.text, margin: 0 }}>Packing</h2>
+      {/* ═══ STICKY TOP REGION — header + person tabs + view pill ═══ */}
+      <div style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 20,
+        background: th.headerBg,
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderBottom: `1px solid ${th.cardBorder}`,
+      }}>
+        {/* Header */}
+        <div style={{ padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              onClick={() => router.push(`/trip/${trip.id}`)}
+              aria-label="Back to trip hub"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                background: `${accent}1a`,
+                border: `1.5px solid ${accent}40`,
+                color: accent,
+                fontSize: 22,
+                fontWeight: 700,
+                cursor: "pointer",
+                padding: 0,
+                transition: "all 0.15s",
+              }}
+            >
+              ←
+            </button>
+            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", color: th.text, margin: "0 0 0 10px" }}>Packing</h2>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", background: `${accent}14`, padding: "4px 10px", borderRadius: "20px" }}>
+            <span style={{ fontSize: "13px" }}>{ps.icon}</span>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: accent }}>{ps.label}</span>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", background: `${accent}14`, padding: "4px 10px", borderRadius: "20px" }}>
-          <span style={{ fontSize: "13px" }}>{ps.icon}</span>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: accent }}>{ps.label}</span>
+
+        {/* Person Tabs */}
+        <div style={{ display: "flex", gap: "0", padding: "0 16px", background: th.bg, borderBottom: `1px solid ${th.cardBorder}`, overflowX: "auto", scrollbarWidth: "none", position: "relative", zIndex: 1 }}>
+          {myFamilyTripMembers.map(m => (
+            <button key={m.id} onClick={() => { setActiveMemberId(m.id); setCurrentEventIdx(0); setGroupingActiveDay(0); }} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "6px", padding: "10px 14px", background: "none", border: "none", borderBottom: `3px solid ${m.id === activeMemberId ? accent : "transparent"}`, cursor: "pointer", transition: "all 0.2s" }}>
+              <span style={{ fontSize: "13px", fontWeight: m.id === activeMemberId ? 700 : 500, color: m.id === activeMemberId ? th.text : th.muted, fontFamily: "'DM Sans', sans-serif" }}>{m.name}</span>
+              {m.role === "host" && <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: "8px", background: `${accent}18`, color: accent, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>Host</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* View Switcher — canonical pill */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "8px 16px 10px" }}>
+          <div style={{ display: "inline-flex", background: th.card, border: `1.5px solid ${th.cardBorder}`, borderRadius: 20 }}>
+            {(packingStyle === "spontaneous"
+              ? [
+                  { value: "walkthrough" as const, label: "Quick Pack" },
+                  { value: "checklist" as const, label: "Pack & Go ✓" },
+                ]
+              : [
+                  { value: "grouping" as const, label: "Group" },
+                  { value: "walkthrough" as const, label: "Outfits" },
+                  { value: "checklist" as const, label: "Pack & Go ✓" },
+                ]
+            ).map(v => (
+              <button
+                key={v.value}
+                onClick={() => setActiveView(v.value)}
+                style={{
+                  background: activeView === v.value ? accent : "transparent",
+                  border: "none",
+                  padding: "8px 18px",
+                  borderRadius: 20,
+                  fontSize: 13,
+                  fontWeight: activeView === v.value ? 700 : 500,
+                  color: activeView === v.value ? "#fff" : th.muted,
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: "all 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       <TripSubNav tripId={trip.id} theme={th} />
-
-      {/* Person Tabs */}
-      <div style={{ display: "flex", gap: "0", padding: "0 16px", background: th.bg, borderBottom: `1px solid ${th.cardBorder}`, overflowX: "auto", scrollbarWidth: "none", position: "relative", zIndex: 1 }}>
-        {myFamilyTripMembers.map(m => (
-          <button key={m.id} onClick={() => { setActiveMemberId(m.id); setCurrentEventIdx(0); setGroupingActiveDay(0); }} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "6px", padding: "10px 14px", background: "none", border: "none", borderBottom: `3px solid ${m.id === activeMemberId ? accent : "transparent"}`, cursor: "pointer", transition: "all 0.2s" }}>
-            <span style={{ fontSize: "13px", fontWeight: m.id === activeMemberId ? 700 : 500, color: m.id === activeMemberId ? th.text : th.muted, fontFamily: "'DM Sans', sans-serif" }}>{m.name}</span>
-            {m.role === "host" && <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: "8px", background: `${accent}18`, color: accent, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>Host</span>}
-          </button>
-        ))}
-      </div>
 
       {/* Packing Style Banner */}
       <div style={{ position: "relative", zIndex: 1 }}>
         <div style={{ margin: "12px 16px 0", padding: "10px 14px", background: `${accent}0a`, border: `1px solid ${th.cardBorder}`, borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px" }}>
           <span style={{ fontSize: "11px", color: th.muted }}>{ps.desc}</span>
         </div>
-
-        {/* View Switcher */}
-        {packingStyle === "spontaneous" ? (
-          <div style={{ display: "flex", gap: "0", padding: "0 16px", margin: "12px 0 0", overflowX: "auto", scrollbarWidth: "none" }}>
-            {(["walkthrough", "checklist"] as const).map(v => (
-              <button key={v} onClick={() => setActiveView(v)} style={{ flex: "0 0 auto", padding: "10px 16px", background: "none", border: "none", borderBottom: `3px solid ${activeView === v ? accent : "transparent"}`, cursor: "pointer", fontSize: "13px", fontWeight: activeView === v ? 700 : 500, color: activeView === v ? accent : th.muted, fontFamily: "'DM Sans', sans-serif" }}>
-                {v === "walkthrough" ? "Quick Pack" : "Pack & Go ✓"}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{ display: "flex", gap: "0", padding: "0 16px", margin: "12px 0 0", overflowX: "auto", scrollbarWidth: "none" }}>
-            {(["grouping", "walkthrough", "checklist"] as const).map(v => (
-              <button key={v} onClick={() => setActiveView(v)} style={{ flex: "0 0 auto", padding: "10px 16px", background: "none", border: "none", borderBottom: `3px solid ${activeView === v ? accent : "transparent"}`, cursor: "pointer", fontSize: "13px", fontWeight: activeView === v ? 700 : 500, color: activeView === v ? accent : th.muted, fontFamily: "'DM Sans', sans-serif" }}>
-                {v === "grouping" ? "Group" : v === "walkthrough" ? "Outfits" : "Pack & Go ✓"}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* ═══════════════════════════════════════════════════════════ */}
         {/*  VIEW: GROUPING                                           */}
