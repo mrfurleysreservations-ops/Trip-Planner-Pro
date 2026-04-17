@@ -9,6 +9,16 @@ import type { PackingPageProps } from "./page";
 import type { TimeOfDay, WeatherBucket, ForecastCell, ForecastMap } from "@/lib/weather";
 import { weatherChipText } from "@/lib/weather";
 import TripSubNav from "../trip-sub-nav";
+import SlotModal, { type ReuseChip } from "@/components/packing/slot-modal";
+import {
+  SLOT_DEFS,
+  SLOT_ORDER_WITH_DRESS,
+  SLOT_ORDER_WITHOUT_DRESS,
+  DIMMED_WHEN_DRESS_FILLED,
+  SLOT_INSERT_CATEGORY,
+  slotForCategory,
+  type SlotKey,
+} from "@/lib/slot-suggestions";
 
 // ─── Inspo Image type (matches API route response) ───
 interface InspoImage {
@@ -459,6 +469,16 @@ export default function PackingPage({
   const [essentialsQty, setEssentialsQty] = useState<Record<string, number>>({});
   const [essentialsAdded, setEssentialsAdded] = useState(false);
 
+  // ─── Slot-based outfit builder state ───
+  // activeSlot opens the bottom-sheet picker for that slot.
+  // overrideConfirm shows the "you're wearing a dress — add a [X] anyway?"
+  // prompt when tapping a tile dimmed by a filled Dress slot.
+  // dressSlotOverrides is an optimistic-update overlay for
+  // trip_members.show_dress_slot so the UI updates instantly on toggle.
+  const [activeSlot, setActiveSlot] = useState<SlotKey | null>(null);
+  const [overrideConfirm, setOverrideConfirm] = useState<SlotKey | null>(null);
+  const [dressSlotOverrides, setDressSlotOverrides] = useState<Record<string, boolean>>({});
+
   // ─── Events for active member ───
   const activeMemberEvents = useMemo(() => {
     const memberParticipations = participants.filter(
@@ -865,6 +885,70 @@ export default function PackingPage({
   // General items (event_id = null) — used for bedtime, toiletries, extras
   const generalItems = useMemo(() => memberItems.filter(i => i.event_id === null), [memberItems]);
 
+  // ─── Slot-based outfit builder: derived values ───
+  // Resolves the 2×3 grid. show_dress_slot is the persisted per-member flag;
+  // dressSlotOverrides is an optimistic overlay so the tile appears/vanishes
+  // the moment the toggle flips, before the Supabase update resolves.
+  const activeMember = useMemo(
+    () => members.find(m => m.id === activeMemberId) || null,
+    [members, activeMemberId],
+  );
+  const showsDress = useMemo(() => {
+    if (!activeMember) return false;
+    if (Object.prototype.hasOwnProperty.call(dressSlotOverrides, activeMember.id)) {
+      return dressSlotOverrides[activeMember.id];
+    }
+    return Boolean(activeMember.show_dress_slot);
+  }, [activeMember, dressSlotOverrides]);
+  const slotOrder = showsDress ? SLOT_ORDER_WITH_DRESS : SLOT_ORDER_WITHOUT_DRESS;
+
+  // Items belonging to the current outfit group, bucketed into slot tiles.
+  // Anything whose category doesn't map to a slot (toiletries, documents…)
+  // falls through and continues to live in its existing surfaces.
+  const currentSlotItems = useMemo(() => {
+    const buckets: Record<SlotKey, PackingItem[]> = {
+      dress: [], top: [], layer: [], bottom: [], shoes: [], accessories: [],
+    };
+    currentEventItems.forEach(i => {
+      const slot = slotForCategory(i.category);
+      if (slot) buckets[slot].push(i);
+    });
+    return buckets;
+  }, [currentEventItems]);
+
+  // Reuse chips per slot — names already packed elsewhere by this member,
+  // deduped by name + counted. Items already in the current group are
+  // excluded so we don't offer a pick the user just made. Sort by highest
+  // reuse count first so well-worn pieces surface.
+  const slotReuseChips = useMemo(() => {
+    const counts: Record<SlotKey, Map<string, number>> = {
+      dress: new Map(), top: new Map(), layer: new Map(),
+      bottom: new Map(), shoes: new Map(), accessories: new Map(),
+    };
+    const inCurrent: Record<SlotKey, Set<string>> = {
+      dress: new Set(), top: new Set(), layer: new Set(),
+      bottom: new Set(), shoes: new Set(), accessories: new Set(),
+    };
+    (Object.keys(currentSlotItems) as SlotKey[]).forEach(k => {
+      currentSlotItems[k].forEach(i => inCurrent[k].add(i.name.toLowerCase()));
+    });
+    memberItems.forEach(i => {
+      const slot = slotForCategory(i.category);
+      if (!slot) return;
+      if (inCurrent[slot].has(i.name.toLowerCase())) return;
+      counts[slot].set(i.name, (counts[slot].get(i.name) || 0) + 1);
+    });
+    const out: Record<SlotKey, ReuseChip[]> = {
+      dress: [], top: [], layer: [], bottom: [], shoes: [], accessories: [],
+    };
+    (Object.keys(counts) as SlotKey[]).forEach(slot => {
+      out[slot] = Array.from(counts[slot].entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    });
+    return out;
+  }, [memberItems, currentSlotItems]);
+
   // ─── Outfit for current group (use first event in group for outfit lookup) ───
   const currentOutfit = useMemo(() => {
     if (!currentOutfitGroup) return null;
@@ -1232,6 +1316,53 @@ export default function PackingPage({
   const addJustInCaseExtra = useCallback(async (name: string) => {
     await addItem(name, "other", null);
   }, [addItem]);
+
+  // ─── Slot modal handlers ───
+  // handleSlotAdd: commit N names to the given slot for the current event.
+  // The slot's canonical category (dresses / tops / outerwear / bottoms /
+  // shoes / accessories) is fixed — the modal never picks a category, so
+  // the slot you tap is the slot the item lands in.
+  const handleSlotAdd = useCallback(async (slot: SlotKey, names: string[]) => {
+    if (!currentEvent) return;
+    for (const name of names) {
+      await addItem(name, SLOT_INSERT_CATEGORY[slot], currentEvent.id);
+    }
+  }, [addItem, currentEvent]);
+
+  // handleSlotRemove: wrapper so the modal can remove by id only.
+  const handleSlotRemove = useCallback(async (itemId: string) => {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+    await deleteItem(itemId, item.name);
+  }, [items, deleteItem]);
+
+  // toggleDressSlot: flips trip_members.show_dress_slot for the active
+  // member. Optimistic overlay applied first, reverted on Supabase error.
+  const toggleDressSlot = useCallback(async (next: boolean) => {
+    if (!activeMember) return;
+    const id = activeMember.id;
+    setDressSlotOverrides(prev => ({ ...prev, [id]: next }));
+    const { error } = await supabase
+      .from("trip_members")
+      .update({ show_dress_slot: next })
+      .eq("id", id);
+    if (error) {
+      console.error("toggleDressSlot error:", error);
+      setDressSlotOverrides(prev => ({ ...prev, [id]: !next }));
+    }
+  }, [supabase, activeMember]);
+
+  // openSlot: tile-tap handler. Top/Layer/Bottom are dimmed while a Dress
+  // is in place — tapping a dimmed tile shows the swap-confirm prompt
+  // instead of opening the picker.
+  const openSlot = useCallback((slot: SlotKey) => {
+    const dressFilled = currentSlotItems.dress.length > 0;
+    if (dressFilled && DIMMED_WHEN_DRESS_FILLED.includes(slot)) {
+      setOverrideConfirm(slot);
+      return;
+    }
+    setActiveSlot(slot);
+  }, [currentSlotItems]);
 
   // ─── Grouping helpers for consolidation/checklist ───
   const groupItems = useCallback((itemsList: { item: PackingItem; events: ItineraryEvent[]; eventCount: number }[]) => {
@@ -1821,43 +1952,129 @@ export default function PackingPage({
                   </div>
                 )}
 
-                {/* ─── Items list ─── */}
-                <div>
-                  {currentEventItems.map((item, idx) => {
-                    const multiUseEvents = getMultiUseInfo(item.name, item.event_id || undefined);
-                    return (
-                      <div key={item.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 18px", borderBottom: idx < currentEventItems.length - 1 ? `1px solid ${th.cardBorder}` : "none" }}>
-                        <span style={{ fontSize: "14px" }}>{getCatIcon(item.category)}</span>
-                        {editingItemId === item.id ? (
-                          <input autoFocus value={editingItemName} onChange={e => setEditingItemName(e.target.value)} onBlur={() => { editItem(item.id, editingItemName); }} onKeyDown={e => { if (e.key === "Enter") editItem(item.id, editingItemName); if (e.key === "Escape") { setEditingItemId(null); setEditingItemName(""); } }} style={{ flex: 1, fontSize: "13px", fontWeight: 600, border: "none", borderBottom: `2px solid ${accent}`, outline: "none", padding: "2px 0", fontFamily: "'DM Sans', sans-serif", background: "transparent" }} />
-                        ) : (
-                          <span onClick={() => { setEditingItemId(item.id); setEditingItemName(item.name); }} style={{ flex: 1, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>{item.name}</span>
-                        )}
-                        <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "8px", background: `${accent}10`, color: accent, fontWeight: 700, textTransform: "uppercase" as const }}>{item.category}</span>
-                        {multiUseEvents.length > 0 && (
-                          <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "8px", background: "#e8f5e9", color: "#2e7d32", fontWeight: 700 }}>↻ ×{multiUseEvents.length + 1}</span>
-                        )}
-                        <button onClick={() => deleteItem(item.id, item.name)} style={{ background: "none", border: "none", color: "#e57373", cursor: "pointer", fontSize: "14px", padding: "2px", lineHeight: 1 }}>✕</button>
-                      </div>
-                    );
-                  })}
-
-                  {/* Add item form */}
-                  {addingItem ? (
-                    <div style={{ padding: "10px 18px", borderTop: currentEventItems.length > 0 ? `1px solid ${th.cardBorder}` : "none", display: "flex", gap: "6px", alignItems: "center" }}>
-                      <input autoFocus placeholder="Item name…" value={newItemName} onChange={e => setNewItemName(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && newItemName.trim()) { addItem(newItemName, newItemCategory, currentEvent.id); } if (e.key === "Escape") setAddingItem(false); }} style={{ flex: 1, fontSize: "13px", padding: "8px 10px", borderRadius: "8px", border: `1px solid ${th.cardBorder}`, fontFamily: "'DM Sans', sans-serif", outline: "none" }} />
-                      <select value={newItemCategory} onChange={e => setNewItemCategory(e.target.value)} style={{ fontSize: "11px", padding: "8px 6px", borderRadius: "8px", border: `1px solid ${th.cardBorder}`, fontFamily: "'DM Sans', sans-serif" }}>
-                        {PACKING_CATEGORIES.map(cat => (
-                          <option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>
-                        ))}
-                      </select>
-                      <button onClick={() => { if (newItemName.trim()) addItem(newItemName, newItemCategory, currentEvent.id); }} style={{ padding: "8px 14px", background: accent, color: "white", border: "none", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Add</button>
-                      <button onClick={() => setAddingItem(false)} style={{ background: "none", border: "none", color: th.muted, cursor: "pointer", fontSize: "14px" }}>✕</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setAddingItem(true)} style={{ width: "100%", padding: "12px 18px", background: "none", border: "none", borderTop: currentEventItems.length > 0 ? `1px solid ${th.cardBorder}` : "none", cursor: "pointer", fontSize: "12px", fontWeight: 600, color: accent, fontFamily: "'DM Sans', sans-serif", textAlign: "left" }}>+ Add Item</button>
-                  )}
+                {/* ─── Dress slot toggle (per-member setting) ─── */}
+                {/* Compact inline switch. Gates the Dress tile without a full settings page. */}
+                <div style={{ padding: "10px 18px", borderTop: `1px solid ${th.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: 700, color: th.text }}>Include Dress slot</div>
+                    <div style={{ fontSize: "10px", color: th.muted, marginTop: "2px" }}>Shows a pink-tinted Dress tile in the outfit grid.</div>
+                  </div>
+                  <button
+                    onClick={() => toggleDressSlot(!showsDress)}
+                    role="switch"
+                    aria-checked={showsDress}
+                    aria-label="Include Dress slot"
+                    style={{
+                      width: "44px", height: "24px", borderRadius: "12px",
+                      background: showsDress ? "#ec4899" : "#d0c8b8",
+                      border: "none", cursor: "pointer", padding: 0, position: "relative",
+                      transition: "background 0.15s",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span style={{
+                      position: "absolute", top: "3px", left: showsDress ? "22px" : "3px",
+                      width: "18px", height: "18px", borderRadius: "50%",
+                      background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+                      transition: "left 0.15s",
+                    }} />
+                  </button>
                 </div>
+
+                {/* ─── Outfit slot grid (2×3) ─── */}
+                {/* Each tile is scoped to a single slot. Tapping opens SlotModal;
+                    tapping a tile dimmed by a filled Dress raises overrideConfirm. */}
+                <div style={{ padding: "14px 16px", borderTop: `1px solid ${th.cardBorder}` }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px" }}>
+                    {slotOrder.map(slotKey => {
+                      const def = SLOT_DEFS[slotKey];
+                      const bucket = currentSlotItems[slotKey];
+                      const filled = bucket.length > 0;
+                      const dressFilled = currentSlotItems.dress.length > 0;
+                      const dimmed = dressFilled && DIMMED_WHEN_DRESS_FILLED.includes(slotKey);
+                      const isDress = slotKey === "dress";
+                      return (
+                        <button
+                          key={slotKey}
+                          onClick={() => openSlot(slotKey)}
+                          aria-label={filled ? `${def.label} (${bucket.length} item${bucket.length === 1 ? "" : "s"})` : `Add ${def.label}`}
+                          style={{
+                            padding: "14px 12px",
+                            minHeight: "96px",
+                            borderRadius: "14px",
+                            border: filled
+                              ? `1px solid ${isDress ? "#ec4899" : accent}`
+                              : `1.5px dashed ${isDress ? "#f3a8cf" : "#d8cfbd"}`,
+                            background: filled
+                              ? (isDress ? "#fdf2f8" : "white")
+                              : (isDress ? "#fff1f8" : "#fffdf8"),
+                            cursor: "pointer",
+                            display: "flex", flexDirection: "column",
+                            alignItems: "flex-start", justifyContent: "flex-start", gap: "6px",
+                            fontFamily: "'DM Sans', sans-serif", textAlign: "left" as const,
+                            opacity: dimmed ? 0.42 : 1,
+                            transition: "opacity 0.15s",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span style={{ fontSize: "18px" }}>{def.emoji}</span>
+                            <span style={{
+                              fontSize: "10px", fontWeight: 700, textTransform: "uppercase" as const,
+                              letterSpacing: "0.06em",
+                              color: isDress ? "#c73a86" : (filled ? accent : th.muted),
+                            }}>{def.label}</span>
+                          </div>
+                          {filled ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "2px", width: "100%" }}>
+                              {bucket.slice(0, 3).map(item => (
+                                <div
+                                  key={item.id}
+                                  style={{
+                                    fontSize: "13px", fontWeight: 600, color: th.text, lineHeight: 1.25,
+                                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, width: "100%",
+                                  }}
+                                >{item.name}</div>
+                              ))}
+                              {bucket.length > 3 && (
+                                <div style={{ fontSize: "10px", color: th.muted, fontWeight: 600 }}>+{bucket.length - 3} more</div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: "12px", color: "#a0927a", fontWeight: 500 }}>{def.empty}</div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ─── Override confirm: Dress is filled, user tapped Top/Layer/Bottom ─── */}
+                {overrideConfirm && (
+                  <div style={{ padding: "14px 16px", borderTop: `1px solid ${th.cardBorder}`, background: "#fdf2f8" }}>
+                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#9f2969", marginBottom: "4px" }}>
+                      You're wearing a dress for this event.
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#6b4160", marginBottom: "10px" }}>
+                      Add a {SLOT_DEFS[overrideConfirm].label.toLowerCase()} anyway? This will remove the dress and swap to separates.
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        onClick={async () => {
+                          const toRemove = currentSlotItems.dress.slice();
+                          const nextSlot = overrideConfirm;
+                          for (const i of toRemove) await deleteItem(i.id, i.name);
+                          setOverrideConfirm(null);
+                          setActiveSlot(nextSlot);
+                        }}
+                        style={{ padding: "8px 14px", borderRadius: "10px", background: "#ec4899", color: "white", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                      >Swap out dress</button>
+                      <button
+                        onClick={() => setOverrideConfirm(null)}
+                        style={{ padding: "8px 14px", borderRadius: "10px", background: "white", color: th.muted, border: `1px solid ${th.cardBorder}`, fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                      >Keep dress</button>
+                    </div>
+                  </div>
+                )}
 
                 {/* ─── Dress code suggestions (persistent — below items) ─── */}
                 {currentEvent.dress_code && (
@@ -2343,6 +2560,23 @@ export default function PackingPage({
 
       {/* Bottom spacer */}
       <div style={{ height: "80px" }} />
+
+      {/* ─── Slot modal (bottom-sheet picker) ─── */}
+      {/* Rendered here so the scrim overlays the full page, not just the card. */}
+      {activeSlot && currentEvent && (
+        <SlotModal
+          slotType={activeSlot}
+          tripId={trip.id}
+          activeMemberId={activeMemberId}
+          outfitGroupId={currentOutfitGroup?.id || null}
+          dressCode={currentEvent.dress_code}
+          reuseChips={slotReuseChips[activeSlot]}
+          currentInSlot={currentSlotItems[activeSlot]}
+          onAdd={(names) => handleSlotAdd(activeSlot, names)}
+          onRemove={handleSlotRemove}
+          onClose={() => setActiveSlot(null)}
+        />
+      )}
     </div>
   );
 }

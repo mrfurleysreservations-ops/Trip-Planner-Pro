@@ -235,6 +235,7 @@ export interface Database {
           status: string;
           invited_by: string;
           invite_token: string | null;
+          show_dress_slot: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -249,6 +250,7 @@ export interface Database {
           status?: string;
           invited_by: string;
           invite_token?: string | null;
+          show_dress_slot?: boolean;
           created_at?: string;
           updated_at?: string;
         };
