@@ -506,43 +506,111 @@ export default function ExpensesPageComponent({
       {th.vibeBg && <div style={{ position: "fixed", inset: 0, background: th.vibeBg, pointerEvents: "none", zIndex: 0 }} />}
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {/* Header */}
+      {/* ─── STICKY TOP REGION ─────────────────────────────── */}
       <div style={{
-        background: th.headerBg, padding: "14px 20px",
+        position: "sticky",
+        top: 0,
+        zIndex: 20,
+        background: th.headerBg,
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
         borderBottom: `1px solid ${th.cardBorder}`,
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        flexWrap: "wrap", gap: "8px", position: "relative", zIndex: 1,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => router.push(`/trip/${trip.id}`)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: 4, color: th.muted }}>←</button>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 20, color: th.text, margin: 0 }}>
-            Expenses
-          </h2>
+        {/* Row 1 — Header */}
+        <div style={{
+          padding: "12px 16px 8px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: 8,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 0, flex: 1, minWidth: 0 }}>
+            <button
+              onClick={() => router.push(`/trip/${trip.id}`)}
+              aria-label="Back to trip hub"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                background: `${th.accent}1a`,
+                border: `1.5px solid ${th.accent}40`,
+                color: th.accent,
+                fontSize: 22,
+                fontWeight: 700,
+                cursor: "pointer",
+                padding: 0,
+                transition: "all 0.15s",
+              }}
+            >
+              ←
+            </button>
+            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 20, color: th.text, margin: "0 0 0 10px" }}>
+              Expenses
+            </h2>
+          </div>
         </div>
+
+        {/* Row 2 — Canonical pill toggle */}
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          padding: "6px 16px 10px",
+        }}>
+          <div style={{
+            display: "inline-flex",
+            background: th.card,
+            border: `1.5px solid ${th.cardBorder}`,
+            borderRadius: 20,
+          }}>
+            {(["expenses", "summary"] as const).map((view) => (
+              <button
+                key={view}
+                onClick={() => setActiveView(view)}
+                style={{
+                  background: activeView === view ? th.accent : "transparent",
+                  border: "none",
+                  padding: "8px 18px",
+                  borderRadius: 20,
+                  fontSize: 13,
+                  fontWeight: activeView === view ? 700 : 500,
+                  color: activeView === view ? "#fff" : th.muted,
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: "all 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {view === "expenses" ? "💰 Expenses" : "📊 Summary"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Row 3 — Category filter pills */}
+        {activeView === "expenses" && expenses.length > 0 && (
+          <div style={{ padding: "0 16px 10px" }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+              <button onClick={() => setFilterCategory(null)} style={pillStyle(filterCategory === null)}>
+                All ({expenses.length})
+              </button>
+              {EXPENSE_CATEGORIES.filter((c) => categoryCounts[c.value]).map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => setFilterCategory(filterCategory === c.value ? null : c.value)}
+                  style={pillStyle(filterCategory === c.value)}
+                >
+                  {c.icon} {c.label} ({categoryCounts[c.value]})
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <TripSubNav tripId={trip.id} theme={th} />
 
       <div style={{ maxWidth: 600, margin: "0 auto", padding: 16, position: "relative", zIndex: 1 }}>
-
-        {/* ═══ VIEW TOGGLE ═══ */}
-        <div style={{ display: "flex", gap: 0, marginBottom: 20, background: `${th.accent}0a`, borderRadius: 12, border: `1.5px solid ${th.cardBorder}`, overflow: "hidden" }}>
-          {(["expenses", "summary"] as const).map((view) => (
-            <button
-              key={view}
-              onClick={() => setActiveView(view)}
-              style={{
-                flex: 1, padding: "10px 16px", background: activeView === view ? `${th.accent}1a` : "transparent",
-                border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-                fontSize: 14, fontWeight: activeView === view ? 700 : 500,
-                color: activeView === view ? th.accent : th.muted,
-                borderBottom: `3px solid ${activeView === view ? th.accent : "transparent"}`,
-              }}
-            >
-              {view === "expenses" ? "💰 Expenses" : "📊 Summary"}
-            </button>
-          ))}
-        </div>
 
         {/* ═══ EXPENSES LIST VIEW ═══ */}
         {activeView === "expenses" && (
@@ -564,24 +632,6 @@ export default function ExpensesPageComponent({
                   <span>{familyGroups.length} {familyGroups.length === 1 ? "party" : "parties"}</span>
                   <span>{members.length} {members.length === 1 ? "person" : "people"}</span>
                 </div>
-              </div>
-            )}
-
-            {/* Category filter pills */}
-            {expenses.length > 0 && (
-              <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-                <button onClick={() => setFilterCategory(null)} style={pillStyle(filterCategory === null)}>
-                  All ({expenses.length})
-                </button>
-                {EXPENSE_CATEGORIES.filter((c) => categoryCounts[c.value]).map((c) => (
-                  <button
-                    key={c.value}
-                    onClick={() => setFilterCategory(filterCategory === c.value ? null : c.value)}
-                    style={pillStyle(filterCategory === c.value)}
-                  >
-                    {c.icon} {c.label} ({categoryCounts[c.value]})
-                  </button>
-                ))}
               </div>
             )}
 
@@ -840,48 +890,36 @@ export default function ExpensesPageComponent({
           </>
         )}
 
-        {/* Spacer for sticky CTA */}
-        <div style={{ height: "80px" }} />
+      </div>
 
-        {/* Sticky gradient CTA — hidden when modal is open */}
-        {!showAddModal && (
-        <div style={{
-          position: "fixed",
-          bottom: "56px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "100%",
-          maxWidth: "480px",
-          zIndex: 101,
-          padding: "0 16px 12px",
-          boxSizing: "border-box" as const,
-          background: `linear-gradient(to top, ${th.bg} 70%, transparent)`,
-          pointerEvents: "none" as const
-        }}>
-          <button onClick={openAddModal} style={{
-            pointerEvents: "auto" as const,
-            width: "100%",
-            padding: "16px 24px",
-            fontSize: "16px",
-            fontWeight: 700,
-            fontFamily: "'Outfit', sans-serif",
-            color: "#fff",
+      {/* ─── FAB ──────────────────────────────────────────── */}
+      {!showAddModal && (
+        <button
+          onClick={openAddModal}
+          aria-label="Add expense"
+          style={{
+            position: "fixed",
+            bottom: 72,
+            right: 16,
+            zIndex: 50,
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
             background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+            color: "#fff",
             border: "none",
-            borderRadius: "14px",
+            fontSize: 28,
+            fontWeight: 300,
             cursor: "pointer",
-            boxShadow: "0 4px 20px rgba(232,148,58,0.35)",
+            boxShadow: `0 4px 20px ${th.accent}60`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: "8px",
-            minHeight: "52px"
-          }}>
-            + Add Expense
-          </button>
-        </div>
-        )}
-      </div>
+          }}
+        >
+          +
+        </button>
+      )}
 
       {/* ═══ ADD EXPENSE MODAL ═══ */}
       {showAddModal && (
