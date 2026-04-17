@@ -1639,10 +1639,38 @@ export default function ItineraryPage({
                       <span style={{ fontSize: 10, fontWeight: 600, color: th.muted, flexShrink: 0 }}>
                         👥 {attendingCount}/{totalAccepted}
                       </span>
-                      {eventExpenseTotals[ev.id] && (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: "#155724", flexShrink: 0 }}>
+                      {eventExpenseTotals[ev.id] ? (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); router.push(`/trip/${trip.id}/expenses`); }}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 3,
+                            padding: "3px 8px", borderRadius: 999,
+                            fontSize: 11, fontWeight: 700, fontFamily: "'DM Sans', sans-serif",
+                            border: "none", cursor: "pointer", flexShrink: 0,
+                            background: "#d4edda", color: "#155724",
+                            lineHeight: 1.2,
+                          }}
+                        >
                           💰 ${eventExpenseTotals[ev.id].toFixed(0)}
-                        </span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/trip/${trip.id}/expenses?fromEvent=${ev.id}&title=${encodeURIComponent(ev.title)}&date=${ev.date || ""}`);
+                          }}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 3,
+                            padding: "3px 8px", borderRadius: 999,
+                            fontSize: 11, fontWeight: 700, fontFamily: "'DM Sans', sans-serif",
+                            cursor: "pointer", flexShrink: 0,
+                            background: `${th.accent}14`, color: th.accent,
+                            border: `1px dashed ${th.accent}59`,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          ＋ $
+                        </button>
                       )}
                     </div>
                     {height > 44 && ev.location && (
