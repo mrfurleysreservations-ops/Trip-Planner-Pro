@@ -6,6 +6,8 @@ import { THEMES, EVENT_TYPES, DRESS_CODES, TIME_SLOTS, PACKING_CATEGORIES, DRESS
 import { logActivity } from "@/lib/trip-activity";
 import type { Trip, TripMember, ItineraryEvent, EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment } from "@/types/database.types";
 import type { PackingPageProps } from "./page";
+import type { TimeOfDay, WeatherBucket, ForecastCell, ForecastMap } from "@/lib/weather";
+import { weatherChipText } from "@/lib/weather";
 import TripSubNav from "../trip-sub-nav";
 
 // ─── Inspo Image type (matches API route response) ───
@@ -66,6 +68,57 @@ function formatTime12h(time: string | null): string {
   if (h === 0) h = 12;
   else if (h > 12) h -= 12;
   return `${h}:${m} ${ampm}`;
+}
+
+// ─── Time-of-day bucketing for an event ───
+// morning 05–10, afternoon 11–15, evening 16–20, night 21–04
+function getEventTimeOfDay(evt: ItineraryEvent): TimeOfDay {
+  if (evt.start_time) {
+    const h = parseInt(evt.start_time.split(":")[0], 10);
+    if (!isNaN(h)) {
+      if (h >= 5 && h <= 10) return "morning";
+      if (h >= 11 && h <= 15) return "afternoon";
+      if (h >= 16 && h <= 20) return "evening";
+      return "night";
+    }
+  }
+  // Fallback: time_slot if it matches one of the four buckets
+  const ts = evt.time_slot;
+  if (ts === "morning" || ts === "afternoon" || ts === "evening" || ts === "night") return ts;
+  return "afternoon";
+}
+
+const HARD_SPLIT_DRESS_CODES = new Set(["swimwear", "formal", "active"]);
+
+// ─── Time-of-day band visuals (shared between grouping + outfit cards) ───
+const TOD_BAND_STYLES: Record<TimeOfDay, { gradient: string; textColor: string; chipBg: string; emoji: string; label: string }> = {
+  morning:   { gradient: "linear-gradient(90deg, #f9c876, #e8943a)", textColor: "#fff",    chipBg: "rgba(255,255,255,0.25)",  emoji: "🌅", label: "Morning" },
+  afternoon: { gradient: "linear-gradient(90deg, #e8943a, #c75a2a)", textColor: "#fff",    chipBg: "rgba(255,255,255,0.25)",  emoji: "☀️", label: "Afternoon" },
+  evening:   { gradient: "linear-gradient(90deg, #7c4a9e, #452a66)", textColor: "#fff",    chipBg: "rgba(255,255,255,0.25)",  emoji: "🌆", label: "Evening" },
+  night:     { gradient: "linear-gradient(90deg, #1a2340, #0a1020)", textColor: "#ffd97a", chipBg: "rgba(255,217,122,0.16)", emoji: "🌙", label: "Night" },
+};
+
+function getCellFromForecast(forecast: ForecastMap, date: string | null, tod: TimeOfDay): ForecastCell | undefined {
+  if (!date) return undefined;
+  const day = forecast[date];
+  if (!day) return undefined;
+  return day[tod] || day["all_day"];
+}
+
+// Map an OutfitGroup's stored bucket back to a display chip when forecast lookup fails
+function chipFromGroupMetadata(bucket: string | null, cell: ForecastCell | undefined): string {
+  if (cell) return weatherChipText(cell);
+  if (!bucket || bucket === "unknown") return "— weather pending";
+  // Synthesize a label from the bucket alone (no temp available)
+  switch (bucket as WeatherBucket) {
+    case "hot_sunny": return "☀️ hot";
+    case "warm_sunny": return "☀️ clear";
+    case "mild": return "⛅ mild";
+    case "cold": return "🥶 cold";
+    case "rainy": return "🌧️ rain";
+    case "snowy": return "❄️ snow";
+    default: return "— weather pending";
+  }
 }
 
 // Infer packing category from item name keywords
@@ -215,6 +268,7 @@ export default function PackingPage({
   userProfile, familyMembers, userId, isHost,
   packingBags: initialPackingBags, packingBagSections: initialPackingBagSections,
   packingBagContainers: initialPackingBagContainers, packingItemAssignments: initialPackingItemAssignments,
+  weatherForecast,
 }: PackingPageProps) {
   const supabase = createBrowserSupabaseClient();
   const router = useRouter();
@@ -372,30 +426,54 @@ export default function PackingPage({
       // Incremental: only group events that aren't in any group yet
       if (ungroupedEvents.length === 0) return;
 
-      // Bucket ungrouped events by date + dress code
+      // Build composite-key buckets (date + TOD + weather + dress code).
+      // Hard-split codes (swimwear/formal/active) get their own group per event.
       const buckets = new Map<string, ItineraryEvent[]>();
+      const bucketMeta = new Map<string, { date: string; tod: TimeOfDay; weather: WeatherBucket; dressCode: string }>();
+
       ungroupedEvents.forEach(evt => {
-        const dc = evt.dress_code || "casual";
-        const key = `${evt.date}__${dc}`;
+        const dressCode = evt.dress_code || "casual";
+        const tod = getEventTimeOfDay(evt);
+        const cell = getCellFromForecast(weatherForecast, evt.date, tod);
+        const weather: WeatherBucket = cell?.bucket || "unknown";
+        const isHardSplit = HARD_SPLIT_DRESS_CODES.has(dressCode);
+        const keyTail = isHardSplit ? `__${evt.id}` : "";
+        const key = `${evt.date}__${tod}__${weather}__${dressCode}${keyTail}`;
         const bucket = buckets.get(key) || [];
         bucket.push(evt);
         buckets.set(key, bucket);
+        if (!bucketMeta.has(key)) {
+          bucketMeta.set(key, { date: evt.date!, tod, weather, dressCode });
+        }
       });
 
       const newGroups: OutfitGroup[] = [];
       const newGroupEvents: OutfitGroupEvent[] = [];
       let sortOrder = memberOutfitGroups.length;
 
-      for (const [, bucketEvents] of buckets) {
-        const firstEvt = bucketEvents[0];
-        const date = firstEvt.date!;
-        const dressCode = firstEvt.dress_code || "casual";
+      // Helper: find an existing group that matches this bucket, with
+      // unknown weather acting as a wildcard on either side.
+      const findExistingMatch = (date: string, tod: TimeOfDay, weather: WeatherBucket, dressCode: string) => {
+        if (HARD_SPLIT_DRESS_CODES.has(dressCode)) return undefined; // never merge into existing
+        return memberOutfitGroups.find(g => {
+          if (g.date !== date) return false;
+          if ((g.dress_code || "casual") !== dressCode) return false;
+          if ((g.time_of_day || "afternoon") !== tod) return false;
+          const gw = (g.weather_bucket || "unknown") as WeatherBucket;
+          // Wildcard: unknown matches anything on the same date/TOD/dress
+          if (gw === "unknown" || weather === "unknown") return true;
+          return gw === weather;
+        });
+      };
 
-        // Check if there's an existing group on the same day with the same dress code
-        const existingGroup = memberOutfitGroups.find(g => g.date === date && g.dress_code === dressCode);
+      for (const [key, bucketEvents] of buckets) {
+        const meta = bucketMeta.get(key)!;
+        const { date, tod, weather, dressCode } = meta;
+
+        const existingGroup = findExistingMatch(date, tod, weather, dressCode);
 
         if (existingGroup) {
-          // Add events to the existing group instead of creating a new one
+          // Add events to the existing group
           for (const evt of bucketEvents) {
             const { data: ge } = await supabase.from("outfit_group_events").insert({
               outfit_group_id: existingGroup.id,
@@ -404,14 +482,16 @@ export default function PackingPage({
             if (ge) newGroupEvents.push(ge as OutfitGroupEvent);
           }
         } else {
-          // Create a new group
-          const label = `${getDressCodeLabel(dressCode)} — ${formatDate(date)}`;
+          // Create a new group with the new metadata
+          const label = `${getDressCodeLabel(dressCode)} · ${TOD_BAND_STYLES[tod].label}`;
           const { data: group, error } = await supabase.from("outfit_groups").insert({
             trip_id: trip.id,
             trip_member_id: activeMemberId,
             date,
             label,
             dress_code: dressCode,
+            time_of_day: tod,
+            weather_bucket: weather,
             sort_order: sortOrder++,
           }).select().single();
 
@@ -437,7 +517,7 @@ export default function PackingPage({
     } finally {
       autoGroupingRef.current = false;
     }
-  }, [supabase, trip.id, activeMemberId, memberOutfitGroups, ungroupedEvents]);
+  }, [supabase, trip.id, activeMemberId, memberOutfitGroups, ungroupedEvents, weatherForecast]);
 
   // Auto-group whenever there are ungrouped events (works on mount AND when new events appear)
   useEffect(() => {
@@ -1070,6 +1150,64 @@ export default function PackingPage({
     }
   }, [allPacked]);
 
+  // ─── Shared card scaffolding (Variant D): TOD band + meta row + timeline ───
+  // Used by both the grouping card and the walkthrough outfit card.
+  function renderCardScaffolding(args: {
+    group: OutfitGroup;
+    eventsInGroup: ItineraryEvent[];
+    rightCounts: string;
+  }) {
+    const { group, eventsInGroup, rightCounts } = args;
+    const tod = ((group.time_of_day as TimeOfDay) || "afternoon") as TimeOfDay;
+    const band = TOD_BAND_STYLES[tod];
+    const cell = getCellFromForecast(weatherForecast, group.date, tod);
+    const chip = chipFromGroupMetadata(group.weather_bucket, cell);
+    const dressCode = group.dress_code || "casual";
+    const dcColor = DRESS_CODE_COLORS[dressCode] || accent;
+
+    return (
+      <>
+        {/* Gradient time-of-day band */}
+        <div style={{ padding: "9px 16px", background: band.gradient, color: band.textColor, display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" as const }}>
+          <span>{band.emoji} {band.label}</span>
+          <span style={{ fontSize: "11px", fontWeight: 600, letterSpacing: 0, textTransform: "none" as const, background: band.chipBg, padding: "3px 9px", borderRadius: "12px" }}>{chip}</span>
+        </div>
+
+        {/* Meta row: dress-code pill + counts */}
+        <div style={{ padding: "10px 16px", borderBottom: "1px solid #f0ebe4", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ padding: "3px 10px", borderRadius: "12px", fontSize: "10px", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.05em", background: `${dcColor}18`, color: dcColor }}>{getDressCodeLabel(dressCode)}</span>
+          <span style={{ fontSize: "11px", color: "#777" }}>{rightCounts}</span>
+        </div>
+
+        {/* Timeline event rows */}
+        {eventsInGroup.map((evt, idx) => {
+          const isFirst = idx === 0;
+          const isLast = idx === eventsInGroup.length - 1;
+          const subParts: string[] = [];
+          if (evt.start_time) subParts.push(formatTime12h(evt.start_time));
+          if (evt.location) subParts.push(evt.location);
+          return (
+            <div key={evt.id} style={{ display: "flex", alignItems: "flex-start", padding: "10px 16px", position: "relative" as const }}>
+              {/* Vertical line via inner span (we trim top/bottom for first/last via height) */}
+              <span aria-hidden style={{ position: "absolute" as const, left: 23, top: isFirst ? "50%" : 0, bottom: isLast ? "50%" : 0, width: 2, background: "#e8e8e8" }} />
+              {/* Dot */}
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: accent, position: "relative" as const, zIndex: 1, flexShrink: 0, marginLeft: 7, marginRight: 14, marginTop: 4, border: "2px solid #fff", boxShadow: `0 0 0 1px ${accent}` }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{getEventTypeIcon(evt.event_type)} {evt.title}</div>
+                {subParts.length > 0 && (
+                  <div style={{ fontSize: 10, color: "#777", marginTop: 2 }}>{subParts.join(" · ")}</div>
+                )}
+                {evt.description && (
+                  <div style={{ fontSize: 11, color: "#555", marginTop: 4, lineHeight: 1.4 }}>{evt.description}</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </>
+    );
+  }
+
   // ─── Empty state ───
   if (activeMemberEvents.length === 0 && (activeView === "walkthrough" || activeView === "grouping")) {
     return (
@@ -1267,52 +1405,37 @@ export default function PackingPage({
                     const isMergeSource = groupingMergeSource === group.id;
                     const isMergeTarget = groupingMergeSource && groupingMergeSource !== group.id;
                     const itemCount = memberItems.filter(i => i.event_id && groupEvents.some(e => e.id === i.event_id)).length;
+                    const packedCountForGroup = memberItems.filter(i => i.event_id && groupEvents.some(e => e.id === i.event_id) && i.is_packed).length;
 
                     return (
                       <div key={group.id} onClick={() => setGroupingSelectedId(isSelected ? null : group.id)} style={{ background: "white", borderRadius: "16px", border: `1px solid ${isMergeSource ? "#e65100" : isSelected ? accent : th.cardBorder}`, overflow: "hidden", marginBottom: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.04)", cursor: "pointer", transition: "all 0.2s" }}>
-                        <div style={{ padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <span style={{ fontSize: "14px" }}>{getEventTypeIcon(groupEvents[0]?.event_type || "other")}</span>
-                            <div>
-                              <div style={{ fontSize: "13px", fontWeight: 700 }}>{group.label}</div>
-                              <div style={{ fontSize: "11px", color: th.muted }}>
-                                {groupEvents.length} event{groupEvents.length !== 1 ? "s" : ""} · {itemCount} item{itemCount !== 1 ? "s" : ""}
-                              </div>
-                            </div>
-                          </div>
-                          <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "10px", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.04em", background: `${DRESS_CODE_COLORS[group.dress_code || "casual"] || accent}18`, color: DRESS_CODE_COLORS[group.dress_code || "casual"] || accent }}>{getDressCodeLabel(group.dress_code)}</span>
-                        </div>
+                        {renderCardScaffolding({
+                          group,
+                          eventsInGroup: groupEvents,
+                          rightCounts: `${groupEvents.length} event${groupEvents.length !== 1 ? "s" : ""} · ${packedCountForGroup}/${itemCount} packed`,
+                        })}
 
-                        {/* Events within group */}
-                        {groupEvents.map((evt, eIdx) => (
-                          <div key={evt.id} style={{ padding: "8px 18px 8px 44px", borderTop: `1px solid ${th.cardBorder}`, display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{ fontSize: "11px" }}>{getEventTypeIcon(evt.event_type)}</span>
-                            <span style={{ fontSize: "12px", fontWeight: 600 }}>{evt.title}</span>
-                            <span style={{ fontSize: "10px", color: th.muted, marginLeft: "auto" }}>
-                              {getTimeSlotLabel(evt.time_slot)}
-                              {evt.start_time && ` · ${formatTime12h(evt.start_time)}`}
-                            </span>
-                            {/* Split button — only if group has 2+ events and not the last event */}
-                            {isSelected && groupEvents.length > 1 && eIdx < groupEvents.length - 1 && (
-                              <button onClick={(e) => { e.stopPropagation(); splitGroup(group.id, evt.id); }} style={{ fontSize: "9px", padding: "2px 8px", borderRadius: "8px", background: "#e3f2fd", color: "#1565c0", border: "none", cursor: "pointer", fontWeight: 700, marginLeft: "4px" }}>Split ↓</button>
-                            )}
-                          </div>
-                        ))}
-
-                        {/* Action row: merge/split — always visible */}
+                        {/* Action row: merge/split */}
                         {isMergeTarget ? (
-                          <div style={{ padding: "8px 18px", borderTop: `1px solid ${th.cardBorder}`, background: `#e6510008` }}>
+                          <div style={{ padding: "8px 16px 10px", borderTop: "1px solid #f0ebe4", background: "#fafafa" }}>
                             <button onClick={(e) => { e.stopPropagation(); mergeGroups(groupingMergeSource!, group.id); }} style={{ fontSize: "11px", padding: "6px 12px", borderRadius: "8px", background: "#e65100", color: "white", border: "none", cursor: "pointer", fontWeight: 700, width: "100%" }}>Merge here ↓</button>
                           </div>
                         ) : (
-                          <div style={{ padding: "8px 18px", borderTop: `1px solid ${th.cardBorder}`, display: "flex", gap: "8px" }}>
-                            {!groupingMergeSource && dayGroups.length > 1 && (
-                              <button onClick={(e) => { e.stopPropagation(); setGroupingMergeSource(group.id); }} style={{ fontSize: "11px", padding: "4px 10px", borderRadius: "8px", background: "#fff3e0", color: "#e65100", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Merge with…</button>
-                            )}
-                            {groupEvents.length > 1 && !groupingMergeSource && (
-                              <button onClick={(e) => { e.stopPropagation(); splitGroup(group.id, groupEvents[0].id); }} style={{ fontSize: "11px", padding: "4px 10px", borderRadius: "8px", background: "#e3f2fd", color: "#1565c0", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Split</button>
-                            )}
-                          </div>
+                          (() => {
+                            const showMerge = !groupingMergeSource && dayGroups.length > 1;
+                            const showSplit = groupEvents.length > 1 && !groupingMergeSource;
+                            if (!showMerge && !showSplit) return null;
+                            return (
+                              <div style={{ padding: "8px 16px 10px", borderTop: "1px solid #f0ebe4", background: "#fafafa", display: "flex", gap: "8px" }}>
+                                {showMerge && (
+                                  <button onClick={(e) => { e.stopPropagation(); setGroupingMergeSource(group.id); }} style={{ fontSize: "11px", padding: "4px 10px", borderRadius: "8px", background: "#fff3e0", color: "#e65100", border: "none", cursor: "pointer", fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>Merge with…</button>
+                                )}
+                                {showSplit && (
+                                  <button onClick={(e) => { e.stopPropagation(); splitGroup(group.id, groupEvents[0].id); }} style={{ fontSize: "11px", padding: "4px 10px", borderRadius: "8px", background: "#e3f2fd", color: "#1565c0", border: "none", cursor: "pointer", fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>Split</button>
+                                )}
+                              </div>
+                            );
+                          })()
                         )}
                       </div>
                     );
@@ -1426,31 +1549,35 @@ export default function PackingPage({
                 </div>
               </div>
             ) : currentStepType === "outfitGroup" && currentOutfitGroup && currentEvent ? (
-              /* ─── STANDARD: Event Outfit Card ─── */
+              /* ─── STANDARD: Event Outfit Card (Variant D) ─── */
               <div style={{ background: "white", borderRadius: "16px", border: `1px solid ${th.cardBorder}`, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
 
-                {/* Event header */}
-                <div style={{ padding: "18px", borderBottom: `1px solid ${th.cardBorder}` }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "4px" }}>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "16px" }}>{getEventTypeIcon(currentEvent.event_type)}</span>
-                        <span style={{ fontSize: "15px", fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>{currentOutfitGroup.label}</span>
-                      </div>
-                      {/* Events in this group */}
-                      <div style={{ marginTop: "6px" }}>
-                        {currentGroupEvents.map(evt => (
-                          <div key={evt.id} style={{ fontSize: "11px", color: th.muted, paddingLeft: "26px" }}>
-                            {getEventTypeIcon(evt.event_type)} {evt.title}
-                            {evt.start_time && ` · ${formatTime12h(evt.start_time)}`}
-                            {evt.location && ` · ${evt.location}`}
-                          </div>
+                {/* Shared scaffolding: TOD band + meta row + timeline */}
+                {renderCardScaffolding({
+                  group: currentOutfitGroup,
+                  eventsInGroup: currentGroupEvents,
+                  rightCounts: `${currentGroupEvents.length} event${currentGroupEvents.length !== 1 ? "s" : ""} · ${currentEventItems.length} item${currentEventItems.length !== 1 ? "s" : ""}`,
+                })}
+
+                {/* ─── "Wear same outfit as…" reuse dropdown (above inspo per Variant D) ─── */}
+                {eventsWithItems.length > 0 && currentEventItems.length === 0 && (
+                  <div style={{ padding: "10px 16px", borderTop: "1px solid #f0ebe4", background: `${accent}06` }}>
+                    <button onClick={() => setShowReuseDropdown(!showReuseDropdown)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: 700, color: accent, padding: 0, fontFamily: "'DM Sans', sans-serif" }}>
+                      <span>↻</span> Wear same outfit as…
+                    </button>
+                    {showReuseDropdown && (
+                      <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                        {eventsWithItems.map(evt => (
+                          <button key={evt.id} onClick={() => reuseOutfitFrom(evt.id)} disabled={reusingOutfit} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", background: "white", border: `1px solid ${th.cardBorder}`, borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontFamily: "'DM Sans', sans-serif", textAlign: "left" as const }}>
+                            <span>{getEventTypeIcon(evt.event_type)}</span>
+                            <span style={{ fontWeight: 600 }}>{evt.title}</span>
+                            <span style={{ fontSize: "10px", color: th.muted, marginLeft: "auto" }}>{formatDate(evt.date)}</span>
+                          </button>
                         ))}
                       </div>
-                    </div>
-                    <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "10px", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.04em", background: `${DRESS_CODE_COLORS[currentEvent.dress_code || "casual"] || accent}18`, color: DRESS_CODE_COLORS[currentEvent.dress_code || "casual"] || accent, flexShrink: 0 }}>{getDressCodeLabel(currentEvent.dress_code)}</span>
+                    )}
                   </div>
-                </div>
+                )}
 
                 {/* ─── Inspo panel (moved above items) ─── */}
                 <button onClick={() => { if (!showInspoPanel) fetchInspoImages(); setShowInspoPanel(!showInspoPanel); }} style={{ width: "100%", padding: "12px 18px", background: `${accent}06`, border: "none", borderTop: `1px solid ${th.cardBorder}`, cursor: "pointer", fontSize: "12px", fontWeight: 700, color: accent, fontFamily: "'DM Sans', sans-serif", textAlign: "left" as const }}>
@@ -1491,26 +1618,6 @@ export default function PackingPage({
                       <div style={{ fontSize: "12px", fontWeight: 600 }}>{currentOutfit.inspo_label || "Inspiration"}</div>
                     </div>
                     <button onClick={clearInspo} style={{ fontSize: "10px", padding: "4px 8px", borderRadius: "6px", background: "#ffebee", color: "#c62828", border: "none", cursor: "pointer", fontWeight: 700 }}>Clear</button>
-                  </div>
-                )}
-
-                {/* ─── Outfit reuse ─── */}
-                {eventsWithItems.length > 0 && currentEventItems.length === 0 && (
-                  <div style={{ padding: "10px 18px", borderBottom: `1px solid ${th.cardBorder}`, background: `${accent}06` }}>
-                    <button onClick={() => setShowReuseDropdown(!showReuseDropdown)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: 700, color: accent, padding: 0, fontFamily: "'DM Sans', sans-serif" }}>
-                      <span>↻</span> Wear same outfit as…
-                    </button>
-                    {showReuseDropdown && (
-                      <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                        {eventsWithItems.map(evt => (
-                          <button key={evt.id} onClick={() => reuseOutfitFrom(evt.id)} disabled={reusingOutfit} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", background: "white", border: `1px solid ${th.cardBorder}`, borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontFamily: "'DM Sans', sans-serif", textAlign: "left" as const }}>
-                            <span>{getEventTypeIcon(evt.event_type)}</span>
-                            <span style={{ fontWeight: 600 }}>{evt.title}</span>
-                            <span style={{ fontSize: "10px", color: th.muted, marginLeft: "auto" }}>{formatDate(evt.date)}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 )}
 

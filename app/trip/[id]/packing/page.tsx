@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Trip, TripMember, ItineraryEvent, EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment } from "@/types/database.types";
+import type { Trip, TripMember, ItineraryEvent, EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment, TripWeatherForecast } from "@/types/database.types";
+import { geocodeLocation, fetchForecast, bucketDailyByTOD, type ForecastMap, type ForecastCell } from "@/lib/weather";
 import PackingPage from "./packing-page";
 
 export interface PackingPageProps {
@@ -21,6 +22,23 @@ export interface PackingPageProps {
   packingBagSections: PackingBagSection[];
   packingBagContainers: PackingBagContainer[];
   packingItemAssignments: PackingItemAssignment[];
+  weatherForecast: ForecastMap;
+}
+
+// Build the in-memory ForecastMap from cached rows
+function rowsToForecastMap(rows: TripWeatherForecast[]): ForecastMap {
+  const map: ForecastMap = {};
+  for (const row of rows) {
+    const dateMap = map[row.forecast_date] || (map[row.forecast_date] = {});
+    dateMap[row.time_of_day] = {
+      bucket: row.weather_bucket as ForecastCell["bucket"],
+      temperatureHighF: row.temperature_high_f != null ? Number(row.temperature_high_f) : null,
+      temperatureLowF: row.temperature_low_f != null ? Number(row.temperature_low_f) : null,
+      weatherCode: row.weather_code,
+      precipitationProbability: row.precipitation_probability,
+    };
+  }
+  return map;
 }
 
 export default async function PackingServerPage({ params }: { params: { id: string } }) {
@@ -106,6 +124,63 @@ export default async function PackingServerPage({ params }: { params: { id: stri
   // Fetch item assignments for this trip
   const { data: packingItemAssignments } = await supabase.from("packing_item_assignments").select("*").eq("trip_id", id);
 
+  // ─── Weather: read cached rows; if missing or stale, refetch + upsert ───
+  let weatherForecast: ForecastMap = {};
+  if (trip.location && trip.start_date && trip.end_date) {
+    const { data: cachedRows } = await supabase
+      .from("trip_weather_forecast")
+      .select("*")
+      .eq("trip_id", id);
+    const rows = (cachedRows ?? []) as TripWeatherForecast[];
+
+    const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
+    const isStale = rows.length === 0 || rows.some(r => new Date(r.fetched_at).getTime() < sixHoursAgo);
+
+    if (isStale && isHost) {
+      // Only the host can write to the cache (per RLS), but any member's read uses cached rows.
+      const geo = await geocodeLocation(trip.location);
+      if (geo) {
+        const dailies = await fetchForecast(geo.lat, geo.lon, trip.start_date, trip.end_date, geo.timezone);
+        if (dailies.length > 0) {
+          // Clear existing rows for this trip, then upsert new ones
+          await supabase.from("trip_weather_forecast").delete().eq("trip_id", id);
+          const upserts: any[] = [];
+          for (const daily of dailies) {
+            const byTOD = bucketDailyByTOD(daily);
+            for (const tod of ["morning", "afternoon", "evening", "night"] as const) {
+              const cell = byTOD[tod];
+              upserts.push({
+                trip_id: id,
+                forecast_date: daily.date,
+                time_of_day: tod,
+                temperature_high_f: cell.temperatureHighF,
+                temperature_low_f: cell.temperatureLowF,
+                weather_code: cell.weatherCode,
+                precipitation_probability: cell.precipitationProbability,
+                weather_bucket: cell.bucket,
+              });
+            }
+          }
+          if (upserts.length > 0) {
+            await supabase.from("trip_weather_forecast").insert(upserts);
+          }
+          // Re-read after upsert so the in-memory map matches DB
+          const { data: freshRows } = await supabase
+            .from("trip_weather_forecast")
+            .select("*")
+            .eq("trip_id", id);
+          weatherForecast = rowsToForecastMap((freshRows ?? []) as TripWeatherForecast[]);
+        } else {
+          weatherForecast = rowsToForecastMap(rows);
+        }
+      } else {
+        weatherForecast = rowsToForecastMap(rows);
+      }
+    } else {
+      weatherForecast = rowsToForecastMap(rows);
+    }
+  }
+
   return (
     <PackingPage
       trip={trip as Trip}
@@ -125,6 +200,7 @@ export default async function PackingServerPage({ params }: { params: { id: stri
       packingBagSections={packingBagSections}
       packingBagContainers={packingBagContainers}
       packingItemAssignments={(packingItemAssignments ?? []) as PackingItemAssignment[]}
+      weatherForecast={weatherForecast}
     />
   );
 }

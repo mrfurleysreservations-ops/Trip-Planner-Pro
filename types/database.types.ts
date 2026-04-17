@@ -633,6 +633,8 @@ export interface Database {
           date: string;
           label: string | null;
           dress_code: string | null;
+          time_of_day: string | null;
+          weather_bucket: string | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -644,9 +646,37 @@ export interface Database {
           date: string;
           label?: string | null;
           dress_code?: string | null;
+          time_of_day?: string | null;
+          weather_bucket?: string | null;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      trip_weather_forecast: {
+        Row: {
+          id: string;
+          trip_id: string;
+          forecast_date: string;
+          time_of_day: string;
+          temperature_high_f: number | null;
+          temperature_low_f: number | null;
+          weather_code: number | null;
+          precipitation_probability: number | null;
+          weather_bucket: string;
+          fetched_at: string;
+        };
+        Insert: {
+          id?: string;
+          trip_id: string;
+          forecast_date: string;
+          time_of_day: string;
+          temperature_high_f?: number | null;
+          temperature_low_f?: number | null;
+          weather_code?: number | null;
+          precipitation_probability?: number | null;
+          weather_bucket: string;
+          fetched_at?: string;
         };
       };
       outfit_group_events: {
@@ -894,6 +924,9 @@ export type OutfitGroup = Database["public"]["Tables"]["outfit_groups"]["Row"];
 export type OutfitGroupInsert = Database["public"]["Tables"]["outfit_groups"]["Insert"];
 export type OutfitGroupEvent = Database["public"]["Tables"]["outfit_group_events"]["Row"];
 export type OutfitGroupEventInsert = Database["public"]["Tables"]["outfit_group_events"]["Insert"];
+
+export type TripWeatherForecast = Database["public"]["Tables"]["trip_weather_forecast"]["Row"];
+export type TripWeatherForecastInsert = Database["public"]["Tables"]["trip_weather_forecast"]["Insert"];
 
 export type TripExpense = Database["public"]["Tables"]["trip_expenses"]["Row"];
 export type TripExpenseInsert = Database["public"]["Tables"]["trip_expenses"]["Insert"];
