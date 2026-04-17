@@ -1229,46 +1229,153 @@ export default function ItineraryPage({
       {th.vibeBg && <div style={{ position: "fixed", inset: 0, background: th.vibeBg, pointerEvents: "none", zIndex: 0 }} />}
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {/* Header */}
+      {/* ═══ STICKY TOP REGION — header + pill + day picker ═══ */}
       <div style={{
-        background: th.headerBg, padding: "14px 20px",
+        position: "sticky",
+        top: 0,
+        zIndex: 20,
+        background: th.headerBg,
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
         borderBottom: `1px solid ${th.cardBorder}`,
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        flexWrap: "wrap", gap: "8px", position: "relative", zIndex: 1,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <button onClick={() => router.push(`/trip/${trip.id}`)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "4px", color: th.muted }}>←</button>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", color: th.text, margin: 0 }}>Itinerary</h2>
+        {/* Header */}
+        <div style={{
+          padding: "14px 20px",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          flexWrap: "wrap", gap: "8px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              onClick={() => router.push(`/trip/${trip.id}`)}
+              aria-label="Back to trip hub"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                background: `${th.accent}1a`,
+                border: `1.5px solid ${th.accent}40`,
+                color: th.accent,
+                fontSize: 22,
+                fontWeight: 700,
+                cursor: "pointer",
+                padding: 0,
+                transition: "all 0.15s",
+              }}
+            >
+              ←
+            </button>
+            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", color: th.text, margin: "0 0 0 10px" }}>Itinerary</h2>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              id="export-btn"
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={placedEvents.length === 0}
+              style={{
+                padding: "9px 16px", borderRadius: 10,
+                border: `1.5px solid ${th.accent}`, background: "none",
+                cursor: placedEvents.length === 0 ? "default" : "pointer",
+                fontSize: 13, fontWeight: 700, color: th.accent,
+                fontFamily: "'DM Sans', sans-serif",
+                opacity: placedEvents.length === 0 ? 0.4 : 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              📤 Export
+            </button>
+            <button
+              onClick={() => { resetImport(); setShowImportModal(true); }}
+              style={{
+                padding: "9px 16px", borderRadius: 10,
+                border: `1.5px solid ${th.accent}`, background: "none",
+                cursor: "pointer", fontSize: 13, fontWeight: 700, color: th.accent,
+                fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap",
+              }}
+            >
+              📥 Import
+            </button>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            id="export-btn"
-            onClick={() => setShowExportMenu(!showExportMenu)}
-            disabled={placedEvents.length === 0}
-            style={{
-              padding: "9px 16px", borderRadius: 10,
-              border: `1.5px solid ${th.accent}`, background: "none",
-              cursor: placedEvents.length === 0 ? "default" : "pointer",
-              fontSize: 13, fontWeight: 700, color: th.accent,
-              fontFamily: "'DM Sans', sans-serif",
-              opacity: placedEvents.length === 0 ? 0.4 : 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            📤 Export
-          </button>
-          <button
-            onClick={() => { resetImport(); setShowImportModal(true); }}
-            style={{
-              padding: "9px 16px", borderRadius: 10,
-              border: `1.5px solid ${th.accent}`, background: "none",
-              cursor: "pointer", fontSize: 13, fontWeight: 700, color: th.accent,
-              fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap",
-            }}
-          >
-            📥 Import
-          </button>
+
+        {/* ═══ VIEW TOGGLE ═══ */}
+        {!noDates && (
+          <div style={{
+            display: "flex", justifyContent: "center", padding: "12px 20px 0",
+          }}>
+            <div style={{
+              display: "inline-flex", borderRadius: 20, overflow: "hidden",
+              border: `1.5px solid ${th.cardBorder}`, background: th.card,
+            }}>
+              {(["calendar", "list"] as const).map((mode) => {
+                const active = viewMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    style={{
+                      padding: "8px 18px", border: "none", cursor: "pointer",
+                      fontFamily: "'DM Sans', sans-serif", fontSize: "13px",
+                      fontWeight: active ? 700 : 500,
+                      background: active ? th.accent : "transparent",
+                      color: active ? "#fff" : th.muted,
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    {mode === "calendar" ? "📅 Calendar" : "📋 List"}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ DAY PICKER — Calendar view only ═══ */}
+        {!noDates && viewMode === "calendar" && (
+        <div style={{
+          display: "flex", gap: 0, overflowX: "auto", WebkitOverflowScrolling: "touch",
+          background: th.headerBg, borderBottom: `1px solid ${th.cardBorder}`,
+          scrollbarWidth: "none", padding: "0 4px",
+        }}>
+          {tripDays.map((date, idx) => {
+            const active = idx === selectedDayIdx;
+            const d = new Date(date + "T12:00:00");
+            const dayNum = idx + 1;
+            const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+            const dayDate = d.getDate();
+            const dayEvtCount = placedEvents.filter((e) => e.date === date).length;
+            return (
+              <button
+                key={date}
+                onClick={() => setSelectedDayIdx(idx)}
+                style={{
+                  flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center",
+                  gap: 2, padding: "10px 16px", background: "none", border: "none",
+                  borderBottom: `3px solid ${active ? th.accent : "transparent"}`,
+                  cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.2s",
+                  minWidth: 56,
+                }}
+              >
+                <span style={{ fontSize: 10, fontWeight: 600, color: active ? th.accent : th.muted, textTransform: "uppercase" }}>
+                  {dayName}
+                </span>
+                <span style={{ fontSize: 20, fontWeight: 800, color: active ? th.accent : th.text, fontFamily: "'Outfit', sans-serif" }}>
+                  {dayDate}
+                </span>
+                {dayEvtCount > 0 && (
+                  <span style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: active ? th.accent : th.muted, opacity: active ? 1 : 0.4,
+                  }} />
+                )}
+              </button>
+            );
+          })}
         </div>
+        )}
       </div>
 
       <TripSubNav tripId={trip.id} theme={th} />
@@ -1412,80 +1519,6 @@ export default function ItineraryPage({
 
       {!noDates && (
         <div style={{ position: "relative", zIndex: 1 }}>
-
-          {/* ═══ VIEW TOGGLE ═══ */}
-          <div style={{
-            display: "flex", justifyContent: "center", padding: "12px 20px 0",
-          }}>
-            <div style={{
-              display: "inline-flex", borderRadius: 20, overflow: "hidden",
-              border: `1.5px solid ${th.cardBorder}`, background: th.card,
-            }}>
-              {(["calendar", "list"] as const).map((mode) => {
-                const active = viewMode === mode;
-                return (
-                  <button
-                    key={mode}
-                    onClick={() => setViewMode(mode)}
-                    style={{
-                      padding: "8px 18px", border: "none", cursor: "pointer",
-                      fontFamily: "'DM Sans', sans-serif", fontSize: "13px",
-                      fontWeight: active ? 700 : 500,
-                      background: active ? th.accent : "transparent",
-                      color: active ? "#fff" : th.muted,
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    {mode === "calendar" ? "📅 Calendar" : "📋 List"}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ═══ DAY PICKER — Calendar view only ═══ */}
-          {viewMode === "calendar" && (
-          <div style={{
-            display: "flex", gap: 0, overflowX: "auto", WebkitOverflowScrolling: "touch",
-            background: th.headerBg, borderBottom: `1px solid ${th.cardBorder}`,
-            scrollbarWidth: "none", padding: "0 4px",
-          }}>
-            {tripDays.map((date, idx) => {
-              const active = idx === selectedDayIdx;
-              const d = new Date(date + "T12:00:00");
-              const dayNum = idx + 1;
-              const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
-              const dayDate = d.getDate();
-              const dayEvtCount = placedEvents.filter((e) => e.date === date).length;
-              return (
-                <button
-                  key={date}
-                  onClick={() => setSelectedDayIdx(idx)}
-                  style={{
-                    flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center",
-                    gap: 2, padding: "10px 16px", background: "none", border: "none",
-                    borderBottom: `3px solid ${active ? th.accent : "transparent"}`,
-                    cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.2s",
-                    minWidth: 56,
-                  }}
-                >
-                  <span style={{ fontSize: 10, fontWeight: 600, color: active ? th.accent : th.muted, textTransform: "uppercase" }}>
-                    {dayName}
-                  </span>
-                  <span style={{ fontSize: 20, fontWeight: 800, color: active ? th.accent : th.text, fontFamily: "'Outfit', sans-serif" }}>
-                    {dayDate}
-                  </span>
-                  {dayEvtCount > 0 && (
-                    <span style={{
-                      width: 6, height: 6, borderRadius: "50%",
-                      background: active ? th.accent : th.muted, opacity: active ? 1 : 0.4,
-                    }} />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          )}
 
           {/* ═══ CALENDAR TIME GRID ═══ */}
           {viewMode === "calendar" && (
@@ -1779,55 +1812,43 @@ export default function ItineraryPage({
           </div>
           )}
 
-          {/* Spacer for sticky CTA */}
+          {/* Spacer so the last row clears the fixed sub-nav + FAB */}
         <div style={{ height: "80px" }} />
-
-        {/* Sticky gradient CTA — hidden when any modal is open */}
-        {!showAddEventModal && !expandedId && !showImportModal && !showExportMenu && !editingId && (
-          <div style={{
-            position: "fixed",
-            bottom: "56px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "100%",
-            maxWidth: "480px",
-            zIndex: 101,
-            padding: "0 16px 12px",
-            boxSizing: "border-box" as const,
-            background: `linear-gradient(to top, ${th.bg} 70%, transparent)`,
-            pointerEvents: "none" as const
-          }}>
-            <button onClick={() => {
-              resetAddForm();
-              setAddDate(tripDays[0] || "");
-              setAddTimeSlot("morning");
-              setShowAddEventModal(true);
-            }} style={{
-              pointerEvents: "auto" as const,
-              width: "100%",
-              padding: "16px 24px",
-              fontSize: "16px",
-              fontWeight: 700,
-              fontFamily: "'Outfit', sans-serif",
-              color: "#fff",
-              background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
-              border: "none",
-              borderRadius: "14px",
-              cursor: "pointer",
-              boxShadow: "0 4px 20px rgba(232,148,58,0.35)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              minHeight: "52px"
-            }}>
-              + Add Event
-            </button>
-          </div>
-        )}
 
         </div>
       )}
+
+      {/* ═══ ADD EVENT FAB (bottom-right) ═══ */}
+      <button
+        onClick={() => {
+          resetAddForm();
+          setAddDate(tripDays[0] || "");
+          setAddTimeSlot("morning");
+          setShowAddEventModal(true);
+        }}
+        aria-label="Add event"
+        style={{
+          position: "fixed",
+          bottom: 72,
+          right: 16,
+          zIndex: 50,
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+          color: "#fff",
+          border: "none",
+          fontSize: 28,
+          fontWeight: 300,
+          cursor: "pointer",
+          boxShadow: `0 4px 20px ${th.accent}60`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        +
+      </button>
 
       {/* ═══ EVENT DETAIL MODAL ═══ */}
       {expandedId && (() => {
