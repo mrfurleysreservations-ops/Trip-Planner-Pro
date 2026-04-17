@@ -701,10 +701,11 @@ export default function PackingPage({
 
         if (existingGroup) {
           for (const evt of bucketEvents) {
-            const { data: ge } = await supabase.from("outfit_group_events").insert({
+            const { data: ge, error: geErr } = await supabase.from("outfit_group_events").insert({
               outfit_group_id: existingGroup.id,
               event_id: evt.id,
             }).select().single();
+            if (geErr) console.error("[autoGroupEvents] outfit_group_events insert failed", geErr);
             if (ge) newGroupEvents.push(ge as OutfitGroupEvent);
           }
         } else {
@@ -735,14 +736,18 @@ export default function PackingPage({
             sort_order: sortOrder++,
           }).select().single();
 
-          if (error || !group) continue;
+          if (error || !group) {
+            if (error) console.error("[autoGroupEvents] outfit_groups insert failed", error);
+            continue;
+          }
           newGroups.push(group as OutfitGroup);
 
           for (const evt of sortedEvents) {
-            const { data: ge } = await supabase.from("outfit_group_events").insert({
+            const { data: ge, error: geErr } = await supabase.from("outfit_group_events").insert({
               outfit_group_id: group.id,
               event_id: evt.id,
             }).select().single();
+            if (geErr) console.error("[autoGroupEvents] outfit_group_events insert failed", geErr);
             if (ge) newGroupEvents.push(ge as OutfitGroupEvent);
           }
         }
