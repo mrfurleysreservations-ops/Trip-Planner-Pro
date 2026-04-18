@@ -4,10 +4,14 @@ import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { TRIP_TYPES, THEMES } from "@/lib/constants";
 import { fetchChatList, type ChatListRow } from "@/lib/chat-list";
+import TopNav from "@/app/top-nav";
 
 interface ChatsPageProps {
   userId: string;
   initialRows: ChatListRow[];
+  unreadChatCount: number;
+  pendingFriendCount: number;
+  unreadAlertCount: number;
 }
 
 // ─── Helpers ───
@@ -53,7 +57,13 @@ function truncate(s: string, n: number): string {
   return s.slice(0, n - 1) + "…";
 }
 
-export default function ChatsPage({ userId, initialRows }: ChatsPageProps) {
+export default function ChatsPage({
+  userId,
+  initialRows,
+  unreadChatCount,
+  pendingFriendCount,
+  unreadAlertCount,
+}: ChatsPageProps) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const th = THEMES.home;
@@ -73,31 +83,55 @@ export default function ChatsPage({ userId, initialRows }: ChatsPageProps) {
   }, [refresh]);
 
   return (
-    <div style={{ color: th.text, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: th.bg, color: th.text, fontFamily: "'DM Sans', sans-serif", paddingBottom: 96 }}>
       <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet"
       />
-      <div style={{ maxWidth: 600, margin: "0 auto", padding: "16px 16px 32px" }}>
-        {/* Page title */}
-        <div style={{ marginBottom: 16 }}>
-          <h1
-            style={{
-              fontFamily: "'Outfit', sans-serif",
-              fontSize: 22,
-              fontWeight: 800,
-              letterSpacing: "-0.02em",
-              color: th.text,
-              margin: 0,
-            }}
-          >
-            Chats
-          </h1>
-          <div style={{ fontSize: 13, color: th.muted, marginTop: 2 }}>
-            All your trip conversations in one place
-          </div>
-        </div>
 
+      {/* ─── STICKY TOP ─── */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 20,
+          background: "rgba(255,255,255,0.95)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: `1px solid ${th.cardBorder}`,
+        }}
+      >
+        <div style={{ maxWidth: 600, margin: "0 auto", padding: "0 16px" }}>
+          {/* Row 1 — Page header */}
+          <div style={{ padding: "14px 0 10px" }}>
+            <h1
+              style={{
+                fontFamily: "'Outfit', sans-serif",
+                fontSize: 22,
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                color: th.text,
+                margin: 0,
+              }}
+            >
+              Chats
+            </h1>
+            <div style={{ fontSize: 13, color: th.muted, marginTop: 2 }}>
+              All your trip conversations in one place
+            </div>
+          </div>
+
+          {/* Row 2 — Top-level nav */}
+          <TopNav
+            unreadChatCount={unreadChatCount}
+            pendingFriendCount={pendingFriendCount}
+            unreadAlertCount={unreadAlertCount}
+          />
+        </div>
+      </div>
+
+      {/* ─── SCROLLABLE BODY ─── */}
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: "16px" }}>
         {rows.length === 0 ? (
           <EmptyState muted={th.muted} />
         ) : (
