@@ -4,6 +4,7 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES } from "@/lib/constants";
 import type { SavedGear } from "@/types/database.types";
+import TopNav from "@/app/top-nav";
 
 const GEAR_CATEGORIES = [
   { value: "camping", label: "Camping", icon: "🏕️" },
@@ -24,9 +25,18 @@ GEAR_CATEGORIES.forEach((c) => { catEmoji[c.value] = c.icon; });
 interface GearPageProps {
   userId: string;
   initialGear: SavedGear[];
+  unreadChatCount: number;
+  pendingFriendCount: number;
+  unreadAlertCount: number;
 }
 
-export default function GearPage({ userId, initialGear }: GearPageProps) {
+export default function GearPage({
+  userId,
+  initialGear,
+  unreadChatCount,
+  pendingFriendCount,
+  unreadAlertCount,
+}: GearPageProps) {
   const [gear, setGear] = useState<SavedGear[]>(initialGear);
   const [newName, setNewName] = useState("");
   const [newCat, setNewCat] = useState("other");
@@ -84,9 +94,48 @@ export default function GearPage({ userId, initialGear }: GearPageProps) {
   };
 
   return (
-    <div style={{ color: th.text, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: th.bg, color: th.text, fontFamily: "'DM Sans', sans-serif", paddingBottom: 96 }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
+      {/* ─── STICKY TOP ─── */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 20,
+          background: "rgba(255,255,255,0.95)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: `1px solid ${th.cardBorder}`,
+        }}
+      >
+        <div style={{ maxWidth: 600, margin: "0 auto", padding: "0 16px" }}>
+          {/* Row 1 — Page header */}
+          <div style={{ padding: "14px 0 10px" }}>
+            <h1
+              style={{
+                fontFamily: "'Outfit', sans-serif",
+                fontSize: 22,
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                color: th.text,
+                margin: 0,
+              }}
+            >
+              Gear
+            </h1>
+          </div>
+
+          {/* Row 2 — Top-level nav */}
+          <TopNav
+            unreadChatCount={unreadChatCount}
+            pendingFriendCount={pendingFriendCount}
+            unreadAlertCount={unreadAlertCount}
+          />
+        </div>
+      </div>
+
+      {/* ─── SCROLLABLE BODY ─── */}
       <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px 16px" }}>
         {/* Add gear */}
         <div className="card-glass" style={{ padding: "16px", marginBottom: "20px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
