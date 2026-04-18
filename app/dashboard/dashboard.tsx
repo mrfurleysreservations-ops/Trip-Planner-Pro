@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { TRIP_TYPES, THEMES } from "@/lib/constants";
 import type { UserProfile, Trip } from "@/types/database.types";
 import type { FamilyWithMembers } from "./page";
+import TopNav from "@/app/top-nav";
 
 interface DashboardProps {
   user: { id: string; email: string };
   profile: UserProfile | null;
   initialTrips: Trip[];
   initialFamilies: FamilyWithMembers[];
+  unreadChatCount: number;
+  pendingFriendCount: number;
 }
 
 function formatDateRange(start?: string | null, end?: string | null): string {
@@ -79,7 +82,14 @@ function TripCard({ trip, past, theme, onDelete, onNavigate }: TripCardProps) {
   );
 }
 
-export default function DashboardPage({ user, profile, initialTrips, initialFamilies }: DashboardProps) {
+export default function DashboardPage({
+  user,
+  profile,
+  initialTrips,
+  initialFamilies,
+  unreadChatCount,
+  pendingFriendCount,
+}: DashboardProps) {
   const [trips, setTrips] = useState<Trip[]>(initialTrips);
   const [families] = useState<FamilyWithMembers[]>(initialFamilies);
   const [creating, setCreating] = useState(false);
@@ -131,8 +141,64 @@ export default function DashboardPage({ user, profile, initialTrips, initialFami
   const navigateToTrip = (id: string) => router.push(`/trip/${id}`);
 
   return (
-    <div style={{ color: th.text }}>
-      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px 16px" }}>
+    <div style={{ minHeight: "100vh", background: th.bg, color: th.text, paddingBottom: 96 }}>
+      {/* ─── STICKY TOP ─── */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 20,
+          background: "rgba(255,255,255,0.95)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: `1px solid ${th.cardBorder}`,
+        }}
+      >
+        <div style={{ maxWidth: 600, margin: "0 auto", padding: "0 16px" }}>
+          {/* Row 1 — Page header */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 0 10px" }}>
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={profile.full_name || "You"}
+                onClick={() => router.push("/profile")}
+                style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", cursor: "pointer" }}
+              />
+            ) : (
+              <div
+                onClick={() => router.push("/profile")}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+                  color: "#fff",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                {(profile?.full_name || user.email || "?").charAt(0).toUpperCase()}
+              </div>
+            )}
+            <h2 className="display" style={{ fontSize: 22, flex: 1, marginLeft: 4 }}>
+              Your Trips
+            </h2>
+          </div>
+
+          {/* Row 2 — Top-level nav */}
+          <TopNav
+            unreadChatCount={unreadChatCount}
+            pendingFriendCount={pendingFriendCount}
+          />
+        </div>
+      </div>
+
+      {/* ─── SCROLLABLE BODY ─── */}
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: "16px" }}>
 
         {/* Onboarding reminder card */}
         {profile && !profile.onboarding_completed && !reminderDismissed && (
@@ -208,30 +274,6 @@ export default function DashboardPage({ user, profile, initialTrips, initialFami
           </div>
         )}
 
-        {/* Header row */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt={profile.full_name || "You"} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }} />
-            ) : (
-              <span style={{ fontSize: 24 }}>👤</span>
-            )}
-            <h2 className="display" style={{ fontSize: "22px" }}>Your Trips</h2>
-          </div>
-          <button
-            onClick={createTrip}
-            disabled={creating}
-            className="btn"
-            style={{
-              background: th.accent,
-              padding: "10px 24px",
-              opacity: creating ? 0.5 : 1,
-            }}
-          >
-            {creating ? "Creating..." : "+ New Trip"}
-          </button>
-        </div>
-
         {/* Empty state */}
         {trips.length === 0 && (
           <div className="card-glass" style={{ padding: "48px", textAlign: "center" }}>
@@ -282,6 +324,36 @@ export default function DashboardPage({ user, profile, initialTrips, initialFami
           </div>
         )}
       </div>
+
+      {/* ─── FAB — New Trip ─── */}
+      <button
+        onClick={createTrip}
+        disabled={creating}
+        aria-label="New trip"
+        style={{
+          position: "fixed",
+          bottom: 20,
+          right: 18,
+          zIndex: 50,
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+          color: "#fff",
+          border: "none",
+          fontSize: 28,
+          fontWeight: 300,
+          cursor: creating ? "default" : "pointer",
+          opacity: creating ? 0.5 : 1,
+          boxShadow: `0 4px 20px ${th.accent}8c`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "transform 0.1s",
+        }}
+      >
+        {creating ? "…" : "+"}
+      </button>
     </div>
   );
 }
