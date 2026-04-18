@@ -11,6 +11,7 @@ import {
 import { ageIcon, catIcon } from "@/lib/utils";
 import MemberSlider from "@/app/components/member-slider";
 import AvatarPicker from "@/app/components/avatar-picker";
+import TopNav from "@/app/top-nav";
 import type { FamilyWithRelations } from "./page";
 
 interface PackingPreferences {
@@ -61,6 +62,9 @@ interface ProfilePageProps {
   avatarUrl: string | null;
   packingPreferences: Record<string, string> | null;
   onboardingCompleted: boolean;
+  unreadChatCount: number;
+  pendingFriendCount: number;
+  unreadAlertCount: number;
 }
 
 // ─── Member Detail Card: inline editable card for a family member ───
@@ -145,7 +149,18 @@ function MemberDetailCard({ member, familyId, familyName, accent, onUpdate, onCl
   );
 }
 
-export default function ProfilePage({ userId, initialFamilies, userEmail, userName, avatarUrl, packingPreferences, onboardingCompleted }: ProfilePageProps) {
+export default function ProfilePage({
+  userId,
+  initialFamilies,
+  userEmail,
+  userName,
+  avatarUrl,
+  packingPreferences,
+  onboardingCompleted,
+  unreadChatCount,
+  pendingFriendCount,
+  unreadAlertCount,
+}: ProfilePageProps) {
   const [families, setFamilies] = useState<FamilyWithRelations[]>(initialFamilies);
   const [editId, setEditId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
@@ -317,7 +332,46 @@ export default function ProfilePage({ userId, initialFamilies, userEmail, userNa
   const editFam = editId ? families.find((f) => f.id === editId) : null;
 
   return (
-    <div style={{ color: th.text }}>
+    <div style={{ minHeight: "100vh", background: th.bg, color: th.text, paddingBottom: 96 }}>
+      {/* ─── STICKY TOP ─── */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 20,
+          background: "rgba(255,255,255,0.95)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: `1px solid ${th.cardBorder}`,
+        }}
+      >
+        <div style={{ maxWidth: 600, margin: "0 auto", padding: "0 16px" }}>
+          {/* Row 1 — Page header */}
+          <div style={{ padding: "14px 0 10px" }}>
+            <h1
+              style={{
+                margin: 0,
+                fontFamily: "'Outfit', sans-serif",
+                fontSize: 22,
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                color: th.text,
+              }}
+            >
+              Profile
+            </h1>
+          </div>
+
+          {/* Row 2 — Top-level nav */}
+          <TopNav
+            unreadChatCount={unreadChatCount}
+            pendingFriendCount={pendingFriendCount}
+            unreadAlertCount={unreadAlertCount}
+          />
+        </div>
+      </div>
+
+      {/* ─── SCROLLABLE BODY ─── */}
       <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px" }}>
         {/* Profile card */}
         <div className="card-glass" style={{ padding: "24px", marginBottom: "24px" }}>
