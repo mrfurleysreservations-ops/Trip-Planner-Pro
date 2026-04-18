@@ -376,10 +376,36 @@ export default function ProfilePage({
       >
         <div style={{ maxWidth: 600, margin: "0 auto", padding: "0 16px" }}>
           {/* Row 1 — Page header */}
-          <div style={{ padding: "14px 0 10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 0 10px" }}>
+            {displayAvatar ? (
+              <img
+                src={displayAvatar}
+                alt={displayName || "You"}
+                style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+                  color: "#fff",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: 14,
+                }}
+              >
+                {(displayName || userEmail || "?").charAt(0).toUpperCase()}
+              </div>
+            )}
             <h1
               style={{
                 margin: 0,
+                marginLeft: 4,
+                flex: 1,
                 fontFamily: "'Outfit', sans-serif",
                 fontSize: 22,
                 fontWeight: 800,
@@ -421,7 +447,7 @@ export default function ProfilePage({
         {view === "you" && (
           <>
         {/* Profile card */}
-        <div className="card-glass" style={{ padding: "24px", marginBottom: "24px" }}>
+        <div className="card-glass" style={{ padding: "20px", marginBottom: "24px" }}>
           {editingProfile ? (
             <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -448,20 +474,8 @@ export default function ProfilePage({
               </div>
             </div>
           ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-              <AvatarPicker
-                currentUrl={displayAvatar}
-                fallbackEmoji="👤"
-                size={80}
-                storagePath={`user-profiles/${userId}`}
-                onUploaded={async (url) => {
-                  const { error } = await supabase.from("user_profiles").update({ avatar_url: url }).eq("id", userId);
-                  if (error) { console.error("Failed to save profile avatar:", error); return; }
-                  setDisplayAvatar(url);
-                  setEditAvatarUrl(url);
-                }}
-              />
-              <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "22px" }}>{displayName || "No name set"}</div>
                 <div style={{ fontSize: "14px", color: "#777", marginTop: "4px" }}>{userEmail}</div>
               </div>
@@ -491,7 +505,7 @@ export default function ProfilePage({
                 <>
                   {/* ─── Packing Style (prominent) ─── */}
                   <div style={{ marginBottom: "18px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: th.accent, marginBottom: "10px" }}>Packing Style</div>
+                    <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#999", marginBottom: "10px" }}>Packing Style</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                       {STYLE_PREF.options.map((opt) => {
                         const isActive = packingPrefs.packing_style === opt.value;
@@ -531,7 +545,7 @@ export default function ProfilePage({
                     <div className="fade-in">
                       {FINE_TUNE_GROUPS.map((group) => (
                         <div key={group.label} style={{ marginBottom: "18px" }}>
-                          <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: th.accent, marginBottom: "10px" }}>{group.label}</div>
+                          <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#999", marginBottom: "10px" }}>{group.label}</div>
                           {group.prefs.map((pref) => {
                             const currentVal = packingPrefs[pref.key as keyof PackingPreferences] as string | undefined;
                             const selected = pref.options.find((o) => o.value === currentVal);
@@ -588,7 +602,7 @@ export default function ProfilePage({
 
                   {/* Shortcuts group */}
                   <div style={{ marginBottom: "4px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: th.accent, marginBottom: "10px" }}>Shortcuts</div>
+                    <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#999", marginBottom: "10px" }}>Shortcuts</div>
                     <div
                       onClick={() => savePackingPref("reusable_templates", !packingPrefs.reusable_templates)}
                       style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", padding: "8px 10px", borderRadius: "10px" }}
@@ -627,7 +641,15 @@ export default function ProfilePage({
             {/* Section 2 — Family Members slider */}
             <div style={{ marginBottom: "28px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "17px", fontWeight: 800, margin: 0 }}>👨‍👩‍👧‍👦 Family Members</h3>
+                <h3 style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  color: "#999",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  margin: 0,
+                  fontFamily: "'DM Sans', sans-serif",
+                }}>Family Members</h3>
                 <button onClick={() => { if (families.length > 0) setEditId(families[0].id); }} className="btn btn-sm" style={{ background: th.accent }}>+ Add</button>
               </div>
               {families.flatMap((f) => f.family_members || []).length === 0 ? (
@@ -664,7 +686,15 @@ export default function ProfilePage({
 
             {/* Section 3 — Your Families list */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", gap: "8px", flexWrap: "wrap" }}>
-              <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "17px", fontWeight: 800, margin: 0 }}>🏠 Your Families</h3>
+              <h3 style={{
+                fontSize: "14px",
+                fontWeight: 700,
+                color: "#999",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                margin: 0,
+                fontFamily: "'DM Sans', sans-serif",
+              }}>Your Families</h3>
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <input value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addFamily()} placeholder="Family name" className="input-modern" style={{ width: "180px" }} />
                 <button onClick={addFamily} className="btn btn-sm" style={{ background: th.accent }}>+ New Family</button>
@@ -700,7 +730,15 @@ export default function ProfilePage({
 
             {/* Members */}
             <div style={{ marginBottom: "24px" }}>
-              <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "17px", fontWeight: 700, marginBottom: "12px" }}>👨‍👩‍👧‍👦 Members</h3>
+              <h3 style={{
+                fontSize: "14px",
+                fontWeight: 700,
+                color: "#999",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                margin: "0 0 12px",
+                fontFamily: "'DM Sans', sans-serif",
+              }}>Members</h3>
               <div style={{ display: "flex", gap: "6px", marginBottom: "10px", flexWrap: "wrap" }}>
                 <input placeholder="Name" value={newMemName} onChange={(e) => setNewMemName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addMember(editFam.id)} className="input-modern" style={{ flex: "1 1 100px", minWidth: "80px" }} />
                 <select value={newMemAge} onChange={(e) => setNewMemAge(e.target.value)} className="input-modern" style={{ width: "auto", fontSize: "12px" }}>
@@ -729,14 +767,30 @@ export default function ProfilePage({
 
             {/* Car Snack Prefs */}
             <div style={{ marginBottom: "24px" }}>
-              <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "17px", fontWeight: 700, marginBottom: "12px" }}>🚗 Car Snack Preferences</h3>
+              <h3 style={{
+                fontSize: "14px",
+                fontWeight: 700,
+                color: "#999",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                margin: "0 0 12px",
+                fontFamily: "'DM Sans', sans-serif",
+              }}>Car Snack Preferences</h3>
               <textarea value={editFam.car_snack_pref || ""} onChange={(e) => updateFamily(editFam.id, "car_snack_pref", e.target.value)} placeholder="Goldfish, juice boxes, trail mix..." className="input-modern" rows={3} style={{ resize: "vertical" }} />
             </div>
 
             {/* Inventory Bins */}
             <div style={{ marginBottom: "24px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "17px", fontWeight: 700, margin: 0 }}>📦 Inventory Bins</h3>
+                <h3 style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  color: "#999",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  margin: 0,
+                  fontFamily: "'DM Sans', sans-serif",
+                }}>Inventory Bins</h3>
                 <button onClick={() => addBin(editFam.id)} className="btn btn-sm" style={{ background: th.accent }}>+ Bin</button>
               </div>
 
