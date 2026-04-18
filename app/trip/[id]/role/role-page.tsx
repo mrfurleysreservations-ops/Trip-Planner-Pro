@@ -57,13 +57,34 @@ export default function RolePage({
       try {
         const nowIso = new Date().toISOString();
 
+        // Only override chat_notification_level when the user hasn't
+        // explicitly customized it from the in-chat settings sheet. We
+        // detect "untouched" by checking whether the CURRENT level still
+        // matches the PREVIOUS role's default — if it does, they never
+        // strayed and it's safe to advance with the new role's default.
+        const prevRoleMeta = ROLE_PREFERENCES.find(
+          (r) => r.value === currentMember.role_preference
+        );
+        const prevDefault = prevRoleMeta?.chatDefault ?? null;
+        const currentLevel = currentMember.chat_notification_level;
+        const userCustomized =
+          prevDefault !== null && currentLevel !== prevDefault;
+
+        const memberUpdate: {
+          role_preference: RoleValue;
+          updated_at: string;
+          chat_notification_level?: string;
+        } = {
+          role_preference: role,
+          updated_at: nowIso,
+        };
+        if (!userCustomized) {
+          memberUpdate.chat_notification_level = meta.chatDefault;
+        }
+
         const { error: memberErr } = await supabase
           .from("trip_members")
-          .update({
-            role_preference: role,
-            chat_notification_level: meta.chatDefault,
-            updated_at: nowIso,
-          })
+          .update(memberUpdate)
           .eq("id", currentMember.id);
 
         if (memberErr) {
@@ -105,7 +126,19 @@ export default function RolePage({
         setSaving(false);
       }
     },
-    [saving, supabase, currentMember.id, defaultRole, userId, userName, trip.id, redirectTo, router]
+    [
+      saving,
+      supabase,
+      currentMember.id,
+      currentMember.role_preference,
+      currentMember.chat_notification_level,
+      defaultRole,
+      userId,
+      userName,
+      trip.id,
+      redirectTo,
+      router,
+    ]
   );
 
   const handleSkip = useCallback(() => {

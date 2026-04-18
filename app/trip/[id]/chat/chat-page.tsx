@@ -2,9 +2,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import { THEMES, type ThemeConfig } from "@/lib/constants";
+import { THEMES, ROLE_PREFERENCES, type ThemeConfig } from "@/lib/constants";
+import { type ChatNotificationLevel } from "@/lib/chat-unread";
 import type { Trip, TripMessage } from "@/types/database.types";
-import type { ChatMember } from "./page";
+import type { ChatMember, ViewerChatSettings } from "./page";
 import TripSubNav from "../trip-sub-nav";
 
 interface ChatPageProps {
@@ -14,7 +15,41 @@ interface ChatPageProps {
   initialMessages: TripMessage[];
   /** Viewer's trip_members.role_preference — drives sub-nav order. */
   currentUserRole: string | null;
+  /**
+   * Viewer's chat-facing member row (id, name, level, role). Null for trip
+   * owners without a dedicated trip_members row — in that case the settings
+   * control is hidden because there's nothing to update.
+   */
+  viewerSettings: ViewerChatSettings | null;
 }
+
+// ─── Notification level option metadata ───
+// Order matches the spec: All → Mentions → Muted.
+const NOTIFICATION_OPTIONS: {
+  value: ChatNotificationLevel;
+  label: string;
+  description: string;
+  icon: string;
+}[] = [
+  {
+    value: "all",
+    label: "All messages",
+    description: "Ping me for every new message",
+    icon: "🔔",
+  },
+  {
+    value: "mentions",
+    label: "Only @mentions",
+    description: "Only notify when someone @'s me",
+    icon: "🔖",
+  },
+  {
+    value: "muted",
+    label: "Muted",
+    description: "No notifications. Gray dot on the tab instead of a count.",
+    icon: "🔕",
+  },
+];
 
 const SUB_NAV_HEIGHT = 56;
 const COMPOSER_HEIGHT = 60;
@@ -61,7 +96,14 @@ function initialOf(name: string): string {
 // Main component
 // ═══════════════════════════════════════════
 
-export default function ChatPage({ trip, userId, members, initialMessages, currentUserRole }: ChatPageProps) {
+export default function ChatPage({
+  trip,
+  userId,
+  members,
+  initialMessages,
+  currentUserRole,
+  viewerSettings,
+}: ChatPageProps) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;
@@ -70,6 +112,17 @@ export default function ChatPage({ trip, userId, members, initialMessages, curre
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Notification level state — hydrated from the server prop and mutated
+  // locally when the user picks a new option in the settings sheet. We
+  // keep a local copy so the UI updates optimistically before the realtime
+  // event loops back. Falls back to 'all' for the rare owner-without-
+  // member-row case (settings sheet is hidden in that case anyway).
+  const [notificationLevel, setNotificationLevel] = useState<ChatNotificationLevel>(
+    viewerSettings?.notificationLevel ?? "all"
+  );
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [savingLevel, setSavingLevel] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const hasFocusRef = useRef<boolean>(typeof document !== "undefined" ? document.hasFocus() : true);
@@ -247,6 +300,44 @@ export default function ChatPage({ trip, userId, members, initialMessages, curre
     setSending(false);
   }, [draft, sending, supabase, trip.id, userId]);
 
+  // ─── Update notification level ───
+  // Writes `trip_members.chat_notification_level` for the viewer on this
+  // trip. Optimistically flips the local state so the sheet dismiss feels
+  // instant; on failure we roll back. The sub-nav badge hook picks up the
+  // change via its own realtime subscription on `trip_members`.
+  const roleMeta = viewerSettings?.rolePreference
+    ? ROLE_PREFERENCES.find((r) => r.value === viewerSettings.rolePreference) ?? null
+    : null;
+  const roleChatDefault = roleMeta?.chatDefault ?? null;
+
+  const handleChangeNotificationLevel = useCallback(
+    async (nextLevel: ChatNotificationLevel) => {
+      if (!viewerSettings || savingLevel) return;
+      if (nextLevel === notificationLevel) {
+        setSettingsOpen(false);
+        return;
+      }
+      const prevLevel = notificationLevel;
+      setNotificationLevel(nextLevel);
+      setSavingLevel(true);
+      const { error } = await supabase
+        .from("trip_members")
+        .update({
+          chat_notification_level: nextLevel,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", viewerSettings.memberId);
+      setSavingLevel(false);
+      if (error) {
+        console.error("chat: failed to update notification level", error);
+        setNotificationLevel(prevLevel);
+        return;
+      }
+      setSettingsOpen(false);
+    },
+    [notificationLevel, savingLevel, supabase, viewerSettings]
+  );
+
   // ─── Delete own message (soft delete) ───
   const deleteMessage = useCallback(
     async (id: string) => {
@@ -385,8 +476,34 @@ export default function ChatPage({ trip, userId, members, initialMessages, curre
             </h1>
           </div>
 
-          {/* Header actions — member avatar stack + count */}
-          <MemberStack members={members} th={th} />
+          {/* Header actions — bell (notification settings) + member avatar stack */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            {viewerSettings && (
+              <button
+                onClick={() => setSettingsOpen(true)}
+                aria-label="Chat notification settings"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: `${th.accent}1a`,
+                  border: `1.5px solid ${th.accent}40`,
+                  color: th.accent,
+                  fontSize: 16,
+                  cursor: "pointer",
+                  padding: 0,
+                  flexShrink: 0,
+                  transition: "all 0.15s",
+                }}
+              >
+                {notificationLevel === "muted" ? "🔕" : notificationLevel === "mentions" ? "🔖" : "🔔"}
+              </button>
+            )}
+            <MemberStack members={members} th={th} />
+          </div>
         </div>
       </div>
 
@@ -526,7 +643,218 @@ export default function ChatPage({ trip, userId, members, initialMessages, curre
 
       {/* ─── FIXED SUB-NAV ─── */}
       <TripSubNav tripId={trip.id} theme={th} role={currentUserRole} />
+
+      {/* ─── Notification settings sheet ─── */}
+      {settingsOpen && viewerSettings && (
+        <NotificationSettingsSheet
+          currentLevel={notificationLevel}
+          roleLabel={roleMeta?.label ?? null}
+          roleIcon={roleMeta?.icon ?? null}
+          roleChatDefault={roleChatDefault}
+          saving={savingLevel}
+          th={th}
+          onSelect={handleChangeNotificationLevel}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// Notification settings sheet
+// ═══════════════════════════════════════════
+
+interface NotificationSettingsSheetProps {
+  currentLevel: ChatNotificationLevel;
+  /** Viewer's role label (e.g. "Just Here") — used to annotate the default option. */
+  roleLabel: string | null;
+  roleIcon: string | null;
+  /** The chat level that's the default for the viewer's role. */
+  roleChatDefault: string | null;
+  saving: boolean;
+  th: ThemeConfig;
+  onSelect: (level: ChatNotificationLevel) => void;
+  onClose: () => void;
+}
+
+function NotificationSettingsSheet({
+  currentLevel,
+  roleLabel,
+  roleIcon,
+  roleChatDefault,
+  saving,
+  th,
+  onSelect,
+  onClose,
+}: NotificationSettingsSheetProps) {
+  return (
+    <>
+      {/* Scrim — tap anywhere outside the sheet to dismiss. */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.35)",
+          zIndex: 150,
+        }}
+      />
+      <div
+        role="dialog"
+        aria-label="Chat notifications"
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          maxWidth: 480,
+          margin: "0 auto",
+          zIndex: 160,
+          background: "#fff",
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          padding: "16px 16px 24px",
+          boxShadow: "0 -8px 28px rgba(0,0,0,0.18)",
+          fontFamily: "'DM Sans', sans-serif",
+        }}
+      >
+        {/* Drag handle */}
+        <div
+          style={{
+            width: 40,
+            height: 4,
+            borderRadius: 2,
+            background: "#e0e0e0",
+            margin: "0 auto 14px",
+          }}
+        />
+        <div
+          style={{
+            fontFamily: "'Outfit', sans-serif",
+            fontSize: 17,
+            fontWeight: 800,
+            color: th.text,
+            marginBottom: 2,
+          }}
+        >
+          Chat notifications
+        </div>
+        <div style={{ fontSize: 12, color: th.muted, marginBottom: 14 }}>
+          Choose how noisy this trip's chat should be for you.
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {NOTIFICATION_OPTIONS.map((opt) => {
+            const active = currentLevel === opt.value;
+            const isRoleDefault = roleChatDefault === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onSelect(opt.value)}
+                disabled={saving}
+                aria-pressed={active}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  textAlign: "left",
+                  padding: "12px 14px",
+                  borderRadius: 14,
+                  background: active ? `${th.accent}0f` : "#fafafa",
+                  border: active ? `2px solid ${th.accent}` : `2px solid ${th.cardBorder}`,
+                  cursor: saving ? "not-allowed" : "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                  width: "100%",
+                  color: th.text,
+                  transition: "all 0.15s",
+                }}
+              >
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: active ? `${th.accent}2e` : "rgba(0,0,0,0.05)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 20,
+                    flexShrink: 0,
+                  }}
+                >
+                  {opt.icon}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontFamily: "'Outfit', sans-serif",
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: th.text,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {opt.label}
+                    {isRoleDefault && roleLabel && (
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: th.muted,
+                          background: "rgba(0,0,0,0.06)",
+                          padding: "2px 8px",
+                          borderRadius: 10,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Default for {roleIcon ? `${roleIcon} ` : ""}{roleLabel}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: th.muted,
+                      marginTop: 2,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {opt.description}
+                  </div>
+                </div>
+                {active && (
+                  <div
+                    aria-hidden
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: "50%",
+                      background: th.accent,
+                      color: "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      flexShrink: 0,
+                    }}
+                  >
+                    ✓
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }
 

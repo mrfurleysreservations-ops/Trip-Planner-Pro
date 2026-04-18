@@ -4,6 +4,11 @@ import { fetchChatList } from "@/lib/chat-list";
 import type { UserProfile } from "@/types/database.types";
 import ChatsPage from "./chats-page";
 
+// NOTE: unread chat counting lives in `fetchChatList` — it already honors
+// each trip's `chat_notification_level`. Summing the returned rows keeps
+// the top-nav bubble and the per-row pills aligned: if you mute a trip,
+// it drops out of both at the same time.
+
 export default async function ChatsServerPage() {
   const supabase = createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -20,14 +25,6 @@ export default async function ChatsServerPage() {
 
   const memberTripIds = (memberTripsRes.data ?? []).map((m: any) => m.trip_id);
 
-  const ownedTripsRes = await supabase
-    .from("trips")
-    .select("id")
-    .eq("owner_id", user.id);
-
-  const ownedTripIds = (ownedTripsRes.data ?? []).map((t: any) => t.id);
-  const allTripIds = Array.from(new Set([...ownedTripIds, ...memberTripIds]));
-
   const [profileRes, pendingFriendRes, pendingInviteRes] = await Promise.all([
     supabase.from("user_profiles").select("*").eq("id", user.id).single(),
     supabase
@@ -42,33 +39,9 @@ export default async function ChatsServerPage() {
       .eq("status", "pending"),
   ]);
 
-  // Unread chat messages across all trips the user belongs to.
-  let unreadChatCount = 0;
-  if (allTripIds.length > 0) {
-    const [readsRes, msgsRes] = await Promise.all([
-      supabase
-        .from("trip_message_reads")
-        .select("trip_id, last_read_at")
-        .eq("user_id", user.id)
-        .in("trip_id", allTripIds),
-      supabase
-        .from("trip_messages")
-        .select("trip_id, created_at")
-        .in("trip_id", allTripIds)
-        .is("deleted_at", null)
-        .neq("sender_id", user.id),
-    ]);
-
-    const readsByTrip = new Map<string, string>();
-    (readsRes.data ?? []).forEach((r: any) => readsByTrip.set(r.trip_id, r.last_read_at));
-
-    (msgsRes.data ?? []).forEach((m: any) => {
-      const lastRead = readsByTrip.get(m.trip_id);
-      if (!lastRead || new Date(m.created_at) > new Date(lastRead)) {
-        unreadChatCount++;
-      }
-    });
-  }
+  // Aggregate unread for the top-nav bubble. Derived from the per-trip rows
+  // so a muted or mentions-only trip can't inflate the number.
+  const unreadChatCount = initialRows.reduce((acc, r) => acc + r.unreadCount, 0);
 
   // Trip activity newer than the user's last /alerts visit.
   let activityCount = 0;

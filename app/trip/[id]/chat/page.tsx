@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { normalizeChatLevel, type ChatNotificationLevel } from "@/lib/chat-unread";
 import type { Trip, TripMessage } from "@/types/database.types";
 import ChatPage from "./chat-page";
 
@@ -11,6 +12,18 @@ export interface ChatMember {
   name: string;
   avatarUrl: string | null;
   role: string;
+}
+
+/** Viewer-specific chat state surfaced to the client page. */
+export interface ViewerChatSettings {
+  /** trip_members.id for the viewer on this trip. Used for the settings update. */
+  memberId: string;
+  /** Viewer's display name on this trip — drives local @mention matching. */
+  memberName: string;
+  /** Viewer's current notification level. Default set by role, overridable in chat. */
+  notificationLevel: ChatNotificationLevel;
+  /** Role preference — lets the settings sheet label the "default for X" option. */
+  rolePreference: string | null;
 }
 
 export default async function ChatServerPage({ params }: { params: { id: string } }) {
@@ -72,15 +85,25 @@ export default async function ChatServerPage({ params }: { params: { id: string 
 
   const initialMessages = ((messagesRaw ?? []) as TripMessage[]).slice().reverse();
 
-  // Viewer's role_preference drives sub-nav ordering. Cheap lookup —
-  // single-row fetch on a unique (trip_id, user_id) combo.
+  // Viewer's trip_member row drives sub-nav ordering, @mention matching,
+  // and the chat settings sheet. Single-row fetch on a unique (trip_id,
+  // user_id) combo — OK to bundle all three fields in one read.
   const { data: viewerMemberRow } = await supabase
     .from("trip_members")
-    .select("role_preference")
+    .select("id, name, role_preference, chat_notification_level")
     .eq("trip_id", id)
     .eq("user_id", user.id)
     .maybeSingle();
   const currentUserRole = viewerMemberRow?.role_preference ?? null;
+
+  const viewerSettings: ViewerChatSettings | null = viewerMemberRow
+    ? {
+        memberId: viewerMemberRow.id,
+        memberName: viewerMemberRow.name,
+        notificationLevel: normalizeChatLevel(viewerMemberRow.chat_notification_level),
+        rolePreference: viewerMemberRow.role_preference ?? null,
+      }
+    : null;
 
   // Bump last_read_at so the /chats unread pill clears immediately on open.
   // The client also bumps on mount + on incoming realtime — this just covers
@@ -99,6 +122,7 @@ export default async function ChatServerPage({ params }: { params: { id: string 
       members={members}
       initialMessages={initialMessages}
       currentUserRole={currentUserRole}
+      viewerSettings={viewerSettings}
     />
   );
 }

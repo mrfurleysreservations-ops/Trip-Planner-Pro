@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { countTotalUnreadForUser } from "@/lib/chat-list";
 import type { UserProfile, Trip, Family, FamilyMember } from "@/types/database.types";
 import DashboardPage from "./dashboard";
 
@@ -50,37 +51,12 @@ export default async function DashboardServerPage() {
     ...((memberTripsDataRes.data ?? []) as Trip[]),
   ];
 
-  // Unread chat messages across all trips the user belongs to.
-  // Approach: fetch the user's per-trip last_read_at, fetch undeleted messages from others
-  // in those same trips, compare in JS. Solo-hobby-scale acceptable; revisit if message
-  // volume grows large.
-  let unreadChatCount = 0;
-  const allTripIds = allTrips.map((t) => t.id);
-  if (allTripIds.length > 0) {
-    const [readsRes, msgsRes] = await Promise.all([
-      supabase
-        .from("trip_message_reads")
-        .select("trip_id, last_read_at")
-        .eq("user_id", user.id)
-        .in("trip_id", allTripIds),
-      supabase
-        .from("trip_messages")
-        .select("trip_id, created_at")
-        .in("trip_id", allTripIds)
-        .is("deleted_at", null)
-        .neq("sender_id", user.id),
-    ]);
-
-    const readsByTrip = new Map<string, string>();
-    (readsRes.data ?? []).forEach((r: any) => readsByTrip.set(r.trip_id, r.last_read_at));
-
-    (msgsRes.data ?? []).forEach((m: any) => {
-      const lastRead = readsByTrip.get(m.trip_id);
-      if (!lastRead || new Date(m.created_at) > new Date(lastRead)) {
-        unreadChatCount++;
-      }
-    });
-  }
+  // Unread chat messages across all trips the user belongs to — aggregated
+  // through the shared helper so the viewer's per-trip
+  // chat_notification_level is honored (muted trips contribute 0, mentions
+  // trips only contribute @mentions). Solo-hobby-scale acceptable; revisit
+  // if message volume grows large.
+  const unreadChatCount = await countTotalUnreadForUser(supabase, user.id);
 
   // Trip activity newer than the user's last visit to /alerts. Mirrors the
   // aggregate currently computed client-side in AppShell, which stops rendering

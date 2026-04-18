@@ -3,6 +3,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useMemo } from "react";
 import type { ThemeConfig } from "@/lib/constants";
 import { subNavOrderForRole } from "@/lib/role-density";
+import { useTripChatUnread } from "@/lib/use-trip-chat-unread";
 
 // Canonical tab catalog. All 7 tabs render for every role — role only changes
 // order. Do NOT remove tabs or hide them behind a role. See feedback memory
@@ -35,6 +36,11 @@ export default function TripSubNav({ tripId, theme, role }: TripSubNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const activeSegment = getActiveSegment(pathname, tripId);
+
+  // Drives the Chat tab badge. Honors the viewer's chat_notification_level
+  // for this trip — muted trips render a gray dot, mentions-only trips
+  // only count @mentions, 'all' trips show the full unread count.
+  const chatUnread = useTripChatUnread(tripId);
 
   // Reorder the canonical tab list per role. Unknown segments from the role
   // config are skipped; any tab missing from the role config gets appended
@@ -80,6 +86,19 @@ export default function TripSubNav({ tripId, theme, role }: TripSubNavProps) {
     }}>
       {orderedTabs.map((tab) => {
         const active = activeSegment === tab.segment;
+        // Chat tab: render a level-aware badge on the icon.
+        //  muted       → gray dot (no number), even if unread > 0
+        //  mentions    → red badge with mention count (hidden if 0)
+        //  all         → red badge with full unread count (hidden if 0)
+        const showChatBadge = tab.segment === "chat" && chatUnread;
+        const chatBadgeStyle: "muted-dot" | "count" | null = showChatBadge
+          ? chatUnread!.level === "muted"
+            ? "muted-dot"
+            : chatUnread!.count > 0
+            ? "count"
+            : null
+          : null;
+
         return (
           <button
             key={tab.key}
@@ -98,10 +117,52 @@ export default function TripSubNav({ tripId, theme, role }: TripSubNavProps) {
               cursor: "pointer",
               padding: 0,
               minWidth: 0,
+              position: "relative",
               transition: "all 0.2s ease",
             }}
           >
-            <span style={{ fontSize: "18px", lineHeight: 1 }}>{tab.icon}</span>
+            <span style={{ fontSize: "18px", lineHeight: 1, position: "relative" }}>
+              {tab.icon}
+              {chatBadgeStyle === "count" && (
+                <span
+                  aria-label={`${chatUnread!.count} unread`}
+                  style={{
+                    position: "absolute",
+                    top: -4,
+                    right: -10,
+                    background: "#d32f2f",
+                    color: "#fff",
+                    fontSize: 9,
+                    fontWeight: 800,
+                    minWidth: 14,
+                    height: 14,
+                    borderRadius: 7,
+                    padding: "0 4px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    lineHeight: 1,
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  {chatUnread!.count > 99 ? "99+" : chatUnread!.count}
+                </span>
+              )}
+              {chatBadgeStyle === "muted-dot" && (
+                <span
+                  aria-label="Chat muted"
+                  style={{
+                    position: "absolute",
+                    top: -1,
+                    right: -6,
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: "#bbb",
+                  }}
+                />
+              )}
+            </span>
             <span style={{
               fontSize: "10px",
               fontWeight: active ? 700 : 500,

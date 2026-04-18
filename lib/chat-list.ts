@@ -11,12 +11,20 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Trip, TripMessage } from "@/types/database.types";
+import {
+  type ChatNotificationLevel,
+  countUnreadByLevel,
+  normalizeChatLevel,
+} from "./chat-unread";
 
 export interface ChatListRow {
   trip: Trip;
   latestMessage: TripMessage | null;
   latestSenderName: string | null; // "You" if sender is the current user
+  /** Filtered by the viewer's chat_notification_level for this trip. */
   unreadCount: number;
+  /** Viewer's notification level on this trip — drives badge styling. */
+  chatLevel: ChatNotificationLevel;
 }
 
 // How many recent messages to pull. 500 covers any realistic load for a solo
@@ -29,11 +37,14 @@ export async function fetchChatList(
   userId: string
 ): Promise<ChatListRow[]> {
   // 1. Collect every trip this user can see (owner or accepted member).
+  // We pull chat_notification_level + name from the member link so we can
+  // honor the viewer's notification preference when counting unread
+  // without a second round-trip per trip.
   const [ownedRes, memberLinksRes] = await Promise.all([
     supabase.from("trips").select("*").eq("owner_id", userId),
     supabase
       .from("trip_members")
-      .select("trip_id")
+      .select("trip_id, chat_notification_level, name")
       .eq("user_id", userId)
       .eq("status", "accepted"),
   ]);
@@ -41,7 +52,9 @@ export async function fetchChatList(
   const ownedTrips = (ownedRes.data ?? []) as Trip[];
   const ownedTripIds = new Set(ownedTrips.map((t) => t.id));
 
-  const memberTripIds = (memberLinksRes.data ?? [])
+  const memberLinkRows = memberLinksRes.data ?? [];
+
+  const memberTripIds = memberLinkRows
     .map((r) => r.trip_id)
     .filter((tid): tid is string => !!tid && !ownedTripIds.has(tid));
 
@@ -53,6 +66,34 @@ export async function fetchChatList(
   if (allTrips.length === 0) return [];
 
   const tripIds = allTrips.map((t) => t.id);
+
+  // Per-trip notification level + viewer name (for @mention matching).
+  // Owner rows aren't in the member-link query above (owners are always
+  // accepted by definition but may not have a member row in some legacy
+  // data); fall back to a second targeted fetch so every trip the viewer
+  // can see has a resolved level.
+  const levelByTrip = new Map<string, ChatNotificationLevel>();
+  const viewerNameByTrip = new Map<string, string>();
+  memberLinkRows.forEach((r) => {
+    if (r.trip_id) {
+      levelByTrip.set(r.trip_id, normalizeChatLevel(r.chat_notification_level));
+      if (r.name) viewerNameByTrip.set(r.trip_id, r.name);
+    }
+  });
+  const missingTripIds = tripIds.filter((t) => !levelByTrip.has(t));
+  if (missingTripIds.length) {
+    const { data: ownerMemberRows } = await supabase
+      .from("trip_members")
+      .select("trip_id, chat_notification_level, name")
+      .eq("user_id", userId)
+      .in("trip_id", missingTripIds);
+    (ownerMemberRows ?? []).forEach((r) => {
+      if (r.trip_id) {
+        levelByTrip.set(r.trip_id, normalizeChatLevel(r.chat_notification_level));
+        if (r.name) viewerNameByTrip.set(r.trip_id, r.name);
+      }
+    });
+  }
 
   // 2. Pull recent messages across all these trips in one shot.
   const { data: messages } = await supabase
@@ -78,14 +119,19 @@ export async function fetchChatList(
     if (!latestByTrip.has(m.trip_id)) latestByTrip.set(m.trip_id, m);
   });
 
-  // 5. Unread count per trip: messages newer than last_read_at, excluding
+  // 5. Unread messages per trip: messages newer than last_read_at, excluding
   //    messages the user sent themselves (you don't unread your own post).
-  const unreadByTrip = new Map<string, number>();
+  //    We collect the full list per trip so we can apply the viewer's
+  //    chat_notification_level filter once, in one place.
+  const unreadMessagesByTrip = new Map<string, TripMessage[]>();
   ((messages ?? []) as TripMessage[]).forEach((m) => {
     if (m.sender_id === userId) return;
+    if (m.deleted_at) return;
     const lastRead = lastReadByTrip.get(m.trip_id);
     if (!lastRead || new Date(m.created_at) > new Date(lastRead)) {
-      unreadByTrip.set(m.trip_id, (unreadByTrip.get(m.trip_id) || 0) + 1);
+      const bucket = unreadMessagesByTrip.get(m.trip_id);
+      if (bucket) bucket.push(m);
+      else unreadMessagesByTrip.set(m.trip_id, [m]);
     }
   });
 
@@ -124,11 +170,18 @@ export async function fetchChatList(
           senderNameMap.get(`${trip.id}:${latest.sender_id}`) || "Someone";
       }
     }
+    const level = levelByTrip.get(trip.id) ?? "all";
+    const unreadCount = countUnreadByLevel({
+      unreadMessages: unreadMessagesByTrip.get(trip.id) ?? [],
+      level,
+      viewerName: viewerNameByTrip.get(trip.id) ?? null,
+    });
     return {
       trip,
       latestMessage: latest,
       latestSenderName,
-      unreadCount: unreadByTrip.get(trip.id) || 0,
+      unreadCount,
+      chatLevel: level,
     };
   });
 
@@ -144,4 +197,20 @@ export async function fetchChatList(
   });
 
   return rows;
+}
+
+/**
+ * Aggregate count of unread chat messages across every trip the user can
+ * see, honoring each trip's `chat_notification_level`. Backs the top-nav
+ * bubble on /dashboard and /chats so a muted trip can't contribute noise.
+ *
+ * This is a thin wrapper around `fetchChatList` to keep unread bookkeeping
+ * in exactly one place. The duplicated fetch cost is fine at hobby scale.
+ */
+export async function countTotalUnreadForUser(
+  supabase: SupabaseClient<Database>,
+  userId: string
+): Promise<number> {
+  const rows = await fetchChatList(supabase, userId);
+  return rows.reduce((acc, r) => acc + r.unreadCount, 0);
 }
