@@ -15,7 +15,7 @@ export default async function OnboardingRoute() {
 
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("full_name, avatar_url, onboarding_completed")
+    .select("full_name, avatar_url, onboarding_completed, default_role_preference")
     .eq("id", user.id)
     .single();
 
@@ -29,6 +29,7 @@ export default async function OnboardingRoute() {
       userEmail={user.email ?? ""}
       userName={profile?.full_name ?? null}
       avatarUrl={profile?.avatar_url ?? null}
+      defaultRolePreference={profile?.default_role_preference ?? null}
     />
   );
 }

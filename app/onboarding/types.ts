@@ -62,4 +62,5 @@ export interface OnboardingPageProps {
   userEmail: string;
   userName: string | null;
   avatarUrl: string | null;
+  defaultRolePreference: string | null;
 }

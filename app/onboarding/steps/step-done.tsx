@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { CLOTHING_STYLES } from "@/lib/constants";
 import { ACCENT, ACCENT2, PACKING_SUB_STEPS } from "../constants";
 import type { OnboardingData } from "../types";
@@ -8,12 +9,79 @@ import type { OnboardingData } from "../types";
 interface StepDoneProps {
   data: OnboardingData;
   onFinish?: () => void;
+  /**
+   * Abbreviated mode — paired with minimal profile for Just Here / Vibes Only users.
+   * Skips the celebratory preferences recap and confetti, renders a one-liner
+   * + a single CTA, and adds the soft upgrade-path message. The skipped steps
+   * are still reachable as opt-in cards on /profile (Phase F).
+   */
+  abbreviated?: boolean;
+  saving?: boolean;
 }
 
-export default function StepDone({ data }: StepDoneProps) {
+export default function StepDone({ data, onFinish, abbreviated = false, saving = false }: StepDoneProps) {
   const [showConfetti, setShowConfetti] = useState(false);
-  useEffect(() => { setTimeout(() => setShowConfetti(true), 300); }, []);
+  useEffect(() => {
+    if (abbreviated) return;
+    const t = setTimeout(() => setShowConfetti(true), 300);
+    return () => clearTimeout(t);
+  }, [abbreviated]);
 
+  // ─── Abbreviated Done (Just Here / Vibes Only) ───
+  if (abbreviated) {
+    const firstName = data.name?.split(" ")[0] || "traveler";
+    return (
+      <div className="fade-in" style={{ textAlign: "center", paddingTop: "24px" }}>
+        <div style={{ fontSize: "40px", marginBottom: "12px" }}>✌️</div>
+        <h1 style={{ fontSize: "26px", fontWeight: 800, margin: "0 0 8px", fontFamily: "'Outfit', system-ui, sans-serif" }}>
+          You&apos;re in, {firstName}.
+        </h1>
+        <p style={{ fontSize: "15px", color: "#777", margin: "0 0 24px", lineHeight: "1.5" }}>
+          Here&apos;s your trip.
+        </p>
+
+        <button
+          onClick={onFinish}
+          disabled={saving}
+          style={{
+            width: "100%",
+            padding: "16px",
+            borderRadius: "14px",
+            border: "none",
+            background: saving ? "#ddd" : ACCENT,
+            color: saving ? "#999" : "#fff",
+            fontSize: "16px",
+            fontWeight: 700,
+            cursor: saving ? "default" : "pointer",
+            boxShadow: saving ? "none" : "0 4px 16px rgba(232,148,58,0.35)",
+            marginBottom: "20px",
+          }}
+        >
+          {saving ? "Saving…" : "Take me there →"}
+        </button>
+
+        <div
+          style={{
+            background: "rgba(232,148,58,0.05)",
+            borderRadius: "14px",
+            padding: "14px 16px",
+            border: "1px solid rgba(232,148,58,0.12)",
+            textAlign: "left",
+            fontSize: "13px",
+            color: "#555",
+            lineHeight: "1.5",
+          }}
+        >
+          Want packing lists, outfit suggestions, or to add family?{" "}
+          <Link href="/profile" style={{ color: ACCENT2, fontWeight: 700, textDecoration: "none" }}>
+            Turn those on any time from your profile →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Full Done (All In / Helping Out) ───
   const styleName = (data.clothingStyles || []).map((v) => CLOTHING_STYLES.find((s) => s.value === v)?.label).filter(Boolean).join(", ");
   const packOpt = PACKING_SUB_STEPS[0].options.find((s) => s.value === data.packingStyle);
   const orgOpt = PACKING_SUB_STEPS[1].options.find((s) => s.value === data.orgMethod);

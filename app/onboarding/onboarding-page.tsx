@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -21,20 +21,61 @@ import StepWelcome from "./steps/step-welcome";
 
 
 // ═══════════════════════════════════════════════════════════
-//  MAIN ONBOARDING COMPONENT
+//  STEP SEQUENCING BY ROLE
+//  ───────────────────────────────────────────────────────────
+//  All In / Helping Out → full 8-step flow.
+//  Just Here / Vibes Only → minimal profile + abbreviated done.
+//  See docs/role-based-onboarding.md Skip/Keep/Defer matrix.
+//  The skipped steps are not deleted — they return as opt-in
+//  cards on /profile (Phase F).
 // ═══════════════════════════════════════════════════════════
 
-const TOTAL_STEPS = 8;
+type StepName =
+  | "welcome"
+  | "profile"
+  | "profile-minimal"
+  | "details"
+  | "style"
+  | "people"
+  | "friend-suggestions"
+  | "packing"
+  | "done"
+  | "done-abbreviated";
 
-export default function OnboardingPage({ userId, userEmail, userName, avatarUrl }: OnboardingPageProps) {
+const FULL_FLOW: StepName[] = [
+  "welcome",
+  "profile",
+  "details",
+  "style",
+  "people",
+  "friend-suggestions",
+  "packing",
+  "done",
+];
+
+const MINIMAL_FLOW: StepName[] = ["profile-minimal", "done-abbreviated"];
+
+function stepsForRole(role: string | null): StepName[] {
+  // Full flow for planners/helpers (and if role is unset, assume helping_out)
+  if (!role || role === "all_in" || role === "helping_out") return FULL_FLOW;
+  // Just Here / Vibes Only — minimal profile + abbreviated done
+  if (role === "just_here" || role === "vibes_only") return MINIMAL_FLOW;
+  return FULL_FLOW;
+}
+
+
+export default function OnboardingPage({ userId, userEmail, userName, avatarUrl, defaultRolePreference }: OnboardingPageProps) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const activeSteps = useMemo(() => stepsForRole(defaultRolePreference), [defaultRolePreference]);
+  const isMinimalFlow = activeSteps === MINIMAL_FLOW;
+
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  // Check if user was invited (for friend suggestions step)
+  // Check if user was invited (for friend suggestions step — full flow only)
   const [inviter, setInviter] = useState<InviterInfo | null>(null);
   const [inviterFriends, setInviterFriends] = useState<InviterFriend[]>([]);
   const [hasInviter, setHasInviter] = useState(false);
@@ -55,8 +96,9 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
     compartmentSystem: null,
   });
 
-  // ─── Check for inviter on mount ───
+  // ─── Check for inviter on mount (full flow only — minimal flow never hits the suggestions step) ───
   useEffect(() => {
+    if (isMinimalFlow) return;
     const checkInviter = async () => {
       // Check if anyone has a pending friend_link pointing at us (they invited us)
       const { data: links } = await supabase
@@ -115,32 +157,35 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
     };
     checkInviter();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, isMinimalFlow]);
 
   // ─── State & Navigation ───
   const updateData = (updates: Partial<OnboardingData>) => setData((d) => ({ ...d, ...updates }));
 
-  const next = () => {
+  const currentStepName: StepName = activeSteps[step];
+
+  // In the full flow we skip friend-suggestions unless the user was actually invited.
+  // Walk forward or backward until we land on a step that should be shown.
+  const advance = (direction: 1 | -1) => {
     setStep((s) => {
-      let nextStep = Math.min(s + 1, TOTAL_STEPS - 1);
-      // Skip friend suggestions step (5) if user was NOT invited
-      if (nextStep === 5 && !hasInviter) nextStep = 6;
-      return nextStep;
+      let next = s + direction;
+      while (next > 0 && next < activeSteps.length - 1) {
+        const name = activeSteps[next];
+        if (name === "friend-suggestions" && !hasInviter) {
+          next += direction;
+          continue;
+        }
+        break;
+      }
+      // Never go back to the welcome gate once we've left it
+      if (direction === -1 && activeSteps[next] === "welcome") next = Math.min(s, activeSteps.length - 1);
+      return Math.max(0, Math.min(next, activeSteps.length - 1));
     });
     containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const back = () => {
-    setStep((s) => {
-      let prevStep = Math.max(s - 1, 0);
-      // Skip friend suggestions step (5) if user was NOT invited
-      if (prevStep === 5 && !hasInviter) prevStep = 4;
-      // Don't go back to welcome gate from profile
-      if (prevStep === 0) prevStep = 1;
-      return prevStep;
-    });
-    containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const next = () => advance(1);
+  const back = () => advance(-1);
 
   // ─── Data Persistence ───
   const saveAndFinish = async () => {
@@ -224,6 +269,8 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
       // Clear skip cookie now that onboarding is complete
       document.cookie = "skipped_onboarding=; path=/; max-age=0";
 
+      // TODO: if we ever pass an active trip context into onboarding (e.g. from
+      // an invite link), route to `/trip/[id]` for minimal-flow users here.
       router.push("/dashboard");
     } catch (err) {
       console.error("Error saving onboarding data:", err);
@@ -232,26 +279,32 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
   };
 
   // ─── Nav config per step ───
+  // Returns null when the step owns its own CTA (welcome gate, done screens).
   const getNavConfig = (): { showBack: boolean; nextLabel: string; nextDisabled: boolean; onBack: () => void; onNext: () => void } | null => {
-    switch (step) {
-      case 0:
-        // Welcome gate — no nav bar, CTAs are inside the step
+    switch (currentStepName) {
+      case "welcome":
+      case "done":
+      case "done-abbreviated":
         return null;
-      case 1:
+      case "profile":
         return { showBack: false, nextLabel: "Let's go", nextDisabled: !data.name?.trim(), onBack: back, onNext: next };
-      case 2:
+      case "profile-minimal":
+        // Minimal flow has no back button (profile is step 0) and the CTA takes the user
+        // straight to the abbreviated done screen.
+        return { showBack: false, nextLabel: "Let's go", nextDisabled: !data.name?.trim(), onBack: back, onNext: next };
+      case "details":
         return { showBack: true, nextLabel: "Next", nextDisabled: !data.ageRange, onBack: back, onNext: next };
-      case 3:
+      case "style":
         return { showBack: true, nextLabel: "Next", nextDisabled: (data.clothingStyles || []).length === 0, onBack: back, onNext: next };
-      case 4: {
+      case "people": {
         const totalPeople = (data.connections || []).length + (data.familyMembers || []).length + (data.invitesSent || []).length;
         return { showBack: true, nextLabel: totalPeople === 0 ? "Skip for now" : "Next", nextDisabled: false, onBack: back, onNext: next };
       }
-      case 5: {
+      case "friend-suggestions": {
         const suggestionsLeft = inviterFriends.filter((f) => !(data.connections || []).find((c) => c.id === f.id)).length;
         return { showBack: true, nextLabel: suggestionsLeft === 0 ? "Next" : "Skip or continue", nextDisabled: false, onBack: back, onNext: next };
       }
-      case 6:
+      case "packing":
         return { showBack: true, nextLabel: "Save & Continue", nextDisabled: false, onBack: back, onNext: next };
       default:
         return null;
@@ -260,30 +313,46 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl 
 
   const navConfig = getNavConfig();
 
+  // Progress dots are only meaningful inside the full flow (5 visible middle steps).
+  // The 2-step minimal flow hides them entirely — it's self-evidently short.
+  const showProgressDots =
+    !isMinimalFlow &&
+    currentStepName !== "welcome" &&
+    currentStepName !== "profile" &&
+    currentStepName !== "done";
+  const visibleStepTotal = FULL_FLOW.length - 1; // hide welcome from dots
+  const visibleStepIndex = Math.max(0, FULL_FLOW.indexOf(currentStepName) - 1);
+
   // ─── Render ───
   return (
     <div style={{ maxWidth: "480px", margin: "0 auto", fontFamily: "'Outfit', system-ui, -apple-system, sans-serif", color: "#1a1a1a", minHeight: "100vh", background: BG }}>
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, padding: "10px 16px 0" }}>
-        {step > 1 && step < TOTAL_STEPS - 1 && <ProgressDots total={TOTAL_STEPS - 1} current={step - 1} />}
+        {showProgressDots && <ProgressDots total={visibleStepTotal} current={visibleStepIndex} />}
       </div>
-      <div ref={containerRef} style={{ padding: step === 0 ? "0" : "0 16px 80px" }}>
-        {step === 0 && <StepWelcome onSetup={next} onSkip={() => router.push("/dashboard")} />}
-        {step === 1 && <StepProfile data={data} onChange={updateData} userId={userId} />}
-        {step === 2 && <StepDetails data={data} onChange={updateData} />}
-        {step === 3 && <StepStyle data={data} onChange={updateData} />}
-        {step === 4 && <StepPeople data={data} onChange={updateData} userId={userId} />}
-        {step === 5 && hasInviter && inviter && <StepFriendSuggestions data={data} onChange={updateData} inviter={inviter} inviterFriends={inviterFriends} />}
-        {step === 6 && <StepPacking data={data} onChange={updateData} />}
-        {step === 7 && <StepDone data={data} />}
+      <div ref={containerRef} style={{ padding: currentStepName === "welcome" ? "0" : "0 16px 80px" }}>
+        {currentStepName === "welcome" && <StepWelcome onSetup={next} onSkip={() => router.push("/dashboard")} />}
+        {currentStepName === "profile" && <StepProfile data={data} onChange={updateData} userId={userId} />}
+        {currentStepName === "profile-minimal" && <StepProfile data={data} onChange={updateData} userId={userId} minimal />}
+        {currentStepName === "details" && <StepDetails data={data} onChange={updateData} />}
+        {currentStepName === "style" && <StepStyle data={data} onChange={updateData} />}
+        {currentStepName === "people" && <StepPeople data={data} onChange={updateData} userId={userId} />}
+        {currentStepName === "friend-suggestions" && hasInviter && inviter && (
+          <StepFriendSuggestions data={data} onChange={updateData} inviter={inviter} inviterFriends={inviterFriends} />
+        )}
+        {currentStepName === "packing" && <StepPacking data={data} onChange={updateData} />}
+        {currentStepName === "done" && <StepDone data={data} />}
+        {currentStepName === "done-abbreviated" && (
+          <StepDone data={data} abbreviated onFinish={saveAndFinish} saving={saving} />
+        )}
       </div>
       {navConfig && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: "480px", margin: "0 auto", padding: "12px 20px", background: "#fff", borderTop: "1px solid #e5e5e5", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", zIndex: 20 }}>
           <NavButtons onBack={navConfig.onBack} onNext={navConfig.onNext} nextLabel={navConfig.nextLabel} nextDisabled={navConfig.nextDisabled} showBack={navConfig.showBack} />
         </div>
       )}
-      {step === 7 && (
+      {currentStepName === "done" && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: "480px", margin: "0 auto", padding: "12px 20px", background: "#fff", borderTop: "1px solid #e5e5e5", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", zIndex: 20 }}>
-          <button onClick={saveAndFinish} style={{ width: "100%", padding: "16px", borderRadius: "14px", border: "none", background: ACCENT, color: "#fff", fontSize: "16px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(232,148,58,0.35)" }}>Start Planning a Trip →</button>
+          <button onClick={saveAndFinish} disabled={saving} style={{ width: "100%", padding: "16px", borderRadius: "14px", border: "none", background: saving ? "#ddd" : ACCENT, color: saving ? "#999" : "#fff", fontSize: "16px", fontWeight: 700, cursor: saving ? "default" : "pointer", boxShadow: saving ? "none" : "0 4px 16px rgba(232,148,58,0.35)" }}>{saving ? "Saving…" : "Start Planning a Trip →"}</button>
         </div>
       )}
       <style>{`
