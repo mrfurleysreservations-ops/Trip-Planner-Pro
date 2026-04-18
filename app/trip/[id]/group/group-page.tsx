@@ -27,7 +27,7 @@ const StatusChip = ({ status }: { status: string }) => {
   );
 };
 
-export default function GroupPage({ trip, members: initialMembers, friends, familiesWithMembers, userId, isHost }: GroupPageProps) {
+export default function GroupPage({ trip, members: initialMembers, friends, familiesWithMembers, otherAppUsers, otherFamilies, userId, isHost }: GroupPageProps) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;
@@ -70,6 +70,16 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
       (fm) => memberFamilyMemberIds.has(fm.id) || (fm.linked_user_id && memberUserIds.has(fm.linked_user_id))
     );
   }, [memberFamilyMemberIds, memberUserIds]);
+
+  // ─── Discovery lists: other app users + other families ───
+  const discoverFriends = otherAppUsers
+    .filter((f) => !memberUserIds.has(f.user_id))
+    .filter((f) => !friendQ || (f.full_name || "").toLowerCase().includes(friendQ))
+    .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+
+  const discoverFamilies = otherFamilies
+    .filter((f) => !isFamilyAdded(f))
+    .filter((f) => !familyQ || f.name.toLowerCase().includes(familyQ) || f.family_members.some((m) => m.name.toLowerCase().includes(familyQ)) || (f.owner_name || "").toLowerCase().includes(familyQ));
 
   // ─── Actions ───
 
@@ -265,7 +275,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
     <div style={{ minHeight: "100vh", background: th.bg, color: th.text, fontFamily: "'DM Sans', sans-serif", paddingBottom: 56 }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {/* ─── STICKY TOP REGION (4 rows) ─────────────────────────── */}
+      {/* ─── STICKY TOP REGION (3 rows) ─────────────────────────── */}
       <div style={{
         position: "sticky",
         top: 0,
@@ -470,25 +480,6 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
           </div>
         </div>
 
-        {/* Row 4 — Search */}
-        <div style={{ padding: "2px 16px 10px", position: "relative" }}>
-          <span style={{ position: "absolute", left: "26px", top: 9, fontSize: 14, color: th.muted }}>🔍</span>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={activeTab === "friends" ? "Search friends…" : "Search families…"}
-            style={{
-              width: "100%",
-              padding: "9px 12px 9px 34px",
-              border: `1px solid ${th.cardBorder}`,
-              borderRadius: 10,
-              background: "#fff",
-              fontSize: 13,
-              fontFamily: "'DM Sans', sans-serif",
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
       </div>
 
       {/* ─── SCROLLABLE BODY ─────────────────────────────────────── */}
@@ -526,7 +517,27 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
               </div>
             </div>
 
-            {/* 2. App friends */}
+            {/* 2. Search */}
+            <div style={{ position: "relative", marginBottom: 12 }}>
+              <span style={{ position: "absolute", left: 10, top: 9, fontSize: 14, color: th.muted }}>🔍</span>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={activeTab === "friends" ? "Search friends…" : "Search families…"}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px 9px 34px",
+                  border: `1px solid ${th.cardBorder}`,
+                  borderRadius: 10,
+                  background: "#fff",
+                  fontSize: 13,
+                  fontFamily: "'DM Sans', sans-serif",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            {/* 3. App friends */}
             {filteredFriends.length > 0 && (
               <>
                 <div style={{ fontSize: 11, fontWeight: 600, color: th.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
@@ -572,7 +583,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
               </>
             )}
 
-            {/* 3. External invites (greyed) */}
+            {/* 4. External invites (greyed) */}
             {filteredExternals.length > 0 && (
               <>
                 <div style={{ fontSize: 11, fontWeight: 600, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.05em", margin: "14px 0 8px" }}>
@@ -603,8 +614,46 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
               </>
             )}
 
+            {/* 5. Also on the app (discovery — greyed) */}
+            {discoverFriends.length > 0 && (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.05em", margin: "14px 0 8px" }}>
+                  Also on the app
+                </div>
+                {discoverFriends.map((f) => (
+                  <div key={f.id} style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "10px 14px", borderRadius: 10, marginBottom: 6,
+                    border: "1px solid #e0e0e0", background: "#f0f0f0", opacity: 0.45,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: "50%", background: "#bbb",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "#fff", fontSize: 14, fontWeight: 700,
+                      }}>
+                        {(f.full_name || "?")[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600 }}>{f.full_name || "Unknown"}</div>
+                        <div style={{ fontSize: 11, color: "#bbb" }}>{f.email || ""}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => addFriend(f)}
+                      disabled={loading}
+                      className="btn"
+                      style={{ background: th.accent, padding: "6px 14px", fontSize: 12, fontWeight: 600, opacity: loading ? 0.6 : 1 }}
+                    >
+                      + Invite
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+
             {/* No results */}
-            {filteredFriends.length === 0 && filteredExternals.length === 0 && friendQ && (
+            {filteredFriends.length === 0 && filteredExternals.length === 0 && discoverFriends.length === 0 && friendQ && (
               <div style={{ textAlign: "center", padding: 24, color: th.muted, fontSize: 14 }}>
                 No friends matching "{friendQ}"
               </div>
@@ -615,7 +664,27 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
         {/* ─── FAMILIES TAB ─── */}
         {activeTab === "families" && (
           <div>
-            {/* Own families */}
+            {/* 1. Search */}
+            <div style={{ position: "relative", marginBottom: 12 }}>
+              <span style={{ position: "absolute", left: 10, top: 9, fontSize: 14, color: th.muted }}>🔍</span>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={activeTab === "families" ? "Search families…" : "Search friends…"}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px 9px 34px",
+                  border: `1px solid ${th.cardBorder}`,
+                  borderRadius: 10,
+                  background: "#fff",
+                  fontSize: 13,
+                  fontFamily: "'DM Sans', sans-serif",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            {/* 2. Own families */}
             {ownFamilies.length > 0 && (
               <>
                 <div style={{ fontSize: 11, fontWeight: 600, color: th.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
@@ -627,7 +696,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
               </>
             )}
 
-            {/* Friends' families */}
+            {/* 3. Friends' families */}
             {friendFamilies.length > 0 && (
               <>
                 <div style={{ fontSize: 11, fontWeight: 600, color: th.muted, textTransform: "uppercase", letterSpacing: "0.05em", margin: "14px 0 8px" }}>
@@ -639,14 +708,35 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
               </>
             )}
 
+            {/* 4. Other families on the app (discovery — dimmed) */}
+            {discoverFamilies.length > 0 && (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.05em", margin: "14px 0 8px" }}>
+                  Other families on the app
+                </div>
+                {discoverFamilies.map((fam) => (
+                  <FamilyCard
+                    key={fam.id}
+                    fam={fam}
+                    added={isFamilyAdded(fam)}
+                    ownerLabel={`${fam.owner_name || "Someone"}'s family`}
+                    theme={th}
+                    loading={loading}
+                    onAdd={() => addWholeFamily(fam)}
+                    dimmed
+                  />
+                ))}
+              </>
+            )}
+
             {/* No results */}
-            {ownFamilies.length === 0 && friendFamilies.length === 0 && familyQ && (
+            {ownFamilies.length === 0 && friendFamilies.length === 0 && discoverFamilies.length === 0 && familyQ && (
               <div style={{ textAlign: "center", padding: 24, color: th.muted, fontSize: 14 }}>
                 No families matching "{familyQ}"
               </div>
             )}
 
-            {ownFamilies.length === 0 && friendFamilies.length === 0 && !familyQ && (
+            {ownFamilies.length === 0 && friendFamilies.length === 0 && discoverFamilies.length === 0 && !familyQ && (
               <div style={{ textAlign: "center", padding: 32, color: th.muted, fontSize: 14 }}>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>🏠</div>
                 No families found. Create a family in your <span style={{ color: th.accent, cursor: "pointer" }} onClick={() => router.push("/profile")}>Profile</span> to add them here.
@@ -671,9 +761,10 @@ interface FamilyCardProps {
   theme: { accent: string; accent2: string; cardBorder: string; card: string };
   loading: boolean;
   onAdd: () => void;
+  dimmed?: boolean;
 }
 
-function FamilyCard({ fam, added, ownerLabel, theme, loading, onAdd }: FamilyCardProps) {
+function FamilyCard({ fam, added, ownerLabel, theme, loading, onAdd, dimmed }: FamilyCardProps) {
   const ageIcon = (age: string | null) => {
     if (!age) return "🧑";
     const map: Record<string, string> = { adult: "🧑", kid: "🧒", toddler: "👶", baby: "🍼", teen: "🧑", senior: "🧑" };
@@ -686,6 +777,7 @@ function FamilyCard({ fam, added, ownerLabel, theme, loading, onAdd }: FamilyCar
       border: `1.5px solid ${added ? "#28a745" : theme.cardBorder}`,
       borderRadius: 14, padding: 16, marginBottom: 10, cursor: added ? "default" : "pointer",
       transition: "border-color 0.2s, box-shadow 0.2s",
+      opacity: dimmed ? 0.55 : 1,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <div>

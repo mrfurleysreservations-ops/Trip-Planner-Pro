@@ -22,6 +22,8 @@ export interface GroupPageProps {
   members: TripMember[];
   friends: FriendWithProfile[];
   familiesWithMembers: FamilyWithMembers[];
+  otherAppUsers: FriendWithProfile[];
+  otherFamilies: FamilyWithMembers[];
   userId: string;
   isHost: boolean;
 }
@@ -119,12 +121,67 @@ export default async function GroupServerPage({ params }: { params: { id: string
     }
   }
 
+  // ── Discovery: other app users (NOT current user, NOT a friend) ──
+  // Note: this exposes all public user_profiles rows to every logged-in user.
+  // That's fine for the current hobby-project scope; flag if RLS is ever tightened.
+  const excludedUserIds = [user.id, ...friendUserIds];
+  let otherAppUsers: FriendWithProfile[] = [];
+  {
+    const { data: otherProfiles } = await supabase
+      .from("user_profiles")
+      .select("id, full_name, email, avatar_url")
+      .not("id", "in", `(${excludedUserIds.join(",")})`)
+      .order("full_name")
+      .limit(100);
+
+    otherAppUsers = (otherProfiles || []).map((p: any) => ({
+      id: p.id,
+      user_id: p.id,
+      full_name: p.full_name,
+      email: p.email,
+      avatar_url: p.avatar_url,
+    }));
+  }
+
+  // ── Discovery: other families on the app (owner NOT current user, NOT a friend) ──
+  let otherFamilies: FamilyWithMembers[] = [];
+  {
+    const { data: otherFamiliesData } = await supabase
+      .from("families")
+      .select("*, family_members(*)")
+      .not("owner_id", "in", `(${excludedUserIds.join(",")})`)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (otherFamiliesData && otherFamiliesData.length > 0) {
+      const ownerIds = [...new Set(otherFamiliesData.map((f: any) => f.owner_id))];
+      const { data: ownerProfiles } = await supabase
+        .from("user_profiles")
+        .select("id, full_name")
+        .in("id", ownerIds);
+
+      const ownerNameMap: Record<string, string | null> = {};
+      (ownerProfiles || []).forEach((p: any) => {
+        ownerNameMap[p.id] = p.full_name;
+      });
+
+      otherFamilies = otherFamiliesData.map((f: any) => ({
+        ...f,
+        family_members: f.family_members || [],
+        owner_name: ownerNameMap[f.owner_id] || null,
+        is_own: false,
+      }));
+    }
+  }
+
   return (
     <GroupPage
       trip={trip as Trip}
       members={(members ?? []) as TripMember[]}
       friends={friends}
       familiesWithMembers={familiesWithMembers}
+      otherAppUsers={otherAppUsers}
+      otherFamilies={otherFamilies}
       userId={user.id}
       isHost={isHost}
     />
