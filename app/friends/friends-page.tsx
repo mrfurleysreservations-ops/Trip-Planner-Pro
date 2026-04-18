@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { THEMES } from "@/lib/constants";
 import TopNav from "@/app/top-nav";
+import { PillBtn, SectionHeader } from "@/app/components/ui";
 import type {
   FriendRowData,
   PendingFriendData,
@@ -637,48 +638,6 @@ function FamiliesView(p: {
 }
 
 // ─── Small reusable pieces ──────────────────────────────────────────
-
-function PillBtn({ label, active, onClick, accent, muted }: {
-  label: string; active: boolean; onClick: () => void; accent: string; muted: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: active ? accent : "transparent",
-        border: "none",
-        padding: "8px 22px",
-        borderRadius: 20,
-        fontSize: 13,
-        fontWeight: active ? 700 : 500,
-        color: active ? "#fff" : muted,
-        cursor: "pointer",
-        fontFamily: "'DM Sans', sans-serif",
-        transition: "all 0.15s",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function SectionHeader({ label }: { label: string }) {
-  return (
-    <h3
-      style={{
-        fontSize: 11,
-        fontWeight: 700,
-        color: "#999",
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-        margin: "16px 0 6px",
-      }}
-    >
-      {label}
-    </h3>
-  );
-}
 
 function SectionSubtitle({ text }: { text: string }) {
   return <p style={{ fontSize: 11, color: "#888", margin: "0 0 10px" }}>{text}</p>;

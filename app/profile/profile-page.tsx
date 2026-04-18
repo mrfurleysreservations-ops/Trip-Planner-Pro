@@ -6,11 +6,12 @@ import {
   THEMES, AGE_TYPES, APPETITE_TYPES, ITEM_CATEGORIES, CAR_ZONES,
   PACKING_STYLES, ORGANIZATION_METHODS, FOLDING_METHODS, COMPARTMENT_SYSTEMS,
   CHECKLIST_LEVELS, PLANNING_TIMELINES, JUST_IN_CASE_LEVELS, VISUAL_PLANNING_STYLES,
-  PACKING_STYLE_DEFAULTS,
+  PACKING_STYLE_DEFAULTS, UPSELL_CARDS,
 } from "@/lib/constants";
 import { ageIcon, catIcon } from "@/lib/utils";
 import MemberSlider from "@/app/components/member-slider";
 import AvatarPicker from "@/app/components/avatar-picker";
+import { PillBtn, SectionHeader } from "@/app/components/ui";
 import TopNav from "@/app/top-nav";
 import type { FamilyWithRelations } from "./page";
 
@@ -65,6 +66,14 @@ interface ProfilePageProps {
   unreadChatCount: number;
   pendingFriendCount: number;
   unreadAlertCount: number;
+  // ─── Upgrade-path upsells ───
+  // Drive the "Upgrade your trip experience" section for Just Here / Vibes Only
+  // (and pre-RSVP-Energy null) users. Only shown when the user skipped onboarding
+  // steps that can still be opted into. All In / Helping Out users never see it.
+  defaultRolePreference: string | null;
+  gender: string | null;
+  ageRange: string | null;
+  initialDismissedUpsells: string[];
 }
 
 // ─── Member Detail Card: inline editable card for a family member ───
@@ -149,32 +158,6 @@ function MemberDetailCard({ member, familyId, familyName, accent, onUpdate, onCl
   );
 }
 
-// ─── Pill button (matches Friends + docs/tab-layout-standard.md) ───
-function PillBtn({ label, active, onClick, accent, muted }: {
-  label: string; active: boolean; onClick: () => void; accent: string; muted: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: active ? accent : "transparent",
-        border: "none",
-        padding: "8px 22px",
-        borderRadius: 20,
-        fontSize: 13,
-        fontWeight: active ? 700 : 500,
-        color: active ? "#fff" : muted,
-        cursor: "pointer",
-        fontFamily: "'DM Sans', sans-serif",
-        transition: "all 0.15s",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
 export default function ProfilePage({
   userId,
   initialFamilies,
@@ -186,6 +169,10 @@ export default function ProfilePage({
   unreadChatCount,
   pendingFriendCount,
   unreadAlertCount,
+  defaultRolePreference,
+  gender,
+  ageRange,
+  initialDismissedUpsells,
 }: ProfilePageProps) {
   const [families, setFamilies] = useState<FamilyWithRelations[]>(initialFamilies);
   const [editId, setEditId] = useState<string | null>(null);
@@ -229,6 +216,27 @@ export default function ProfilePage({
 
   // ─── Top-level view (pill) ───
   const [view, setView] = useState<"you" | "family" | "account">("you");
+
+  // ─── Upgrade-path upsells ───
+  // Only surfaced for low-engagement / pre-RSVP-Energy users. All In / Helping Out
+  // users already chose the full flow during onboarding, so we suppress entirely.
+  const [dismissedUpsells, setDismissedUpsells] = useState<string[]>(initialDismissedUpsells);
+  const showUpsellSection =
+    defaultRolePreference === null ||
+    defaultRolePreference === "just_here" ||
+    defaultRolePreference === "vibes_only";
+  const profileComplete = !!gender && !!ageRange;
+  const visibleUpsells = UPSELL_CARDS.filter((card) => {
+    if (dismissedUpsells.includes(card.key)) return false;
+    if (card.showWhen === "profile_incomplete" && profileComplete) return false;
+    return true;
+  });
+
+  const dismissUpsell = async (key: string) => {
+    // Optimistic — the row is user-scoped by RLS and idempotent via UNIQUE(user_id, upsell_key).
+    setDismissedUpsells((prev) => (prev.includes(key) ? prev : [...prev, key]));
+    await supabase.from("user_dismissed_upsells").insert({ user_id: userId, upsell_key: key });
+  };
 
   const supabase = createBrowserSupabaseClient();
   const router = useRouter();
@@ -484,6 +492,63 @@ export default function ProfilePage({
           )}
         </div>
 
+        {/* ─── Upgrade Path (skipped-onboarding re-surface) ─── */}
+        {showUpsellSection && visibleUpsells.length > 0 && (
+          <div style={{ marginBottom: "24px" }}>
+            <SectionHeader label="Upgrade your trip experience" size="md" style={{ marginBottom: 10 }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {visibleUpsells.map((card) => (
+                <div
+                  key={card.key}
+                  className="card-glass"
+                  style={{
+                    padding: "16px 18px",
+                    position: "relative",
+                    borderLeft: `3px solid ${th.accent}`,
+                  }}
+                >
+                  <button
+                    onClick={() => dismissUpsell(card.key)}
+                    aria-label={`Dismiss ${card.title}`}
+                    style={{
+                      position: "absolute",
+                      top: "8px",
+                      right: "10px",
+                      background: "transparent",
+                      border: "none",
+                      color: "#bbb",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      padding: "4px 8px",
+                      lineHeight: 1,
+                    }}
+                  >
+                    ✕ dismiss
+                  </button>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", paddingRight: "60px" }}>
+                    <span style={{ fontSize: "26px", flexShrink: 0 }}>{card.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "15px", marginBottom: "4px" }}>
+                        {card.title}
+                      </div>
+                      <div style={{ fontSize: "13px", color: th.muted, lineHeight: 1.45, marginBottom: "10px" }}>
+                        {card.body}
+                      </div>
+                      <button
+                        onClick={() => router.push(card.href)}
+                        className="btn btn-sm"
+                        style={{ background: th.accent }}
+                      >
+                        {card.cta}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ─── Packing Preferences ─── */}
         <div className="card-glass" style={{ padding: 0, marginBottom: "24px", overflow: "hidden" }}>
           <div
@@ -505,7 +570,7 @@ export default function ProfilePage({
                 <>
                   {/* ─── Packing Style (prominent) ─── */}
                   <div style={{ marginBottom: "18px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#999", marginBottom: "10px" }}>Packing Style</div>
+                    <SectionHeader label="Packing Style" style={{ marginBottom: 10 }} />
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                       {STYLE_PREF.options.map((opt) => {
                         const isActive = packingPrefs.packing_style === opt.value;
@@ -545,7 +610,7 @@ export default function ProfilePage({
                     <div className="fade-in">
                       {FINE_TUNE_GROUPS.map((group) => (
                         <div key={group.label} style={{ marginBottom: "18px" }}>
-                          <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#999", marginBottom: "10px" }}>{group.label}</div>
+                          <SectionHeader label={group.label} style={{ marginBottom: 10 }} />
                           {group.prefs.map((pref) => {
                             const currentVal = packingPrefs[pref.key as keyof PackingPreferences] as string | undefined;
                             const selected = pref.options.find((o) => o.value === currentVal);
@@ -602,7 +667,7 @@ export default function ProfilePage({
 
                   {/* Shortcuts group */}
                   <div style={{ marginBottom: "4px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#999", marginBottom: "10px" }}>Shortcuts</div>
+                    <SectionHeader label="Shortcuts" style={{ marginBottom: 10 }} />
                     <div
                       onClick={() => savePackingPref("reusable_templates", !packingPrefs.reusable_templates)}
                       style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", padding: "8px 10px", borderRadius: "10px" }}
@@ -641,15 +706,7 @@ export default function ProfilePage({
             {/* Section 2 — Family Members slider */}
             <div style={{ marginBottom: "28px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                <h3 style={{
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  color: "#999",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  margin: 0,
-                  fontFamily: "'DM Sans', sans-serif",
-                }}>Family Members</h3>
+                <SectionHeader label="Family Members" size="md" style={{ margin: 0 }} />
                 <button onClick={() => { if (families.length > 0) setEditId(families[0].id); }} className="btn btn-sm" style={{ background: th.accent }}>+ Add</button>
               </div>
               {families.flatMap((f) => f.family_members || []).length === 0 ? (
@@ -686,15 +743,7 @@ export default function ProfilePage({
 
             {/* Section 3 — Your Families list */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", gap: "8px", flexWrap: "wrap" }}>
-              <h3 style={{
-                fontSize: "14px",
-                fontWeight: 700,
-                color: "#999",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                margin: 0,
-                fontFamily: "'DM Sans', sans-serif",
-              }}>Your Families</h3>
+              <SectionHeader label="Your Families" size="md" style={{ margin: 0 }} />
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <input value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addFamily()} placeholder="Family name" className="input-modern" style={{ width: "180px" }} />
                 <button onClick={addFamily} className="btn btn-sm" style={{ background: th.accent }}>+ New Family</button>
@@ -730,15 +779,7 @@ export default function ProfilePage({
 
             {/* Members */}
             <div style={{ marginBottom: "24px" }}>
-              <h3 style={{
-                fontSize: "14px",
-                fontWeight: 700,
-                color: "#999",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                margin: "0 0 12px",
-                fontFamily: "'DM Sans', sans-serif",
-              }}>Members</h3>
+              <SectionHeader label="Members" size="md" style={{ marginBottom: 12 }} />
               <div style={{ display: "flex", gap: "6px", marginBottom: "10px", flexWrap: "wrap" }}>
                 <input placeholder="Name" value={newMemName} onChange={(e) => setNewMemName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addMember(editFam.id)} className="input-modern" style={{ flex: "1 1 100px", minWidth: "80px" }} />
                 <select value={newMemAge} onChange={(e) => setNewMemAge(e.target.value)} className="input-modern" style={{ width: "auto", fontSize: "12px" }}>
@@ -767,30 +808,14 @@ export default function ProfilePage({
 
             {/* Car Snack Prefs */}
             <div style={{ marginBottom: "24px" }}>
-              <h3 style={{
-                fontSize: "14px",
-                fontWeight: 700,
-                color: "#999",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                margin: "0 0 12px",
-                fontFamily: "'DM Sans', sans-serif",
-              }}>Car Snack Preferences</h3>
+              <SectionHeader label="Car Snack Preferences" size="md" style={{ marginBottom: 12 }} />
               <textarea value={editFam.car_snack_pref || ""} onChange={(e) => updateFamily(editFam.id, "car_snack_pref", e.target.value)} placeholder="Goldfish, juice boxes, trail mix..." className="input-modern" rows={3} style={{ resize: "vertical" }} />
             </div>
 
             {/* Inventory Bins */}
             <div style={{ marginBottom: "24px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                <h3 style={{
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  color: "#999",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  margin: 0,
-                  fontFamily: "'DM Sans', sans-serif",
-                }}>Inventory Bins</h3>
+                <SectionHeader label="Inventory Bins" size="md" style={{ margin: 0 }} />
                 <button onClick={() => addBin(editFam.id)} className="btn btn-sm" style={{ background: th.accent }}>+ Bin</button>
               </div>
 
