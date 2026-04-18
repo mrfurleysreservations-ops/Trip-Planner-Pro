@@ -1,12 +1,17 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { countTotalUnreadForUser } from "@/lib/chat-list";
-import type { UserProfile, Trip, Family, FamilyMember } from "@/types/database.types";
+import type { UserProfile, Trip, TripMember, Family, FamilyMember } from "@/types/database.types";
 import DashboardPage from "./dashboard";
 
 export type FamilyWithMembers = Family & {
   family_members: FamilyMember[];
 };
+
+export interface PendingTripInvitation {
+  memberId: string;
+  trip: Trip;
+}
 
 export default async function DashboardServerPage() {
   const supabase = createServerSupabaseClient();
@@ -14,15 +19,17 @@ export default async function DashboardServerPage() {
 
   if (!user) redirect("/auth/login");
 
-  // Fetch trips the user is a member of (invited trips)
+  // Fetch trips the user is a member of (invited trips), including status so we can
+  // split pending invitations (awaiting accept/decline) from accepted memberships.
   const memberTripsRes = await supabase
     .from("trip_members")
-    .select("trip_id")
+    .select("id, trip_id, status")
     .eq("user_id", user.id);
 
-  const memberTripIds = (memberTripsRes.data ?? []).map((m: any) => m.trip_id);
+  const memberRows = (memberTripsRes.data ?? []) as Pick<TripMember, "id" | "trip_id" | "status">[];
+  const memberTripIds = memberRows.map((m) => m.trip_id);
 
-  const [profileRes, ownedTripsRes, memberTripsDataRes, familiesRes, pendingFriendRes, pendingInviteRes] = await Promise.all([
+  const [profileRes, ownedTripsRes, memberTripsDataRes, familiesRes, pendingFriendRes] = await Promise.all([
     supabase.from("user_profiles").select("*").eq("id", user.id).single(),
     supabase.from("trips").select("*").eq("owner_id", user.id).order("created_at", { ascending: false }),
     // Fetch trips where user is a member but NOT the owner (avoid duplicates)
@@ -37,19 +44,27 @@ export default async function DashboardServerPage() {
       .select("id", { count: "exact", head: true })
       .eq("friend_id", user.id)
       .eq("status", "pending"),
-    // Pending trip invitations awaiting this user's accept/decline.
-    supabase
-      .from("trip_members")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("status", "pending"),
   ]);
 
-  // Combine owned + member trips, owned first
+  // Partition membership rows: pending invitations get their own section on the
+  // dashboard with Accept/Decline buttons; accepted ones show inline with owned trips.
+  const pendingTripIds = new Set(memberRows.filter((m) => m.status === "pending").map((m) => m.trip_id));
+  const memberIdByTripId = new Map(memberRows.map((m) => [m.trip_id, m.id]));
+
+  const memberTripRows = (memberTripsDataRes.data ?? []) as Trip[];
+  const acceptedMemberTrips = memberTripRows.filter((t) => !pendingTripIds.has(t.id));
+  const pendingInvitations: PendingTripInvitation[] = memberTripRows
+    .filter((t) => pendingTripIds.has(t.id))
+    .map((trip) => ({ memberId: memberIdByTripId.get(trip.id) as string, trip }));
+
+  // Combine owned + accepted member trips, owned first. Pending invitations are
+  // intentionally excluded here — they render in their own section above Upcoming.
   const allTrips = [
     ...((ownedTripsRes.data ?? []) as Trip[]),
-    ...((memberTripsDataRes.data ?? []) as Trip[]),
+    ...acceptedMemberTrips,
   ];
+
+  const pendingInviteCount = pendingInvitations.length;
 
   // Unread chat messages across all trips the user belongs to — aggregated
   // through the shared helper so the viewer's per-trip
@@ -76,7 +91,6 @@ export default async function DashboardServerPage() {
   }
 
   const pendingFriendCount = pendingFriendRes.count ?? 0;
-  const pendingInviteCount = pendingInviteRes.count ?? 0;
   const unreadAlertCount = pendingInviteCount + pendingFriendCount + activityCount;
 
   return (
@@ -85,6 +99,7 @@ export default async function DashboardServerPage() {
       profile={profileRes.data as UserProfile | null}
       initialTrips={allTrips}
       initialFamilies={(familiesRes.data ?? []) as FamilyWithMembers[]}
+      initialPendingInvitations={pendingInvitations}
       unreadChatCount={unreadChatCount}
       pendingFriendCount={pendingFriendCount}
       unreadAlertCount={unreadAlertCount}

@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { TRIP_TYPES, THEMES } from "@/lib/constants";
 import type { UserProfile, Trip } from "@/types/database.types";
-import type { FamilyWithMembers } from "./page";
+import type { FamilyWithMembers, PendingTripInvitation } from "./page";
 import TopNav from "@/app/top-nav";
 
 interface DashboardProps {
@@ -12,6 +12,7 @@ interface DashboardProps {
   profile: UserProfile | null;
   initialTrips: Trip[];
   initialFamilies: FamilyWithMembers[];
+  initialPendingInvitations: PendingTripInvitation[];
   unreadChatCount: number;
   pendingFriendCount: number;
   unreadAlertCount: number;
@@ -88,17 +89,54 @@ export default function DashboardPage({
   profile,
   initialTrips,
   initialFamilies,
+  initialPendingInvitations,
   unreadChatCount,
   pendingFriendCount,
   unreadAlertCount,
 }: DashboardProps) {
   const [trips, setTrips] = useState<Trip[]>(initialTrips);
   const [families] = useState<FamilyWithMembers[]>(initialFamilies);
+  const [pendingInvitations, setPendingInvitations] =
+    useState<PendingTripInvitation[]>(initialPendingInvitations);
+  const [respondingTo, setRespondingTo] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [reminderDismissed, setReminderDismissed] = useState(false);
   const supabase = createBrowserSupabaseClient();
   const router = useRouter();
   const th = THEMES.home;
+
+  // ─── Trip invitation actions (mirror /alerts) ───
+  // Accept flips trip_members.status → accepted and routes the invitee through the
+  // Role Picker before landing on the trip hub. Decline deletes the row.
+  const acceptInvite = useCallback(async (inv: PendingTripInvitation) => {
+    setRespondingTo(inv.memberId);
+    const { error } = await supabase
+      .from("trip_members")
+      .update({ status: "accepted", updated_at: new Date().toISOString() })
+      .eq("id", inv.memberId);
+    if (error) {
+      console.error("acceptInvite error:", JSON.stringify(error, null, 2));
+      setRespondingTo(null);
+      return;
+    }
+    setPendingInvitations((prev) => prev.filter((p) => p.memberId !== inv.memberId));
+    const tripId = inv.trip.id;
+    router.push(`/trip/${tripId}/role?redirectTo=${encodeURIComponent(`/trip/${tripId}`)}`);
+  }, [supabase, router]);
+
+  const declineInvite = useCallback(async (inv: PendingTripInvitation) => {
+    setRespondingTo(inv.memberId);
+    const { error } = await supabase
+      .from("trip_members")
+      .delete()
+      .eq("id", inv.memberId);
+    if (error) {
+      console.error("declineInvite error:", JSON.stringify(error, null, 2));
+    } else {
+      setPendingInvitations((prev) => prev.filter((p) => p.memberId !== inv.memberId));
+    }
+    setRespondingTo(null);
+  }, [supabase]);
 
   const createTrip = async () => {
     if (creating) return;
@@ -293,11 +331,79 @@ export default function DashboardPage({
           </div>
         )}
 
-        {/* Empty state */}
-        {trips.length === 0 && (
+        {/* Empty state — only when nothing to show (no trips and no pending invites) */}
+        {trips.length === 0 && pendingInvitations.length === 0 && (
           <div className="card-glass" style={{ padding: "48px", textAlign: "center" }}>
             <div style={{ fontSize: "42px", marginBottom: "10px" }}>🧭</div>
             <p style={{ color: th.muted, fontSize: "15px" }}>No trips yet! Create your first one above.</p>
+          </div>
+        )}
+
+        {/* Pending trip invitations — shown ABOVE upcoming so they don't silently
+            land in the user's trip list before they've accepted. */}
+        {pendingInvitations.length > 0 && (
+          <div style={{ marginBottom: "24px" }}>
+            <h3 style={{
+              fontSize: "13px",
+              fontWeight: 700,
+              color: "#e53935",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+              marginBottom: "10px",
+            }}>
+              Invitations ({pendingInvitations.length})
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {pendingInvitations.map((inv) => {
+                const tt = TRIP_TYPES.find((t) => t.value === inv.trip.trip_type) || TRIP_TYPES[0];
+                const tth = THEMES[inv.trip.trip_type] || THEMES.camping;
+                const isResponding = respondingTo === inv.memberId;
+                return (
+                  <div
+                    key={inv.memberId}
+                    className="card-glass"
+                    style={{
+                      padding: "16px 18px",
+                      borderLeft: `4px solid ${tth.accent}`,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "3px" }}>
+                          {tt.icon} {inv.trip.name}
+                        </div>
+                        {inv.trip.location && (
+                          <div style={{ fontSize: "13px", color: th.muted, marginBottom: "2px" }}>
+                            📍 {inv.trip.location}
+                          </div>
+                        )}
+                        <div style={{ fontSize: "12px", color: "#999" }}>
+                          {formatDateRange(inv.trip.start_date, inv.trip.end_date)}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                        <button
+                          onClick={() => acceptInvite(inv)}
+                          disabled={isResponding}
+                          className="btn"
+                          style={{ background: "#28a745", padding: "8px 18px", fontSize: "12px", fontWeight: 700, opacity: isResponding ? 0.5 : 1 }}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={() => declineInvite(inv)}
+                          disabled={isResponding}
+                          className="btn"
+                          style={{ background: "#e74c3c", padding: "8px 18px", fontSize: "12px", fontWeight: 700, opacity: isResponding ? 0.5 : 1 }}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
