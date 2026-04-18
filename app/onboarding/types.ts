@@ -63,4 +63,24 @@ export interface OnboardingPageProps {
   userName: string | null;
   avatarUrl: string | null;
   defaultRolePreference: string | null;
+  // ─── Standalone upgrade-path mode ───
+  // When present in the URL as ?standalone=1&step=<name>, onboarding re-mounts a single
+  // existing step so users can opt into features they skipped. /profile Upgrade cards
+  // deep-link here. Existing profile values are pre-seeded so users can edit, not just
+  // re-enter. See docs/role-based-onboarding.md → "Upgrade Paths".
+  standalone?: boolean;
+  standaloneStep?: string | null;
+  onboardingCompleted?: boolean;
+  initialProfileSeed?: {
+    gender: string | null;
+    ageRange: string | null;
+    phone: string | null;
+    clothingStyles: string[];
+    packingPrefs: {
+      packing_style: string | null;
+      organization_method: string | null;
+      folding_method: string | null;
+      compartment_system: string | null;
+    };
+  };
 }

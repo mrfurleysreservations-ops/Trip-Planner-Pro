@@ -24,7 +24,7 @@ export default async function ProfileServerPage() {
 
   const memberTripIds = (memberTripsRes.data ?? []).map((m: any) => m.trip_id);
 
-  const [familiesRes, profileRes, ownedTripsRes, pendingFriendRes, pendingInviteRes] = await Promise.all([
+  const [familiesRes, profileRes, ownedTripsRes, pendingFriendRes, pendingInviteRes, dismissedUpsellsRes] = await Promise.all([
     supabase.from("families")
       .select("*, family_members(*), inventory_bins(*, inventory_items:inventory_items(*))")
       .eq("owner_id", user.id)
@@ -45,9 +45,15 @@ export default async function ProfileServerPage() {
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("status", "pending"),
+    // Upgrade-path dismissals — which upsell cards has this user already hidden?
+    supabase
+      .from("user_dismissed_upsells")
+      .select("upsell_key")
+      .eq("user_id", user.id),
   ]);
 
   const profile = profileRes.data as UserProfile | null;
+  const dismissedUpsellKeys = (dismissedUpsellsRes.data ?? []).map((r: any) => r.upsell_key as string);
 
   // Combine owned + member trip ids for the chat-unread scan.
   const ownedTripIds = (ownedTripsRes.data ?? []).map((t: any) => t.id);
@@ -115,6 +121,10 @@ export default async function ProfileServerPage() {
       unreadChatCount={unreadChatCount}
       pendingFriendCount={pendingFriendCount}
       unreadAlertCount={unreadAlertCount}
+      defaultRolePreference={profile?.default_role_preference ?? null}
+      gender={profile?.gender ?? null}
+      ageRange={profile?.age_range ?? null}
+      initialDismissedUpsells={dismissedUpsellKeys}
     />
   );
 }

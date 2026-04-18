@@ -64,13 +64,28 @@ function stepsForRole(role: string | null): StepName[] {
 }
 
 
-export default function OnboardingPage({ userId, userEmail, userName, avatarUrl, defaultRolePreference }: OnboardingPageProps) {
+export default function OnboardingPage({
+  userId,
+  userEmail,
+  userName,
+  avatarUrl,
+  defaultRolePreference,
+  standalone = false,
+  standaloneStep = null,
+  onboardingCompleted = false,
+  initialProfileSeed,
+}: OnboardingPageProps) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const activeSteps = useMemo(() => stepsForRole(defaultRolePreference), [defaultRolePreference]);
-  const isMinimalFlow = activeSteps === MINIMAL_FLOW;
+  // In standalone mode, the "flow" is a single existing step so we can reuse the
+  // step components verbatim. Nav + save paths are swapped for a profile-return CTA.
+  const activeSteps = useMemo(() => {
+    if (standalone && standaloneStep) return [standaloneStep as StepName];
+    return stepsForRole(defaultRolePreference);
+  }, [defaultRolePreference, standalone, standaloneStep]);
+  const isMinimalFlow = !standalone && activeSteps === MINIMAL_FLOW;
 
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -83,22 +98,25 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl,
   const [data, setData] = useState<OnboardingData>({
     name: userName || "",
     avatarUrl: avatarUrl || null,
-    gender: null,
-    ageRange: null,
-    phone: "",
-    clothingStyles: [],
+    // Pre-seed existing profile values in standalone mode so users can edit, not
+    // re-enter. In the initial onboarding flow initialProfileSeed is either absent
+    // or still null/empty, matching the original behavior.
+    gender: initialProfileSeed?.gender ?? null,
+    ageRange: initialProfileSeed?.ageRange ?? null,
+    phone: initialProfileSeed?.phone ?? "",
+    clothingStyles: initialProfileSeed?.clothingStyles ?? [],
     connections: [],
     familyMembers: [],
     invitesSent: [],
-    packingStyle: null,
-    orgMethod: null,
-    foldingMethod: null,
-    compartmentSystem: null,
+    packingStyle: initialProfileSeed?.packingPrefs.packing_style ?? null,
+    orgMethod: initialProfileSeed?.packingPrefs.organization_method ?? null,
+    foldingMethod: initialProfileSeed?.packingPrefs.folding_method ?? null,
+    compartmentSystem: initialProfileSeed?.packingPrefs.compartment_system ?? null,
   });
 
   // ─── Check for inviter on mount (full flow only — minimal flow never hits the suggestions step) ───
   useEffect(() => {
-    if (isMinimalFlow) return;
+    if (isMinimalFlow || standalone) return;
     const checkInviter = async () => {
       // Check if anyone has a pending friend_link pointing at us (they invited us)
       const { data: links } = await supabase
@@ -157,7 +175,7 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl,
     };
     checkInviter();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, isMinimalFlow]);
+  }, [userId, isMinimalFlow, standalone]);
 
   // ─── State & Navigation ───
   const updateData = (updates: Partial<OnboardingData>) => setData((d) => ({ ...d, ...updates }));
@@ -186,6 +204,102 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl,
 
   const next = () => advance(1);
   const back = () => advance(-1);
+
+  // ─── Standalone Save (upgrade-path mode) ───
+  // Persists only the fields that belong to the active step, preserves other
+  // profile fields, and returns to /profile. Never flips onboarding_completed
+  // back to true if it was already true — the user has already completed it.
+  const saveStandalone = async () => {
+    if (saving || !standalone || !standaloneStep) return;
+    setSaving(true);
+
+    try {
+      const update: Record<string, unknown> = {};
+
+      if (standaloneStep === "details") {
+        update.gender = data.gender;
+        update.age_range = data.ageRange;
+        update.phone = data.phone || null;
+      } else if (standaloneStep === "style") {
+        update.clothing_styles = data.clothingStyles;
+      } else if (standaloneStep === "packing") {
+        const style = data.packingStyle || "planner";
+        const defaults = PACKING_STYLE_DEFAULTS[style] || PACKING_STYLE_DEFAULTS.planner;
+        update.packing_preferences = {
+          packing_style: data.packingStyle,
+          organization_method: data.orgMethod || defaults.organization_method,
+          folding_method: data.foldingMethod || defaults.folding_method,
+          compartment_system: data.compartmentSystem || defaults.compartment_system,
+          checklist_level: defaults.checklist_level,
+          planning_timeline: defaults.planning_timeline,
+          just_in_case_level: defaults.just_in_case_level,
+          visual_planning: defaults.visual_planning,
+        };
+      }
+      // "people" doesn't push anything into user_profiles — it creates rows in
+      // families / family_members / friend_links below.
+
+      // First-timers going through a standalone step still get credit for finishing
+      // onboarding; already-completed users are left alone.
+      if (!onboardingCompleted) update.onboarding_completed = true;
+
+      if (Object.keys(update).length > 0) {
+        await supabase.from("user_profiles").update(update).eq("id", userId);
+      }
+
+      if (standaloneStep === "people") {
+        // Create family members — mirrors the logic in saveAndFinish, scoped to one step.
+        if (data.familyMembers.length > 0) {
+          const { data: families } = await supabase
+            .from("families")
+            .select("id")
+            .eq("owner_id", userId)
+            .limit(1);
+
+          let familyId: string;
+          if (families && families.length > 0) {
+            familyId = families[0].id;
+          } else {
+            const { data: newFamily } = await supabase
+              .from("families")
+              .insert({ owner_id: userId, name: `${data.name || userName || "Your"}'s Family` })
+              .select("id")
+              .single();
+            familyId = newFamily!.id;
+          }
+
+          for (const member of data.familyMembers) {
+            await supabase.from("family_members").insert({
+              family_id: familyId,
+              name: member.name,
+              age_type: member.age_type,
+              linked_user_id: member.linkedUserId || null,
+            });
+          }
+        }
+
+        for (const connection of data.connections) {
+          const { data: existing } = await supabase
+            .from("friend_links")
+            .select("id")
+            .or(`and(user_id.eq.${userId},friend_id.eq.${connection.id}),and(user_id.eq.${connection.id},friend_id.eq.${userId})`)
+            .limit(1);
+          if (!existing || existing.length === 0) {
+            await supabase.from("friend_links").insert({
+              user_id: userId,
+              friend_id: connection.id,
+              status: "pending",
+            });
+          }
+        }
+      }
+
+      router.push("/profile");
+    } catch (err) {
+      console.error("Error saving standalone onboarding step:", err);
+      setSaving(false);
+    }
+  };
 
   // ─── Data Persistence ───
   const saveAndFinish = async () => {
@@ -281,6 +395,26 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl,
   // ─── Nav config per step ───
   // Returns null when the step owns its own CTA (welcome gate, done screens).
   const getNavConfig = (): { showBack: boolean; nextLabel: string; nextDisabled: boolean; onBack: () => void; onNext: () => void } | null => {
+    // Standalone mode: single-step upgrade path. Back returns to /profile, Save
+    // persists just that step's fields. We still reuse per-step disabled logic.
+    if (standalone) {
+      const back = () => router.push("/profile");
+      switch (currentStepName) {
+        case "details":
+          return { showBack: true, nextLabel: saving ? "Saving…" : "Save", nextDisabled: saving || !data.ageRange, onBack: back, onNext: saveStandalone };
+        case "style":
+          return { showBack: true, nextLabel: saving ? "Saving…" : "Save", nextDisabled: saving || (data.clothingStyles || []).length === 0, onBack: back, onNext: saveStandalone };
+        case "people": {
+          const totalPeople = (data.connections || []).length + (data.familyMembers || []).length + (data.invitesSent || []).length;
+          return { showBack: true, nextLabel: saving ? "Saving…" : "Save", nextDisabled: saving || totalPeople === 0, onBack: back, onNext: saveStandalone };
+        }
+        case "packing":
+          return { showBack: true, nextLabel: saving ? "Saving…" : "Save", nextDisabled: saving || !data.packingStyle, onBack: back, onNext: saveStandalone };
+        default:
+          return null;
+      }
+    }
+
     switch (currentStepName) {
       case "welcome":
       case "done":
@@ -315,8 +449,10 @@ export default function OnboardingPage({ userId, userEmail, userName, avatarUrl,
 
   // Progress dots are only meaningful inside the full flow (5 visible middle steps).
   // The 2-step minimal flow hides them entirely — it's self-evidently short.
+  // Standalone mode is a single-step re-entry point, so dots are also hidden.
   const showProgressDots =
     !isMinimalFlow &&
+    !standalone &&
     currentStepName !== "welcome" &&
     currentStepName !== "profile" &&
     currentStepName !== "done";

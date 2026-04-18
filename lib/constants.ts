@@ -400,6 +400,52 @@ export function getDailyEssentials(gender: string | null): string[] {
   return base;
 }
 
+// ─── Upgrade-path upsell cards (Profile → "Upgrade your trip experience") ───
+// Re-surface onboarding steps skipped by Just Here / Vibes Only users so they can
+// opt in later without re-doing onboarding. `showWhen` is evaluated by the profile
+// page (e.g. "profile_incomplete" checks gender + age_range). See
+// docs/role-based-onboarding.md → "Upgrade Paths".
+export const UPSELL_CARDS = [
+  {
+    key: "packing_prefs",
+    icon: "🧳",
+    title: "Get personalized packing lists",
+    body: "Tell us your packing style once and we'll auto-build lists for every trip.",
+    cta: "Set my style",
+    href: "/onboarding?step=packing&standalone=1",
+    showWhen: "always",
+  },
+  {
+    key: "clothing_style",
+    icon: "👕",
+    title: "Suggest outfits for events",
+    body: "Pick your clothing styles so we can suggest outfits per event.",
+    cta: "Pick styles",
+    href: "/onboarding?step=style&standalone=1",
+    showWhen: "always",
+  },
+  {
+    key: "family",
+    icon: "👨‍👩‍👧",
+    title: "Add family members",
+    body: "Bring a +1 or kids? Add them once, re-use on every trip.",
+    cta: "Add family",
+    href: "/onboarding?step=people&standalone=1",
+    showWhen: "always",
+  },
+  {
+    key: "finish_profile",
+    icon: "📝",
+    title: "Finish your profile",
+    body: "Gender + age range help us tailor suggestions.",
+    cta: "Finish up",
+    href: "/onboarding?step=details&standalone=1",
+    showWhen: "profile_incomplete",
+  },
+] as const;
+
+export type UpsellCardKey = (typeof UPSELL_CARDS)[number]["key"];
+
 // ─── Packing Style Defaults ───
 // Maps each packing style to smart defaults for all sub-preferences.
 // Used by onboarding (auto-fill on style pick) and profile (reset to defaults).

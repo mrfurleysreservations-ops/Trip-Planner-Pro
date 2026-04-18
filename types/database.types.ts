@@ -923,6 +923,20 @@ export interface Database {
           last_read_at?: string;
         };
       };
+      user_dismissed_upsells: {
+        Row: {
+          id: string;
+          user_id: string;
+          upsell_key: string;
+          dismissed_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          upsell_key: string;
+          dismissed_at?: string;
+        };
+      };
     };
   };
 }
@@ -1015,4 +1029,8 @@ export type OutfitWithItems = Outfit & {
 export type TripMessage = Database["public"]["Tables"]["trip_messages"]["Row"];
 export type TripMessageInsert = Database["public"]["Tables"]["trip_messages"]["Insert"];
 export type TripMessageRead = Database["public"]["Tables"]["trip_message_reads"]["Row"];
+
+// ─── Upgrade-path upsells (dismissible cards on /profile) ───
+export type UserDismissedUpsell = Database["public"]["Tables"]["user_dismissed_upsells"]["Row"];
+export type UserDismissedUpsellInsert = Database["public"]["Tables"]["user_dismissed_upsells"]["Insert"];
 export type TripMessageReadInsert = Database["public"]["Tables"]["trip_message_reads"]["Insert"];
