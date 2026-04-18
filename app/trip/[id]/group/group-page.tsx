@@ -2,7 +2,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { THEMES } from "@/lib/constants";
+import { THEMES, ROLE_PREFERENCES } from "@/lib/constants";
 import { logActivity } from "@/lib/trip-activity";
 import type { Trip, TripMember, FamilyMember } from "@/types/database.types";
 import type { GroupPageProps, FriendWithProfile, FamilyWithMembers } from "./page";
@@ -357,6 +357,8 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
         }}>
           {orderedMembers.map((m) => {
             const isHostChip = m.role === "host";
+            const isMe = !!(m.user_id && m.user_id === userId);
+            const role = ROLE_PREFERENCES.find((r) => r.value === m.role_preference);
             const statusColor =
               isHostChip ? th.accent :
               m.status === "accepted" ? "#2e7d32" :
@@ -366,22 +368,37 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
               isHostChip ? "HOST" :
               m.status === "accepted" ? "✓" :
               m.status === "pending"  ? "…" : "×";
+
+            // Click priority: self → role picker; host viewing a non-host → remove.
+            // Non-host viewing a non-host chip: no-op.
+            const handleChipClick = () => {
+              if (isMe) {
+                router.push(
+                  `/trip/${trip.id}/role?redirectTo=${encodeURIComponent(`/trip/${trip.id}/group`)}`
+                );
+                return;
+              }
+              if (isHost && !isHostChip) removeMember(m.id);
+            };
+            const chipIsInteractive = isMe || (isHost && !isHostChip);
+
             return (
               <div
                 key={m.id}
-                onClick={() => { if (!isHostChip && isHost) removeMember(m.id); }}
+                onClick={handleChipClick}
+                aria-label={isMe ? "Change your role" : undefined}
                 style={{
                   flexShrink: 0,
-                  background: "#fff",
-                  border: `1px solid ${th.cardBorder}`,
+                  background: isMe ? `${th.accent}0f` : "#fff",
+                  border: isMe ? `1.5px solid ${th.accent}66` : `1px solid ${th.cardBorder}`,
                   borderRadius: 10,
                   padding: "6px 8px",
-                  minWidth: 62,
+                  minWidth: 72,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   gap: 3,
-                  cursor: isHostChip ? "default" : (isHost ? "pointer" : "default"),
+                  cursor: chipIsInteractive ? "pointer" : "default",
                 }}
               >
                 <div
@@ -405,7 +422,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
                   fontSize: 10,
                   fontWeight: 700,
                   color: th.text,
-                  maxWidth: 58,
+                  maxWidth: 68,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -420,6 +437,35 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
                 }}>
                   {statusLabel}
                 </div>
+                {role && (
+                  <div
+                    title={role.label}
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 600,
+                      color: th.muted,
+                      maxWidth: 68,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {role.icon} {role.label}
+                  </div>
+                )}
+                {isMe && (
+                  <div
+                    style={{
+                      fontSize: 8,
+                      fontWeight: 700,
+                      color: th.accent,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Change ›
+                  </div>
+                )}
               </div>
             );
           })}

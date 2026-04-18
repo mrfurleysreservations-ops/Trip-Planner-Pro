@@ -79,11 +79,15 @@ export default function AlertsPage({
       .eq("id", inv.member.id);
     if (error) {
       console.error("acceptInvite error:", JSON.stringify(error, null, 2));
-    } else {
-      setInvitations((prev) => prev.filter((p) => p.member.id !== inv.member.id));
+      setRespondingTo(null);
+      return;
     }
-    setRespondingTo(null);
-  }, [supabase]);
+    setInvitations((prev) => prev.filter((p) => p.member.id !== inv.member.id));
+    // Route the invitee through the Role Picker before landing on the trip hub.
+    // The picker itself handles pre-selecting their default_role_preference if set.
+    const tripId = inv.trip.id;
+    router.push(`/trip/${tripId}/role?redirectTo=${encodeURIComponent(`/trip/${tripId}`)}`);
+  }, [supabase, router]);
 
   const declineInvite = useCallback(async (inv: PendingInvitation) => {
     setRespondingTo(inv.member.id);

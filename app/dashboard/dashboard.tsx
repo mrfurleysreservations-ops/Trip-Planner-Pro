@@ -112,7 +112,23 @@ export default function DashboardPage({
     if (data) {
       // Initialize trip_data (host member is auto-created by DB trigger)
       await supabase.from("trip_data").insert({ trip_id: data.id });
-      router.push(`/trip/${data.id}`);
+
+      // Solo detection: only the host was auto-added → no one to opt in for.
+      // Skip the picker entirely, leaving the host at their default role_preference.
+      // Otherwise send the host through the Role Picker, then on to /group to invite.
+      const { count: memberCount } = await supabase
+        .from("trip_members")
+        .select("id", { count: "exact", head: true })
+        .eq("trip_id", data.id);
+
+      const isSolo = (memberCount ?? 1) <= 1;
+      if (isSolo) {
+        router.push(`/trip/${data.id}`);
+      } else {
+        router.push(
+          `/trip/${data.id}/role?redirectTo=${encodeURIComponent(`/trip/${data.id}/group`)}`
+        );
+      }
     }
     setCreating(false);
   };
