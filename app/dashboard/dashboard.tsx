@@ -14,6 +14,7 @@ interface DashboardProps {
   initialFamilies: FamilyWithMembers[];
   unreadChatCount: number;
   pendingFriendCount: number;
+  unreadAlertCount: number;
 }
 
 function formatDateRange(start?: string | null, end?: string | null): string {
@@ -89,6 +90,7 @@ export default function DashboardPage({
   initialFamilies,
   unreadChatCount,
   pendingFriendCount,
+  unreadAlertCount,
 }: DashboardProps) {
   const [trips, setTrips] = useState<Trip[]>(initialTrips);
   const [families] = useState<FamilyWithMembers[]>(initialFamilies);
@@ -193,6 +195,7 @@ export default function DashboardPage({
           <TopNav
             unreadChatCount={unreadChatCount}
             pendingFriendCount={pendingFriendCount}
+            unreadAlertCount={unreadAlertCount}
           />
         </div>
       </div>

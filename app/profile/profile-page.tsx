@@ -728,8 +728,36 @@ export default function ProfilePage({ userId, initialFamilies, userEmail, userNa
           </div>
         )}
 
+        {/* ─── Sign Out ─── */}
+        <div className="card-glass" style={{ padding: 0, marginTop: "32px", overflow: "hidden" }}>
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.push("/auth/login");
+              router.refresh();
+            }}
+            style={{
+              width: "100%",
+              padding: "16px 20px",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: "15px",
+              fontWeight: 600,
+              color: th.text,
+            }}
+          >
+            <span>👋 Sign Out</span>
+            <span style={{ fontSize: "18px", color: "#999" }}>›</span>
+          </button>
+        </div>
+
         {/* ─── Delete Account (Danger Zone) ─── */}
-        <div className="card-glass" style={{ padding: 0, marginTop: "40px", overflow: "hidden", border: "1px solid rgba(231,76,60,0.25)" }}>
+        <div className="card-glass" style={{ padding: 0, marginTop: "16px", overflow: "hidden", border: "1px solid rgba(231,76,60,0.25)" }}>
           <div
             onClick={() => { setShowDeleteAccount(!showDeleteAccount); setDeleteError(""); setDeleteConfirmPw(""); setDeleteConfirmText(""); }}
             style={{ padding: "16px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}

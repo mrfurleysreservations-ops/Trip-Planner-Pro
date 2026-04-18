@@ -21,7 +21,7 @@ export default async function DashboardServerPage() {
 
   const memberTripIds = (memberTripsRes.data ?? []).map((m: any) => m.trip_id);
 
-  const [profileRes, ownedTripsRes, memberTripsDataRes, familiesRes, pendingFriendRes] = await Promise.all([
+  const [profileRes, ownedTripsRes, memberTripsDataRes, familiesRes, pendingFriendRes, pendingInviteRes] = await Promise.all([
     supabase.from("user_profiles").select("*").eq("id", user.id).single(),
     supabase.from("trips").select("*").eq("owner_id", user.id).order("created_at", { ascending: false }),
     // Fetch trips where user is a member but NOT the owner (avoid duplicates)
@@ -35,6 +35,12 @@ export default async function DashboardServerPage() {
       .from("friend_links")
       .select("id", { count: "exact", head: true })
       .eq("friend_id", user.id)
+      .eq("status", "pending"),
+    // Pending trip invitations awaiting this user's accept/decline.
+    supabase
+      .from("trip_members")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
       .eq("status", "pending"),
   ]);
 
@@ -76,6 +82,27 @@ export default async function DashboardServerPage() {
     });
   }
 
+  // Trip activity newer than the user's last visit to /alerts. Mirrors the
+  // aggregate currently computed client-side in AppShell, which stops rendering
+  // on /dashboard once the TopNav migration lands here.
+  let activityCount = 0;
+  const lastAlertsSeen = (profileRes.data as UserProfile | null)?.alerts_last_seen_at ?? null;
+  if (memberTripIds.length > 0) {
+    let activityQuery = supabase
+      .from("trip_activity")
+      .select("id", { count: "exact", head: true })
+      .in("trip_id", memberTripIds);
+    if (lastAlertsSeen) {
+      activityQuery = activityQuery.gte("created_at", lastAlertsSeen);
+    }
+    const { count } = await activityQuery;
+    activityCount = count ?? 0;
+  }
+
+  const pendingFriendCount = pendingFriendRes.count ?? 0;
+  const pendingInviteCount = pendingInviteRes.count ?? 0;
+  const unreadAlertCount = pendingInviteCount + pendingFriendCount + activityCount;
+
   return (
     <DashboardPage
       user={{ id: user.id, email: user.email ?? "" }}
@@ -83,7 +110,8 @@ export default async function DashboardServerPage() {
       initialTrips={allTrips}
       initialFamilies={(familiesRes.data ?? []) as FamilyWithMembers[]}
       unreadChatCount={unreadChatCount}
-      pendingFriendCount={pendingFriendRes.count ?? 0}
+      pendingFriendCount={pendingFriendCount}
+      unreadAlertCount={unreadAlertCount}
     />
   );
 }

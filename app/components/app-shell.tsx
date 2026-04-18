@@ -67,10 +67,15 @@ export default function AppShell({ children }: AppShellProps) {
   };
 
   const insideTrip = pathname.startsWith("/trip/");
+  // Pages that render their own top-level nav (TopNav) should skip the legacy
+  // title bar + TabBar chrome. Dashboard is the first migrated page; others
+  // (/chats, /friends, /gear, /profile, /alerts) still rely on the TabBar.
+  const rendersOwnTopNav = pathname === "/dashboard";
+  const showLegacyShell = !insideTrip && !rendersOwnTopNav;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>
-      {!insideTrip && (
+      {showLegacyShell && (
         <>
           {/* Top title bar */}
           <div style={{
