@@ -149,6 +149,32 @@ function MemberDetailCard({ member, familyId, familyName, accent, onUpdate, onCl
   );
 }
 
+// ─── Pill button (matches Friends + docs/tab-layout-standard.md) ───
+function PillBtn({ label, active, onClick, accent, muted }: {
+  label: string; active: boolean; onClick: () => void; accent: string; muted: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: active ? accent : "transparent",
+        border: "none",
+        padding: "8px 22px",
+        borderRadius: 20,
+        fontSize: 13,
+        fontWeight: active ? 700 : 500,
+        color: active ? "#fff" : muted,
+        cursor: "pointer",
+        fontFamily: "'DM Sans', sans-serif",
+        transition: "all 0.15s",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 export default function ProfilePage({
   userId,
   initialFamilies,
@@ -200,6 +226,9 @@ export default function ProfilePage({
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // ─── Top-level view (pill) ───
+  const [view, setView] = useState<"you" | "family" | "account">("you");
 
   const supabase = createBrowserSupabaseClient();
   const router = useRouter();
@@ -368,11 +397,29 @@ export default function ProfilePage({
             pendingFriendCount={pendingFriendCount}
             unreadAlertCount={unreadAlertCount}
           />
+
+          {/* Row 3 — View pill */}
+          <div style={{ display: "flex", justifyContent: "center", padding: "4px 0 10px" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                background: th.card,
+                border: `1.5px solid ${th.cardBorder}`,
+                borderRadius: 20,
+              }}
+            >
+              <PillBtn label="You" active={view === "you"} onClick={() => setView("you")} accent={th.accent} muted={th.muted} />
+              <PillBtn label="Family" active={view === "family"} onClick={() => setView("family")} accent={th.accent} muted={th.muted} />
+              <PillBtn label="Account" active={view === "account"} onClick={() => setView("account")} accent={th.accent} muted={th.muted} />
+            </div>
+          </div>
         </div>
       </div>
 
       {/* ─── SCROLLABLE BODY ─── */}
       <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px" }}>
+        {view === "you" && (
+          <>
         {/* Profile card */}
         <div className="card-glass" style={{ padding: "24px", marginBottom: "24px" }}>
           {editingProfile ? (
@@ -419,67 +466,6 @@ export default function ProfilePage({
                 <div style={{ fontSize: "14px", color: "#777", marginTop: "4px" }}>{userEmail}</div>
               </div>
               <button onClick={() => setEditingProfile(true)} className="btn btn-sm" style={{ background: th.accent }}>Edit</button>
-            </div>
-          )}
-        </div>
-
-        {/* Change Password section */}
-        <div className="card-glass" style={{ padding: 0, marginBottom: "24px", overflow: "hidden" }}>
-          <div
-            onClick={() => { setShowChangePassword(!showChangePassword); setPwError(""); setPwSuccess(""); }}
-            style={{ padding: "16px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-          >
-            <span style={{ fontSize: "15px", fontWeight: 600 }}>🔒 Change Password</span>
-            <span style={{ fontSize: "18px", color: "#999", transform: showChangePassword ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}>›</span>
-          </div>
-          {showChangePassword && (
-            <div className="fade-in" style={{ padding: "0 20px 20px", borderTop: "1px solid #eee", paddingTop: "16px", marginTop: "0" }}>
-              <div style={{ marginBottom: "12px" }}>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#777", display: "block", marginBottom: "6px" }}>Current Password</label>
-                <input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} className="input-modern" />
-              </div>
-              <div style={{ marginBottom: "12px" }}>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#777", display: "block", marginBottom: "6px" }}>New Password</label>
-                <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} className="input-modern" minLength={6} placeholder="Min 6 characters" />
-              </div>
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#777", display: "block", marginBottom: "6px" }}>Confirm New Password</label>
-                <input type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} className="input-modern" minLength={6} />
-              </div>
-
-              {pwError && (
-                <div style={{ padding: "10px 14px", borderRadius: "10px", background: "rgba(225,70,70,0.08)", border: "1px solid rgba(225,70,70,0.2)", color: "#c0392b", fontSize: "13px", marginBottom: "12px" }}>
-                  {pwError}
-                </div>
-              )}
-              {pwSuccess && (
-                <div style={{ padding: "10px 14px", borderRadius: "10px", background: "rgba(124,179,66,0.08)", border: "1px solid rgba(124,179,66,0.2)", color: "#2e7d32", fontSize: "13px", marginBottom: "12px" }}>
-                  {pwSuccess}
-                </div>
-              )}
-
-              <button
-                className="btn"
-                disabled={pwLoading}
-                style={{ background: th.accent, opacity: pwLoading ? 0.6 : 1 }}
-                onClick={async () => {
-                  setPwError("");
-                  setPwSuccess("");
-                  if (newPw !== confirmPw) { setPwError("Passwords don't match"); return; }
-                  if (newPw.length < 6) { setPwError("Password must be at least 6 characters"); return; }
-                  setPwLoading(true);
-                  const { error: signInErr } = await supabase.auth.signInWithPassword({ email: userEmail, password: currentPw });
-                  if (signInErr) { setPwError("Current password is incorrect"); setPwLoading(false); return; }
-                  const { error: updateErr } = await supabase.auth.updateUser({ password: newPw });
-                  if (updateErr) { setPwError(updateErr.message); setPwLoading(false); return; }
-                  setPwSuccess("Password updated!");
-                  setCurrentPw(""); setNewPw(""); setConfirmPw("");
-                  setPwLoading(false);
-                  setTimeout(() => { setShowChangePassword(false); setPwSuccess(""); }, 2000);
-                }}
-              >
-                {pwLoading ? "..." : "Update Password"}
-              </button>
             </div>
           )}
         </div>
@@ -631,7 +617,11 @@ export default function ProfilePage({
             </div>
           )}
         </div>
+          </>
+        )}
 
+        {view === "family" && (
+          <>
         {!editFam ? (
           <div>
             {/* Section 2 — Family Members slider */}
@@ -781,6 +771,71 @@ export default function ProfilePage({
             </div>
           </div>
         )}
+          </>
+        )}
+
+        {view === "account" && (
+          <>
+        {/* Change Password section */}
+        <div className="card-glass" style={{ padding: 0, marginBottom: "24px", overflow: "hidden" }}>
+          <div
+            onClick={() => { setShowChangePassword(!showChangePassword); setPwError(""); setPwSuccess(""); }}
+            style={{ padding: "16px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+          >
+            <span style={{ fontSize: "15px", fontWeight: 600 }}>🔒 Change Password</span>
+            <span style={{ fontSize: "18px", color: "#999", transform: showChangePassword ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}>›</span>
+          </div>
+          {showChangePassword && (
+            <div className="fade-in" style={{ padding: "0 20px 20px", borderTop: "1px solid #eee", paddingTop: "16px", marginTop: "0" }}>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#777", display: "block", marginBottom: "6px" }}>Current Password</label>
+                <input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} className="input-modern" />
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#777", display: "block", marginBottom: "6px" }}>New Password</label>
+                <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} className="input-modern" minLength={6} placeholder="Min 6 characters" />
+              </div>
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#777", display: "block", marginBottom: "6px" }}>Confirm New Password</label>
+                <input type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} className="input-modern" minLength={6} />
+              </div>
+
+              {pwError && (
+                <div style={{ padding: "10px 14px", borderRadius: "10px", background: "rgba(225,70,70,0.08)", border: "1px solid rgba(225,70,70,0.2)", color: "#c0392b", fontSize: "13px", marginBottom: "12px" }}>
+                  {pwError}
+                </div>
+              )}
+              {pwSuccess && (
+                <div style={{ padding: "10px 14px", borderRadius: "10px", background: "rgba(124,179,66,0.08)", border: "1px solid rgba(124,179,66,0.2)", color: "#2e7d32", fontSize: "13px", marginBottom: "12px" }}>
+                  {pwSuccess}
+                </div>
+              )}
+
+              <button
+                className="btn"
+                disabled={pwLoading}
+                style={{ background: th.accent, opacity: pwLoading ? 0.6 : 1 }}
+                onClick={async () => {
+                  setPwError("");
+                  setPwSuccess("");
+                  if (newPw !== confirmPw) { setPwError("Passwords don't match"); return; }
+                  if (newPw.length < 6) { setPwError("Password must be at least 6 characters"); return; }
+                  setPwLoading(true);
+                  const { error: signInErr } = await supabase.auth.signInWithPassword({ email: userEmail, password: currentPw });
+                  if (signInErr) { setPwError("Current password is incorrect"); setPwLoading(false); return; }
+                  const { error: updateErr } = await supabase.auth.updateUser({ password: newPw });
+                  if (updateErr) { setPwError(updateErr.message); setPwLoading(false); return; }
+                  setPwSuccess("Password updated!");
+                  setCurrentPw(""); setNewPw(""); setConfirmPw("");
+                  setPwLoading(false);
+                  setTimeout(() => { setShowChangePassword(false); setPwSuccess(""); }, 2000);
+                }}
+              >
+                {pwLoading ? "..." : "Update Password"}
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* ─── Sign Out ─── */}
         <div className="card-glass" style={{ padding: 0, marginTop: "32px", overflow: "hidden" }}>
@@ -888,6 +943,8 @@ export default function ProfilePage({
             </div>
           )}
         </div>
+          </>
+        )}
       </div>
     </div>
   );
