@@ -5,6 +5,7 @@ import type { ThemeConfig } from "@/lib/constants";
 const SUB_NAV_TABS = [
   { key: "itinerary", label: "Itinerary", icon: "📅", segment: "itinerary" },
   { key: "expenses", label: "Expenses", icon: "💰", segment: "expenses" },
+  { key: "chat", label: "Chat", icon: "💬", segment: "chat" },
   { key: "packing", label: "Packing", icon: "🧳", segment: "packing" },
   { key: "notes", label: "Notes", icon: "📝", segment: "notes" },
   { key: "meals", label: "Meals", icon: "🍽️", segment: "meals" },

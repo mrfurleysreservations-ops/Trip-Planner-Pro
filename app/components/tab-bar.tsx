@@ -3,7 +3,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 const TABS = [
   { key: "trips", icon: "🧭", label: "Trips", path: "/dashboard" },
-  { key: "packing", icon: "🧳", label: "Packing", path: "/packing" },
+  { key: "chats", icon: "💬", label: "Chats", path: "/chats" },
   { key: "gear", icon: "⚙️", label: "Gear", path: "/gear" },
   { key: "friends", icon: "👥", label: "Friends", path: "/friends" },
   { key: "profile", icon: "👤", label: "Profile", path: "/profile" },

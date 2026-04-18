@@ -867,6 +867,36 @@ export interface Database {
           created_at?: string;
         };
       };
+      trip_messages: {
+        Row: {
+          id: string;
+          trip_id: string;
+          sender_id: string;
+          content: string;
+          created_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          trip_id: string;
+          sender_id: string;
+          content: string;
+          created_at?: string;
+          deleted_at?: string | null;
+        };
+      };
+      trip_message_reads: {
+        Row: {
+          trip_id: string;
+          user_id: string;
+          last_read_at: string;
+        };
+        Insert: {
+          trip_id: string;
+          user_id: string;
+          last_read_at?: string;
+        };
+      };
     };
   };
 }
@@ -951,3 +981,9 @@ export type PackingItemAssignmentInsert = Database["public"]["Tables"]["packing_
 export type OutfitWithItems = Outfit & {
   outfit_items: OutfitItem[];
 };
+
+// ─── Chat ───
+export type TripMessage = Database["public"]["Tables"]["trip_messages"]["Row"];
+export type TripMessageInsert = Database["public"]["Tables"]["trip_messages"]["Insert"];
+export type TripMessageRead = Database["public"]["Tables"]["trip_message_reads"]["Row"];
+export type TripMessageReadInsert = Database["public"]["Tables"]["trip_message_reads"]["Insert"];
