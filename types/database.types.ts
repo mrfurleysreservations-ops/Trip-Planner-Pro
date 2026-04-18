@@ -26,6 +26,7 @@ export interface Database {
           gender: string | null;
           age_range: string | null;
           phone: string | null;
+          city: string | null;
           clothing_styles: string[] | null;
           created_at: string;
           updated_at: string;
@@ -42,6 +43,7 @@ export interface Database {
           gender?: string | null;
           age_range?: string | null;
           phone?: string | null;
+          city?: string | null;
           clothing_styles?: string[] | null;
           created_at?: string;
           updated_at?: string;
@@ -495,6 +497,24 @@ export interface Database {
           created_at?: string;
         };
       };
+      family_links: {
+        Row: {
+          id: string;
+          family_id: string;
+          linked_family_id: string;
+          requested_by: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          family_id: string;
+          linked_family_id: string;
+          requested_by: string;
+          status?: string;
+          created_at?: string;
+        };
+      };
       itinerary_events: {
         Row: {
           id: string;
@@ -937,6 +957,9 @@ export type TripBookingInsert = Database["public"]["Tables"]["trip_bookings"]["I
 
 export type FriendLink = Database["public"]["Tables"]["friend_links"]["Row"];
 export type FriendLinkInsert = Database["public"]["Tables"]["friend_links"]["Insert"];
+
+export type FamilyLink = Database["public"]["Tables"]["family_links"]["Row"];
+export type FamilyLinkInsert = Database["public"]["Tables"]["family_links"]["Insert"];
 
 export type TripActivity = Database["public"]["Tables"]["trip_activity"]["Row"];
 export type TripActivityInsert = Database["public"]["Tables"]["trip_activity"]["Insert"];
