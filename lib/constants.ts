@@ -240,6 +240,50 @@ export const EVENT_TYPES = [
   { value: "other", label: "Other", icon: "📌" },
 ] as const;
 
+// ─── Role Preferences (RSVP Energy) ───
+// Per-trip role that drives UI density: default tab, sub-nav order, chat noise level.
+// Must never hide features — only reorder/re-default them. See docs/role-based-onboarding.md.
+export const ROLE_PREFERENCES = [
+  {
+    value: "all_in",
+    label: "All In",
+    icon: "🔥",
+    tagline: "I'm doing this, get out of my way",
+    defaultTab: "itinerary",
+    subNavOrder: ["itinerary", "expenses", "chat", "packing", "notes", "meals", "group"],
+    chatDefault: "all",
+  },
+  {
+    value: "helping_out",
+    label: "Helping Out",
+    icon: "🙌",
+    tagline: "I've got you on whatever you need",
+    defaultTab: "itinerary",
+    subNavOrder: ["itinerary", "packing", "chat", "expenses", "notes", "meals", "group"],
+    chatDefault: "all",
+  },
+  {
+    value: "just_here",
+    label: "Just Here",
+    icon: "🎟️",
+    tagline: "I showed up, that's the contribution",
+    defaultTab: "expenses",
+    subNavOrder: ["expenses", "chat", "itinerary", "group", "packing", "notes", "meals"],
+    chatDefault: "mentions",
+  },
+  {
+    value: "vibes_only",
+    label: "Vibes Only",
+    icon: "✌️",
+    tagline: "Don't @ me, I'll see you there",
+    defaultTab: "itinerary",
+    subNavOrder: ["itinerary", "expenses", "chat", "group", "packing", "notes", "meals"],
+    chatDefault: "muted",
+  },
+] as const;
+
+export type RolePreference = (typeof ROLE_PREFERENCES)[number]["value"];
+
 // Note conversion destinations (categorization at conversion time, not creation)
 export const NOTE_CONVERT_OPTIONS = [
   { value: "event", label: "Itinerary Event", icon: "📅", description: "Add to the schedule with a date & time" },

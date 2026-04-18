@@ -28,6 +28,7 @@ export interface Database {
           phone: string | null;
           city: string | null;
           clothing_styles: string[] | null;
+          default_role_preference: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -45,6 +46,7 @@ export interface Database {
           phone?: string | null;
           city?: string | null;
           clothing_styles?: string[] | null;
+          default_role_preference?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -238,6 +240,8 @@ export interface Database {
           invited_by: string;
           invite_token: string | null;
           show_dress_slot: boolean;
+          role_preference: string;
+          chat_notification_level: string;
           created_at: string;
           updated_at: string;
         };
@@ -253,6 +257,8 @@ export interface Database {
           invited_by: string;
           invite_token?: string | null;
           show_dress_slot?: boolean;
+          role_preference?: string;
+          chat_notification_level?: string;
           created_at?: string;
           updated_at?: string;
         };
