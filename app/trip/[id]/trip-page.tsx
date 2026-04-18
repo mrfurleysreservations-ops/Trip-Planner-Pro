@@ -709,29 +709,63 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
         {th.vibeBg && <div style={{ position: "fixed", inset: 0, background: th.vibeBg, pointerEvents: "none", zIndex: 0 }} />}
 
         {/* Header */}
-        <div style={{ background: th.headerBg, padding: "14px 20px", backdropFilter: "blur(20px)", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", position: "relative", zIndex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <button onClick={() => router.push("/dashboard")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", color: th.muted, padding: "10px", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
-            <div>
-              <div style={{ color: th.text, fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800 }}>
-                {trip.name}
-              </div>
-              <div style={{ fontSize: "11px", opacity: 0.5 }}>
-                {trip.location && `📍 ${trip.location}`}
-                {trip.location && days.length > 0 && " · "}
-                {days.length > 0 && `${formatDate(days[0])} — ${formatDate(days[days.length - 1])}`}
-                {memberCount > 0 && ` · ${memberCount} ${memberCount === 1 ? "person" : "people"}`}
+        <div
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 20,
+            background: "rgba(255,255,255,0.95)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            borderBottom: `1px solid ${th.cardBorder}`,
+          }}
+        >
+          <div style={{ background: th.headerBg, padding: "14px 20px", backdropFilter: "blur(20px)", borderBottom: `1px solid ${th.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", position: "relative", zIndex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <button
+                onClick={() => router.push("/dashboard")}
+                aria-label="Back to dashboard"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: `${th.accent}1a`,
+                  border: `1.5px solid ${th.accent}40`,
+                  color: th.accent,
+                  fontSize: 22,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  padding: 0,
+                  transition: "all 0.15s",
+                  flexShrink: 0,
+                }}
+              >
+                ←
+              </button>
+              <div style={{ marginLeft: 4 }}>
+                <div style={{ color: th.text, fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800 }}>
+                  {trip.name}
+                </div>
+                <div style={{ fontSize: "11px", opacity: 0.5 }}>
+                  {trip.location && `📍 ${trip.location}`}
+                  {trip.location && days.length > 0 && " · "}
+                  {days.length > 0 && `${formatDate(days[0])} — ${formatDate(days[days.length - 1])}`}
+                  {memberCount > 0 && ` · ${memberCount} ${memberCount === 1 ? "person" : "people"}`}
+                </div>
               </div>
             </div>
+            {isHost && (
+              <button
+                onClick={() => router.push(`/trip/${id}?edit=true`)}
+                style={{ background: "none", border: `1.5px solid ${th.cardBorder}`, borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontSize: "13px", color: th.muted, fontFamily: "'DM Sans', sans-serif", minHeight: "44px", minWidth: "44px" }}
+              >
+                ✏️ Edit Details
+              </button>
+            )}
           </div>
-          {isHost && (
-            <button
-              onClick={() => router.push(`/trip/${id}?edit=true`)}
-              style={{ background: "none", border: `1.5px solid ${th.cardBorder}`, borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontSize: "13px", color: th.muted, fontFamily: "'DM Sans', sans-serif", minHeight: "44px", minWidth: "44px" }}
-            >
-              ✏️ Edit Details
-            </button>
-          )}
         </div>
 
         <div style={{ padding: "16px", paddingBottom: "80px", maxWidth: "600px", margin: "0 auto", position: "relative", zIndex: 1 }}>
@@ -959,43 +993,33 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
           <div style={{ height: "80px" }} />
         </div>
 
-        {/* Sticky gradient CTA — hidden when any modal is open */}
-        {!showAddBookingModal && !showEditBookingModal && (
-          <div style={{
-            position: "fixed",
-            bottom: "56px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "100%",
-            maxWidth: "480px",
-            zIndex: 101,
-            padding: "0 16px 12px",
-            boxSizing: "border-box" as const,
-            background: `linear-gradient(to top, ${th.bg} 70%, transparent)`,
-            pointerEvents: "none" as const
-          }}>
-            <button onClick={() => setShowAddBookingModal(true)} style={{
-              pointerEvents: "auto" as const,
-              width: "100%",
-              padding: "16px 24px",
-              fontSize: "16px",
-              fontWeight: 700,
-              fontFamily: "'Outfit', sans-serif",
-              color: "#fff",
+        {/* Add Booking FAB — hidden when add modal is open */}
+        {!showAddBookingModal && (
+          <button
+            onClick={() => setShowAddBookingModal(true)}
+            aria-label="Add booking"
+            style={{
+              position: "fixed",
+              bottom: 72,
+              right: 16,
+              zIndex: 101,
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
               background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+              color: "#fff",
               border: "none",
-              borderRadius: "14px",
+              fontSize: 28,
+              fontWeight: 300,
               cursor: "pointer",
-              boxShadow: "0 4px 20px rgba(232,148,58,0.35)",
+              boxShadow: `0 4px 20px ${th.accent}8c`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: "8px",
-              minHeight: "52px"
-            }}>
-              + Add Booking
-            </button>
-          </div>
+            }}
+          >
+            +
+          </button>
         )}
 
         {/* Add Booking Modal */}
