@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { THEMES } from "@/lib/constants";
+import TopNav from "@/app/top-nav";
 import type {
   FriendRowData,
   PendingFriendData,
@@ -29,6 +30,9 @@ interface FriendsPageProps {
   pendingFamilies: PendingFamilyData[];
   suggestedFamilies: SuggestedFamilyData[];
   otherFamilies: OtherFamilyData[];
+  unreadChatCount: number;
+  pendingFriendCount: number;
+  unreadAlertCount: number;
 }
 
 // ─── Main page ──────────────────────────────────────────────────────
@@ -45,6 +49,9 @@ export default function FriendsPage(props: FriendsPageProps) {
     pendingFamilies,
     suggestedFamilies,
     otherFamilies,
+    unreadChatCount,
+    pendingFriendCount,
+    unreadAlertCount,
   } = props;
 
   const router = useRouter();
@@ -230,11 +237,11 @@ export default function FriendsPage(props: FriendsPageProps) {
   // ─── Render ──────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: "100vh", background: th.bg, color: th.text, paddingBottom: 96 }}>
-      {/* ─── STICKY TOP (title + pill toggle only) ─────────────────── */}
+      {/* ─── STICKY TOP (title + TopNav + pill toggle) ─────────────── */}
       <div
         style={{
           position: "sticky",
-          top: 56, // pins below the global 56px TabBar
+          top: 0,
           zIndex: 20,
           background: "rgba(248,248,248,0.96)",
           backdropFilter: "blur(20px)",
@@ -242,62 +249,69 @@ export default function FriendsPage(props: FriendsPageProps) {
           borderBottom: "1px solid rgba(0,0,0,0.06)",
         }}
       >
-        {/* Row 1 — Title + Share link */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 16px 8px",
-            gap: 8,
-            maxWidth: 600,
-            margin: "0 auto",
-            width: "100%",
-            boxSizing: "border-box",
-          }}
-        >
-          <h1
-            style={{
-              margin: 0,
-              fontFamily: "'Outfit', sans-serif",
-              fontSize: 22,
-              fontWeight: 800,
-              letterSpacing: "-0.02em",
-              color: th.text,
-            }}
-          >
-            Friends
-          </h1>
-          <button
-            onClick={() => alert("Share link — coming soon.")}
-            style={{
-              background: "#fff",
-              border: "1.5px solid #e0e0e0",
-              borderRadius: 10,
-              padding: "6px 12px",
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#555",
-              cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            Share link
-          </button>
-        </div>
-
-        {/* Row 2 — Pill toggle */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "4px 16px 10px" }}>
+        <div style={{ maxWidth: 600, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+          {/* Row 1 — Title + Share link */}
           <div
             style={{
-              display: "inline-flex",
-              background: th.card,
-              border: `1.5px solid ${th.cardBorder}`,
-              borderRadius: 20,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "12px 16px 8px",
+              gap: 8,
             }}
           >
-            <PillBtn label="Friends" active={view === "friends"} onClick={() => setView("friends")} accent={accent} muted={th.muted} />
-            <PillBtn label="Families" active={view === "families"} onClick={() => setView("families")} accent={accent} muted={th.muted} />
+            <h1
+              style={{
+                margin: 0,
+                fontFamily: "'Outfit', sans-serif",
+                fontSize: 22,
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                color: th.text,
+              }}
+            >
+              Friends
+            </h1>
+            <button
+              onClick={() => alert("Share link — coming soon.")}
+              style={{
+                background: "#fff",
+                border: "1.5px solid #e0e0e0",
+                borderRadius: 10,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 600,
+                color: "#555",
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Share link
+            </button>
+          </div>
+
+          {/* Row 2 — Top-level nav */}
+          <div style={{ padding: "0 16px" }}>
+            <TopNav
+              unreadChatCount={unreadChatCount}
+              pendingFriendCount={pendingFriendCount}
+              unreadAlertCount={unreadAlertCount}
+            />
+          </div>
+
+          {/* Row 3 — Pill toggle */}
+          <div style={{ display: "flex", justifyContent: "center", padding: "4px 16px 10px" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                background: th.card,
+                border: `1.5px solid ${th.cardBorder}`,
+                borderRadius: 20,
+              }}
+            >
+              <PillBtn label="Friends" active={view === "friends"} onClick={() => setView("friends")} accent={accent} muted={th.muted} />
+              <PillBtn label="Families" active={view === "families"} onClick={() => setView("families")} accent={accent} muted={th.muted} />
+            </div>
           </div>
         </div>
       </div>

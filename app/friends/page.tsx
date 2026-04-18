@@ -95,7 +95,7 @@ export default async function FriendsServerPage() {
   ] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("full_name, avatar_url, city")
+      .select("full_name, avatar_url, city, alerts_last_seen_at")
       .eq("id", user.id)
       .single(),
 
@@ -527,6 +527,73 @@ export default async function FriendsServerPage() {
     };
   }).sort((a, b) => a.name.localeCompare(b.name));
 
+  // ─── TopNav badge counts ──────────────────────────────────────────
+  // Mirrors the count logic used on /dashboard so the TopNav shows the same
+  // chat/friend/alert badges everywhere the nav is rendered.
+  const [allMembershipsRes, pendingTripInvitesRes] = await Promise.all([
+    // All trip memberships (any status) — chat + activity both care about this.
+    // DB trigger auto-adds the host as a trip_member, so this also covers owned trips.
+    supabase.from("trip_members").select("trip_id").eq("user_id", user.id),
+    // Pending trip invitations awaiting this user's accept/decline.
+    supabase
+      .from("trip_members")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "pending"),
+  ]);
+
+  const allMemberTripIds = (allMembershipsRes.data ?? []).map((m: any) => m.trip_id);
+
+  // Unread chat messages across all trips the user belongs to. Mirrors dashboard:
+  // compare per-trip last_read_at against undeleted messages from other senders.
+  let unreadChatCount = 0;
+  if (allMemberTripIds.length > 0) {
+    const [readsRes, msgsRes] = await Promise.all([
+      supabase
+        .from("trip_message_reads")
+        .select("trip_id, last_read_at")
+        .eq("user_id", user.id)
+        .in("trip_id", allMemberTripIds),
+      supabase
+        .from("trip_messages")
+        .select("trip_id, created_at")
+        .in("trip_id", allMemberTripIds)
+        .is("deleted_at", null)
+        .neq("sender_id", user.id),
+    ]);
+
+    const readsByTrip = new Map<string, string>();
+    (readsRes.data ?? []).forEach((r: any) => readsByTrip.set(r.trip_id, r.last_read_at));
+
+    (msgsRes.data ?? []).forEach((m: any) => {
+      const lastRead = readsByTrip.get(m.trip_id);
+      if (!lastRead || new Date(m.created_at) > new Date(lastRead)) {
+        unreadChatCount++;
+      }
+    });
+  }
+
+  // Trip activity newer than the user's last visit to /alerts.
+  let activityCount = 0;
+  const lastAlertsSeen = (profile as any)?.alerts_last_seen_at ?? null;
+  if (allMemberTripIds.length > 0) {
+    let activityQuery = supabase
+      .from("trip_activity")
+      .select("id", { count: "exact", head: true })
+      .in("trip_id", allMemberTripIds);
+    if (lastAlertsSeen) {
+      activityQuery = activityQuery.gte("created_at", lastAlertsSeen);
+    }
+    const { count } = await activityQuery;
+    activityCount = count ?? 0;
+  }
+
+  // Friend requests waiting on the current user = incoming pending links.
+  // Derived from already-fetched pendingLinks to avoid a duplicate query.
+  const pendingFriendCount = pendingIncoming.length;
+  const pendingInviteCount = pendingTripInvitesRes.count ?? 0;
+  const unreadAlertCount = pendingInviteCount + pendingFriendCount + activityCount;
+
   return (
     <FriendsPage
       user={{
@@ -544,6 +611,9 @@ export default async function FriendsServerPage() {
       pendingFamilies={pendingFamiliesData}
       suggestedFamilies={suggestedFamiliesData}
       otherFamilies={otherFamiliesData}
+      unreadChatCount={unreadChatCount}
+      pendingFriendCount={pendingFriendCount}
+      unreadAlertCount={unreadAlertCount}
     />
   );
 }
