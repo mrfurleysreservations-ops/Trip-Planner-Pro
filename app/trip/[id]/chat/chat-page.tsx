@@ -12,6 +12,8 @@ interface ChatPageProps {
   userId: string;
   members: ChatMember[];
   initialMessages: TripMessage[];
+  /** Viewer's trip_members.role_preference — drives sub-nav order. */
+  currentUserRole: string | null;
 }
 
 const SUB_NAV_HEIGHT = 56;
@@ -59,7 +61,7 @@ function initialOf(name: string): string {
 // Main component
 // ═══════════════════════════════════════════
 
-export default function ChatPage({ trip, userId, members, initialMessages }: ChatPageProps) {
+export default function ChatPage({ trip, userId, members, initialMessages, currentUserRole }: ChatPageProps) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;
@@ -523,7 +525,7 @@ export default function ChatPage({ trip, userId, members, initialMessages }: Cha
       </div>
 
       {/* ─── FIXED SUB-NAV ─── */}
-      <TripSubNav tripId={trip.id} theme={th} />
+      <TripSubNav tripId={trip.id} theme={th} role={currentUserRole} />
     </div>
   );
 }

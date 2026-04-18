@@ -608,7 +608,7 @@ export default function ExpensesPageComponent({
         )}
       </div>
 
-      <TripSubNav tripId={trip.id} theme={th} />
+      <TripSubNav tripId={trip.id} theme={th} role={currentUserMember?.role_preference ?? null} />
 
       <div style={{ maxWidth: 600, margin: "0 auto", padding: 16, position: "relative", zIndex: 1 }}>
 

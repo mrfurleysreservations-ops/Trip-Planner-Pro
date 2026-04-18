@@ -18,5 +18,15 @@ export default async function MealsServerPage({ params }: { params: { id: string
 
   if (!trip) redirect("/dashboard");
 
-  return <MealsPage trip={trip as Trip} />;
+  // Viewer's role_preference drives sub-nav ordering. Cheap lookup —
+  // single-row fetch on a unique (trip_id, user_id) combo.
+  const { data: memberRow } = await supabase
+    .from("trip_members")
+    .select("role_preference")
+    .eq("trip_id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const currentUserRole = memberRow?.role_preference ?? null;
+
+  return <MealsPage trip={trip as Trip} currentUserRole={currentUserRole} />;
 }

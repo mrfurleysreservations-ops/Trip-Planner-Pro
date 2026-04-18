@@ -1,7 +1,12 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
+import { useMemo } from "react";
 import type { ThemeConfig } from "@/lib/constants";
+import { subNavOrderForRole } from "@/lib/role-density";
 
+// Canonical tab catalog. All 7 tabs render for every role — role only changes
+// order. Do NOT remove tabs or hide them behind a role. See feedback memory
+// `role_density_no_feature_loss.md`.
 const SUB_NAV_TABS = [
   { key: "itinerary", label: "Itinerary", icon: "📅", segment: "itinerary" },
   { key: "expenses", label: "Expenses", icon: "💰", segment: "expenses" },
@@ -22,12 +27,37 @@ function getActiveSegment(pathname: string, tripId: string): string | null {
 interface TripSubNavProps {
   tripId: string;
   theme: ThemeConfig;
+  /** Current viewer's `trip_members.role_preference`. Drives tab ordering. */
+  role?: string | null;
 }
 
-export default function TripSubNav({ tripId, theme }: TripSubNavProps) {
+export default function TripSubNav({ tripId, theme, role }: TripSubNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const activeSegment = getActiveSegment(pathname, tripId);
+
+  // Reorder the canonical tab list per role. Unknown segments from the role
+  // config are skipped; any tab missing from the role config gets appended
+  // so we never silently drop a tab.
+  const orderedTabs = useMemo(() => {
+    const order = subNavOrderForRole(role);
+    const bySegment = new Map(SUB_NAV_TABS.map((t) => [t.segment, t]));
+    const seen = new Set<string>();
+    const out: typeof SUB_NAV_TABS = [];
+    for (const seg of order) {
+      const tab = bySegment.get(seg);
+      if (tab && !seen.has(seg)) {
+        out.push(tab);
+        seen.add(seg);
+      }
+    }
+    // Safety net: append any tab not referenced by the role config so the
+    // "all 7 tabs always render" invariant holds even if the constants drift.
+    for (const tab of SUB_NAV_TABS) {
+      if (!seen.has(tab.segment)) out.push(tab);
+    }
+    return out;
+  }, [role]);
 
   return (
     <nav style={{
@@ -48,7 +78,7 @@ export default function TripSubNav({ tripId, theme }: TripSubNavProps) {
       borderTop: "1px solid #e5e5e5",
       padding: "0 4px",
     }}>
-      {SUB_NAV_TABS.map((tab) => {
+      {orderedTabs.map((tab) => {
         const active = activeSegment === tab.segment;
         return (
           <button

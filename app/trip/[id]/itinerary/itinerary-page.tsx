@@ -1151,8 +1151,18 @@ export default function ItineraryPage({
   const HOUR_HEIGHT = 60;     // px per hour row
   const LABEL_WIDTH = 52;     // px for the time labels column
 
-  // Selected day for calendar view (default to first trip day)
-  const [selectedDayIdx, setSelectedDayIdx] = useState(0);
+  // Selected day for calendar view.
+  // Default: first trip day. For vibes_only viewers, "Today mode" lands them
+  // on today's date if the trip is currently in-progress — otherwise fall
+  // back to day 1 so pre-trip and post-trip views aren't empty.
+  const [selectedDayIdx, setSelectedDayIdx] = useState(() => {
+    if (currentMember?.role_preference === "vibes_only" && tripDays.length > 0) {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const todayIdx = tripDays.indexOf(todayIso);
+      if (todayIdx >= 0) return todayIdx;
+    }
+    return 0;
+  });
   const selectedDate = tripDays[selectedDayIdx] || "";
 
   // Events for selected day, sorted by start_time (only placed events)
@@ -1380,7 +1390,7 @@ export default function ItineraryPage({
         )}
       </div>
 
-      <TripSubNav tripId={trip.id} theme={th} />
+      <TripSubNav tripId={trip.id} theme={th} role={currentMember?.role_preference ?? null} />
 
       {/* No dates warning */}
       {noDates && (

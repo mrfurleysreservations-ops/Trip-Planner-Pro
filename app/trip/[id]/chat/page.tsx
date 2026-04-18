@@ -72,6 +72,16 @@ export default async function ChatServerPage({ params }: { params: { id: string 
 
   const initialMessages = ((messagesRaw ?? []) as TripMessage[]).slice().reverse();
 
+  // Viewer's role_preference drives sub-nav ordering. Cheap lookup —
+  // single-row fetch on a unique (trip_id, user_id) combo.
+  const { data: viewerMemberRow } = await supabase
+    .from("trip_members")
+    .select("role_preference")
+    .eq("trip_id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const currentUserRole = viewerMemberRow?.role_preference ?? null;
+
   // Bump last_read_at so the /chats unread pill clears immediately on open.
   // The client also bumps on mount + on incoming realtime — this just covers
   // the SSR case and avoids a flash of stale unread count.
@@ -88,6 +98,7 @@ export default async function ChatServerPage({ params }: { params: { id: string 
       userId={user.id}
       members={members}
       initialMessages={initialMessages}
+      currentUserRole={currentUserRole}
     />
   );
 }

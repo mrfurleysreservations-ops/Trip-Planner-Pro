@@ -4,7 +4,7 @@ import { THEMES } from "@/lib/constants";
 import type { Trip } from "@/types/database.types";
 import TripSubNav from "../trip-sub-nav";
 
-export default function MealsPage({ trip }: { trip: Trip }) {
+export default function MealsPage({ trip, currentUserRole }: { trip: Trip; currentUserRole: string | null }) {
   const router = useRouter();
   const th = THEMES[trip.trip_type] || THEMES.home;
 
@@ -15,7 +15,7 @@ export default function MealsPage({ trip }: { trip: Trip }) {
         <button onClick={() => router.push(`/trip/${trip.id}`)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "4px", color: th.muted }}>←</button>
         <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", color: th.text, margin: 0 }}>Meals</h2>
       </div>
-      <TripSubNav tripId={trip.id} theme={th} />
+      <TripSubNav tripId={trip.id} theme={th} role={currentUserRole} />
       <div style={{ padding: "24px 16px", maxWidth: "600px", margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
         <div style={{ fontSize: "48px", marginBottom: "16px" }}>🍽️</div>
         <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "20px", marginBottom: "8px" }}>Meals</h3>

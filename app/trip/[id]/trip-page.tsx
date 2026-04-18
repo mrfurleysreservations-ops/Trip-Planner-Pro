@@ -8,9 +8,10 @@ import { generateDays, formatDate } from "@/lib/utils";
 import { usePlacesAutocomplete } from "@/lib/use-places-autocomplete";
 import { useItineraryLocations } from "@/lib/use-itinerary-locations";
 import { logActivity } from "@/lib/trip-activity";
-import type { Trip, TripBooking, TripMember } from "@/types/database.types";
+import type { Trip, TripBooking, TripMember, ItineraryEvent } from "@/types/database.types";
 import TripSubNav from "./trip-sub-nav";
 import WeatherCard from "./weather-card";
+import RoleHero from "./role-hero";
 
 export interface TripPageProps {
   trip: Trip;
@@ -21,6 +22,12 @@ export interface TripPageProps {
   memberCount: number;
   bookings: TripBooking[];
   members: TripMember[];
+  /** Current viewer's trip_members.role_preference — drives sub-nav order + hero variant. */
+  currentUserRole: string | null;
+  /** Earliest upcoming itinerary event (date >= today), or null if nothing scheduled. */
+  nextEvent: ItineraryEvent | null;
+  /** Count of events with date >= today. Used by the All In hero headline. */
+  upcomingEventCount: number;
 }
 
 // ─── Booking helpers ───
@@ -574,7 +581,19 @@ function EditBookingFormHub({ booking, tripId, userId, accent, cardBg, cardBorde
   );
 }
 
-export default function TripPage({ trip: initialTrip, userId, userName, isHost, needsSetup, memberCount, bookings: initialBookings, members }: TripPageProps) {
+export default function TripPage({
+  trip: initialTrip,
+  userId,
+  userName,
+  isHost,
+  needsSetup,
+  memberCount,
+  bookings: initialBookings,
+  members,
+  currentUserRole,
+  nextEvent,
+  upcomingEventCount,
+}: TripPageProps) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const id = initialTrip.id;
@@ -769,6 +788,18 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
         </div>
 
         <div style={{ padding: "16px", paddingBottom: "80px", maxWidth: "600px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+          {/* Role-specific hero addendum — renders below the existing trip
+              header. Respects the "nothing disappears" rule: this is an ADD,
+              not a replacement. See lib/role-density.ts + role-hero.tsx. */}
+          <RoleHero
+            role={currentUserRole}
+            trip={trip}
+            theme={th}
+            nextEvent={nextEvent}
+            upcomingEventCount={upcomingEventCount}
+            isHost={isHost}
+          />
+
           {/* Weather Forecast */}
           <WeatherCard location={trip.location} startDate={trip.start_date} endDate={trip.end_date} theme={th} />
 
@@ -1125,7 +1156,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
           );
         })()}
 
-        <TripSubNav tripId={id} theme={th} />
+        <TripSubNav tripId={id} theme={th} role={currentUserRole} />
 
         <style>{`
           @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -1225,7 +1256,7 @@ export default function TripPage({ trip: initialTrip, userId, userName, isHost, 
         </button>
       </div>
 
-      <TripSubNav tripId={id} theme={th} />
+      <TripSubNav tripId={id} theme={th} role={currentUserRole} />
     </div>
   );
 }

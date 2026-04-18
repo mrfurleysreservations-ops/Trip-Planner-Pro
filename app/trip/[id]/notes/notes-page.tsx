@@ -47,6 +47,9 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;
 
+  // Current viewer's role — drives sub-nav ordering. See lib/role-density.ts.
+  const currentUserRole = members.find((m) => m.user_id === userId)?.role_preference ?? null;
+
   const [notes, setNotes] = useState<TripNote[]>(initialNotes);
   const [filter, setFilter] = useState<FilterTab>("all");
   const [scopeFilter, setScopeFilter] = useState<"all" | "group" | "personal">("all");
@@ -642,7 +645,7 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
         </div>
       </div>
 
-      <TripSubNav tripId={trip.id} theme={th} />
+      <TripSubNav tripId={trip.id} theme={th} role={currentUserRole} />
 
       <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px", position: "relative", zIndex: 1 }}>
 

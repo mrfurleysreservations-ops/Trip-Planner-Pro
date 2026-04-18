@@ -1656,7 +1656,7 @@ export default function PackingPage({
           <button onClick={() => router.push(`/trip/${trip.id}`)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "4px", color: th.muted }}>←</button>
           <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "20px", color: th.text, margin: 0 }}>Packing</h2>
         </div>
-        <TripSubNav tripId={trip.id} theme={th} />
+        <TripSubNav tripId={trip.id} theme={th} role={currentMember?.role_preference ?? null} />
         {/* Person Tabs — stay clickable so Joe can jump back to a member who IS opted in. */}
         <div style={{ display: "flex", gap: "0", padding: "0 16px", background: th.bg, borderBottom: `1px solid ${th.cardBorder}`, overflowX: "auto", scrollbarWidth: "none", position: "relative", zIndex: 1 }}>
           {myFamilyTripMembers.map(m => (
@@ -1828,7 +1828,7 @@ export default function PackingPage({
         </div>
       </div>
 
-      <TripSubNav tripId={trip.id} theme={th} />
+      <TripSubNav tripId={trip.id} theme={th} role={currentMember?.role_preference ?? null} />
 
       {/* Packing Style Banner */}
       <div style={{ position: "relative", zIndex: 1 }}>

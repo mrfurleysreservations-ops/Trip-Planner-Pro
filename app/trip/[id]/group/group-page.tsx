@@ -34,6 +34,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
 
   const [members, setMembers] = useState<TripMember[]>(initialMembers);
   const currentUserName = initialMembers.find((m) => m.user_id === userId)?.name || "Someone";
+  const currentUserRole = members.find((m) => m.user_id === userId)?.role_preference ?? null;
   const [activeTab, setActiveTab] = useState<"friends" | "families">("friends");
   const [search, setSearch] = useState("");
   const [inviteName, setInviteName] = useState("");
@@ -793,7 +794,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
 
       </div>
 
-      <TripSubNav tripId={trip.id} theme={th} />
+      <TripSubNav tripId={trip.id} theme={th} role={currentUserRole} />
     </div>
   );
 }
