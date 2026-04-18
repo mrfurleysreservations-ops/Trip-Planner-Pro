@@ -22,6 +22,9 @@ export interface AlertsPageProps {
   pendingFriendRequests: PendingFriendRequest[];
   activity: TripActivity[];
   tripNameMap: Record<string, string>;
+  unreadChatCount: number;
+  pendingFriendCount: number;
+  unreadAlertCount: number;
 }
 
 export default async function AlertsServerPage() {
@@ -30,23 +33,20 @@ export default async function AlertsServerPage() {
 
   if (!user) redirect("/auth/login");
 
-  // ─── Get user's last seen timestamp ───
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("alerts_last_seen_at")
-    .eq("id", user.id)
-    .single();
+  // ─── Kick off independent fetches in parallel ───
+  const [profileRes, pendingMemberRes, incomingFriendRes, allMembershipsRes, ownedTripsRes] = await Promise.all([
+    supabase.from("user_profiles").select("alerts_last_seen_at").eq("id", user.id).single(),
+    supabase.from("trip_members").select("*").eq("user_id", user.id).eq("status", "pending"),
+    supabase.from("friend_links").select("*").eq("friend_id", user.id).eq("status", "pending"),
+    supabase.from("trip_members").select("trip_id").eq("user_id", user.id),
+    supabase.from("trips").select("id, name").eq("owner_id", user.id),
+  ]);
 
-  const alertsLastSeenAt = profile?.alerts_last_seen_at || null;
+  const alertsLastSeenAt = profileRes.data?.alerts_last_seen_at || null;
 
   // ─── Pending trip invitations ───
-  const { data: pendingMemberRows } = await supabase
-    .from("trip_members")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("status", "pending");
-
-  const pendingTripIds = (pendingMemberRows ?? []).map((m: any) => m.trip_id);
+  const pendingMemberRows = pendingMemberRes.data ?? [];
+  const pendingTripIds = pendingMemberRows.map((m: any) => m.trip_id);
   let pendingInvitations: PendingInvitation[] = [];
   if (pendingTripIds.length > 0) {
     const { data: pendingTrips } = await supabase
@@ -55,20 +55,15 @@ export default async function AlertsServerPage() {
       .in("id", pendingTripIds);
     const tripMap: Record<string, Trip> = {};
     (pendingTrips ?? []).forEach((t: any) => { tripMap[t.id] = t as Trip; });
-    pendingInvitations = (pendingMemberRows ?? [])
+    pendingInvitations = pendingMemberRows
       .filter((m: any) => tripMap[m.trip_id])
       .map((m: any) => ({ member: m as TripMember, trip: tripMap[m.trip_id] }));
   }
 
   // ─── Pending friend requests (where someone sent ME a request) ───
-  const { data: incomingFriendLinks } = await supabase
-    .from("friend_links")
-    .select("*")
-    .eq("friend_id", user.id)
-    .eq("status", "pending");
-
+  const incomingFriendLinks = incomingFriendRes.data ?? [];
   let pendingFriendRequests: PendingFriendRequest[] = [];
-  if (incomingFriendLinks && incomingFriendLinks.length > 0) {
+  if (incomingFriendLinks.length > 0) {
     const senderIds = incomingFriendLinks.map((fl: any) => fl.user_id);
     const { data: senderProfiles } = await supabase
       .from("user_profiles")
@@ -88,21 +83,9 @@ export default async function AlertsServerPage() {
   }
 
   // ─── Trip activity (across all user's trips) ───
-  const { data: allMemberships } = await supabase
-    .from("trip_members")
-    .select("trip_id")
-    .eq("user_id", user.id);
-
-  const allTripIds = (allMemberships ?? []).map((m: any) => m.trip_id);
-
-  // Also include trips owned by user
-  const { data: ownedTrips } = await supabase
-    .from("trips")
-    .select("id, name")
-    .eq("owner_id", user.id);
-
-  const ownedTripIds = (ownedTrips ?? []).map((t: any) => t.id);
-  const combinedTripIds = [...new Set([...allTripIds, ...ownedTripIds])];
+  const memberTripIds = (allMembershipsRes.data ?? []).map((m: any) => m.trip_id);
+  const ownedTripIds = (ownedTripsRes.data ?? []).map((t: any) => t.id);
+  const combinedTripIds = Array.from(new Set<string>([...memberTripIds, ...ownedTripIds]));
 
   let activity: TripActivity[] = [];
   const tripNameMap: Record<string, string> = {};
@@ -124,6 +107,58 @@ export default async function AlertsServerPage() {
     (tripsRes.data ?? []).forEach((t: any) => { tripNameMap[t.id] = t.name; });
   }
 
+  // ─── TopNav badge counts ───
+  // Mirrors /dashboard so the nav badges stay consistent across all top-level pages.
+  // unreadAlertCount here is computed from the pre-update snapshot of
+  // alerts_last_seen_at — after the client marks alerts as seen it will render as 0
+  // on the next request, which is expected.
+
+  // Unread chat messages across all trips the user belongs to.
+  let unreadChatCount = 0;
+  if (combinedTripIds.length > 0) {
+    const [readsRes, msgsRes] = await Promise.all([
+      supabase
+        .from("trip_message_reads")
+        .select("trip_id, last_read_at")
+        .eq("user_id", user.id)
+        .in("trip_id", combinedTripIds),
+      supabase
+        .from("trip_messages")
+        .select("trip_id, created_at")
+        .in("trip_id", combinedTripIds)
+        .is("deleted_at", null)
+        .neq("sender_id", user.id),
+    ]);
+
+    const readsByTrip = new Map<string, string>();
+    (readsRes.data ?? []).forEach((r: any) => readsByTrip.set(r.trip_id, r.last_read_at));
+
+    (msgsRes.data ?? []).forEach((m: any) => {
+      const lastRead = readsByTrip.get(m.trip_id);
+      if (!lastRead || new Date(m.created_at) > new Date(lastRead)) {
+        unreadChatCount++;
+      }
+    });
+  }
+
+  // Trip activity newer than the user's last visit to /alerts.
+  let activityCount = 0;
+  if (memberTripIds.length > 0) {
+    let activityQuery = supabase
+      .from("trip_activity")
+      .select("id", { count: "exact", head: true })
+      .in("trip_id", memberTripIds);
+    if (alertsLastSeenAt) {
+      activityQuery = activityQuery.gte("created_at", alertsLastSeenAt);
+    }
+    const { count } = await activityQuery;
+    activityCount = count ?? 0;
+  }
+
+  const pendingFriendCount = incomingFriendLinks.length;
+  const pendingInviteCount = pendingMemberRows.length;
+  const unreadAlertCount = pendingInviteCount + pendingFriendCount + activityCount;
+
   return (
     <AlertsPage
       userId={user.id}
@@ -132,6 +167,9 @@ export default async function AlertsServerPage() {
       pendingFriendRequests={pendingFriendRequests}
       activity={activity}
       tripNameMap={tripNameMap}
+      unreadChatCount={unreadChatCount}
+      pendingFriendCount={pendingFriendCount}
+      unreadAlertCount={unreadAlertCount}
     />
   );
 }
