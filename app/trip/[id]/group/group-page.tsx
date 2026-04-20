@@ -39,7 +39,32 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
   const [search, setSearch] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Basic email shape check — same regex as the server route.
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+
+  // POST to /api/send-invite. Best-effort — surfaces the error but never blocks
+  // the DB row that was already created (host can re-send later).
+  const triggerInviteEmail = useCallback(async (email: string, name: string) => {
+    try {
+      const res = await fetch("/api/send-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tripId: trip.id, email, inviteeName: name }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        console.error("send-invite failed:", j?.error || res.statusText);
+        return { ok: false, error: j?.error as string | undefined };
+      }
+      return { ok: true as const };
+    } catch (e: any) {
+      console.error("send-invite threw:", e);
+      return { ok: false, error: e?.message as string | undefined };
+    }
+  }, [trip.id]);
 
   // Sets for quick lookups
   const memberUserIds = useMemo(() => new Set(members.map((m) => m.user_id).filter(Boolean)), [members]);
@@ -102,6 +127,10 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
       if (error) {
         console.error("addFriend error:", JSON.stringify(error, null, 2));
       } else {
+        // Best-effort: email the added app user a magic-link landing on /trip/[id]/invite.
+        if (friend.email) {
+          triggerInviteEmail(friend.email, friend.full_name || "Friend").catch(() => {});
+        }
         logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "added", entityType: "member", entityName: friend.full_name || "Friend", linkPath: `/trip/${trip.id}/group` });
         // Build a local placeholder — avoids .select() triggering SELECT RLS recursion
         setMembers((prev) => [...prev, {
@@ -213,11 +242,26 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
   }, [supabase, trip.id, userId, memberFamilyMemberIds]);
 
   const sendExternalInvite = useCallback(async () => {
-    if (!inviteName.trim()) return;
+    const name = inviteName.trim();
+    const email = inviteEmail.trim();
+    setInviteError(null);
+
+    if (!name) {
+      setInviteError("Name is required");
+      return;
+    }
+    if (!email) {
+      setInviteError("Email is required — we need to send them an invite link");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setInviteError("That doesn't look like a valid email address");
+      return;
+    }
+
     setLoading(true);
     const token = crypto.randomUUID();
-    const name = inviteName.trim();
-    const email = inviteEmail.trim() || null;
+
     const { error } = await supabase
       .from("trip_members")
       .insert({
@@ -230,29 +274,45 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
         invited_by: userId,
         invite_token: token,
       });
+
     if (error) {
       console.error("sendExternalInvite error:", JSON.stringify(error, null, 2));
-    } else {
-      logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "added", entityType: "member", entityName: name, detail: "External invite", linkPath: `/trip/${trip.id}/group` });
-      setMembers((prev) => [...prev, {
-        id: crypto.randomUUID(),
-        trip_id: trip.id,
-        user_id: null,
-        family_member_id: null,
-        name,
-        email,
-        role: "member",
-        status: "pending",
-        invited_by: userId,
-        invite_token: token,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as TripMember]);
+      setInviteError("Couldn't save the invite — try again");
+      setLoading(false);
+      return;
+    }
+
+    // Fire the invite email. If email fails, keep the row so the host can
+    // retry/resend, but surface the error.
+    const mail = await triggerInviteEmail(email, name);
+
+    logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "added", entityType: "member", entityName: name, detail: "External invite", linkPath: `/trip/${trip.id}/group` });
+    setMembers((prev) => [...prev, {
+      id: crypto.randomUUID(),
+      trip_id: trip.id,
+      user_id: null,
+      family_member_id: null,
+      name,
+      email,
+      role: "member",
+      status: "pending",
+      invited_by: userId,
+      invite_token: token,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as TripMember]);
+
+    if (mail.ok) {
       setInviteName("");
       setInviteEmail("");
+      setInviteError(null);
+    } else {
+      setInviteError(
+        `Saved ${name} to the roster, but the invite email didn't send${mail.error ? `: ${mail.error}` : ""}. Re-send from the members list.`
+      );
     }
     setLoading(false);
-  }, [supabase, trip.id, userId, inviteName, inviteEmail]);
+  }, [supabase, trip.id, userId, inviteName, inviteEmail, currentUserName, triggerInviteEmail]);
 
   const removeMember = useCallback(async (memberId: string) => {
     setLoading(true);
@@ -537,31 +597,57 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
           <div>
             {/* 1. Invite someone new (moved to top) */}
             <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${th.cardBorder}` }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>✉️ Invite someone new</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>✉️ Invite someone new</div>
+              <div style={{ fontSize: 11, color: th.muted, marginBottom: 8 }}>
+                We'll email them a link to join this trip.
+              </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
                 <input
                   value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                  placeholder="Name"
+                  onChange={(e) => { setInviteName(e.target.value); if (inviteError) setInviteError(null); }}
+                  placeholder="Name *"
                   className="input-modern"
                   style={{ flex: "1 1 140px" }}
                 />
                 <input
                   value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="Email (optional)"
+                  onChange={(e) => { setInviteEmail(e.target.value); if (inviteError) setInviteError(null); }}
+                  placeholder="Email *"
+                  type="email"
+                  required
                   className="input-modern"
                   style={{ flex: "1 1 140px" }}
                 />
                 <button
                   onClick={sendExternalInvite}
-                  disabled={loading || !inviteName.trim()}
+                  disabled={loading || !inviteName.trim() || !inviteEmail.trim()}
                   className="btn"
-                  style={{ background: th.accent, padding: "8px 16px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", opacity: loading || !inviteName.trim() ? 0.5 : 1 }}
+                  style={{
+                    background: th.accent,
+                    padding: "8px 16px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    opacity: loading || !inviteName.trim() || !inviteEmail.trim() ? 0.5 : 1,
+                  }}
                 >
-                  Send Invite
+                  {loading ? "Sending…" : "Send Invite"}
                 </button>
               </div>
+              {inviteError && (
+                <div style={{
+                  marginTop: 8,
+                  padding: "8px 10px",
+                  background: "#fff3cd",
+                  border: "1px solid #ffeaa7",
+                  borderRadius: 8,
+                  color: "#856404",
+                  fontSize: 12,
+                  fontWeight: 500,
+                }}>
+                  {inviteError}
+                </div>
+              )}
             </div>
 
             {/* 2. Search */}
