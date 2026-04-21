@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES, ROLE_PREFERENCES } from "@/lib/constants";
@@ -7,6 +7,7 @@ import { logActivity } from "@/lib/trip-activity";
 import type { Trip, TripMember, FamilyMember } from "@/types/database.types";
 import type { GroupPageProps, FriendWithProfile, FamilyWithMembers } from "./page";
 import TripSubNav from "../trip-sub-nav";
+import BulkInviteModal from "./bulk-invite-modal";
 
 // ─── Small UI components ───
 
@@ -41,6 +42,16 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkSentCount, setBulkSentCount] = useState(0);
+  const [toast, setToast] = useState<string | null>(null);
+
+  // Auto-dismiss the bulk-invite success toast after a few seconds.
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2800);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // Basic email shape check — same regex as the server route.
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
@@ -241,6 +252,60 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
     setLoading(false);
   }, [supabase, trip.id, userId, memberFamilyMemberIds]);
 
+  // Shared per-invite helper: DB insert + email trigger + optimistic member row.
+  // Called from BOTH the single-invite form and the bulk-invite modal so the
+  // two flows stay in lockstep (same columns, same regex upstream, same email
+  // path). Intentionally does NOT call logActivity — callers decide whether to
+  // log once per invite (single) or once per batch (bulk).
+  const insertExternalMember = useCallback(
+    async (
+      name: string,
+      email: string
+    ): Promise<
+      | { ok: true; member: TripMember; mailOk: boolean; mailError?: string }
+      | { ok: false; error: string }
+    > => {
+      const token = crypto.randomUUID();
+      const { error } = await supabase.from("trip_members").insert({
+        trip_id: trip.id,
+        user_id: null,
+        name,
+        email,
+        role: "member",
+        status: "pending",
+        invited_by: userId,
+        invite_token: token,
+      });
+
+      if (error) {
+        console.error("insertExternalMember error:", JSON.stringify(error, null, 2));
+        return { ok: false, error: "Couldn't save the invite — try again" };
+      }
+
+      // Best-effort email. A failed email does NOT roll back the DB row — the
+      // host can resend from the roster later.
+      const mail = await triggerInviteEmail(email, name);
+
+      const newMember: TripMember = {
+        id: crypto.randomUUID(),
+        trip_id: trip.id,
+        user_id: null,
+        family_member_id: null,
+        name,
+        email,
+        role: "member",
+        status: "pending",
+        invited_by: userId,
+        invite_token: token,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as TripMember;
+
+      return { ok: true, member: newMember, mailOk: mail.ok, mailError: mail.error };
+    },
+    [supabase, trip.id, userId, triggerInviteEmail]
+  );
+
   const sendExternalInvite = useCallback(async () => {
     const name = inviteName.trim();
     const email = inviteEmail.trim();
@@ -260,59 +325,81 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
     }
 
     setLoading(true);
-    const token = crypto.randomUUID();
-
-    const { error } = await supabase
-      .from("trip_members")
-      .insert({
-        trip_id: trip.id,
-        user_id: null,
-        name,
-        email,
-        role: "member",
-        status: "pending",
-        invited_by: userId,
-        invite_token: token,
-      });
-
-    if (error) {
-      console.error("sendExternalInvite error:", JSON.stringify(error, null, 2));
-      setInviteError("Couldn't save the invite — try again");
+    const res = await insertExternalMember(name, email);
+    if (!res.ok) {
+      setInviteError(res.error);
       setLoading(false);
       return;
     }
 
-    // Fire the invite email. If email fails, keep the row so the host can
-    // retry/resend, but surface the error.
-    const mail = await triggerInviteEmail(email, name);
-
     logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "added", entityType: "member", entityName: name, detail: "External invite", linkPath: `/trip/${trip.id}/group` });
-    setMembers((prev) => [...prev, {
-      id: crypto.randomUUID(),
-      trip_id: trip.id,
-      user_id: null,
-      family_member_id: null,
-      name,
-      email,
-      role: "member",
-      status: "pending",
-      invited_by: userId,
-      invite_token: token,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    } as TripMember]);
+    setMembers((prev) => [...prev, res.member]);
 
-    if (mail.ok) {
+    if (res.mailOk) {
       setInviteName("");
       setInviteEmail("");
       setInviteError(null);
     } else {
       setInviteError(
-        `Saved ${name} to the roster, but the invite email didn't send${mail.error ? `: ${mail.error}` : ""}. Re-send from the members list.`
+        `Saved ${name} to the roster, but the invite email didn't send${res.mailError ? `: ${res.mailError}` : ""}. Re-send from the members list.`
       );
     }
     setLoading(false);
-  }, [supabase, trip.id, userId, inviteName, inviteEmail, currentUserName, triggerInviteEmail]);
+  }, [supabase, trip.id, userId, inviteName, inviteEmail, currentUserName, insertExternalMember]);
+
+  // Adapter for BulkInviteModal's insertMember prop. Mirrors single-invite
+  // behavior: DB insert failure → row failure; email failure → row still
+  // counts as success (member is in the DB, host can resend from roster).
+  // Avoids the "DB row orphaned from email" retry-duplicate problem.
+  const insertMemberForBulk = useCallback(
+    async (
+      name: string,
+      email: string
+    ): Promise<{ ok: true; member: TripMember } | { ok: false; error: string }> => {
+      const res = await insertExternalMember(name, email);
+      if (!res.ok) return res;
+      return { ok: true, member: res.member };
+    },
+    [insertExternalMember]
+  );
+
+  // Pre-computed at modal open time (and kept current while modal is open) so
+  // the duplicate check against existing trip members is O(1).
+  const existingMemberEmails = useMemo(() => {
+    const s = new Set<string>();
+    members.forEach((m) => {
+      if (m.email) s.add(m.email);
+    });
+    return s;
+  }, [members]);
+
+  const handleBulkSuccess = useCallback(
+    (addedMembers: TripMember[]) => {
+      if (addedMembers.length === 0) return;
+      setMembers((prev) => [...prev, ...addedMembers]);
+      setBulkSentCount((c) => c + addedMembers.length);
+      // One aggregate activity entry per batch (not per member) — spec.
+      logActivity(supabase, {
+        tripId: trip.id,
+        userId,
+        userName: currentUserName,
+        action: "added",
+        entityType: "member",
+        entityName: `${addedMembers.length} ${addedMembers.length === 1 ? "person" : "people"}`,
+        detail: "Bulk invite",
+        linkPath: `/trip/${trip.id}/group`,
+      });
+    },
+    [supabase, trip.id, userId, currentUserName]
+  );
+
+  const handleBulkClose = useCallback(() => {
+    setShowBulkModal(false);
+    if (bulkSentCount > 0) {
+      setToast(`✓ Sent ${bulkSentCount} invite${bulkSentCount === 1 ? "" : "s"}`);
+    }
+    setBulkSentCount(0);
+  }, [bulkSentCount]);
 
   const removeMember = useCallback(async (memberId: string) => {
     setLoading(true);
@@ -634,6 +721,24 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
                   {loading ? "Sending…" : "Send Invite"}
                 </button>
               </div>
+              {/* Bulk-invite entry point — sits under the single-invite row. */}
+              <div style={{ marginTop: 10, fontSize: 12, color: th.muted, fontWeight: 500 }}>
+                Inviting a group?{" "}
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowBulkModal(true);
+                  }}
+                  style={{
+                    color: th.accent,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  Add up to 20 people at once →
+                </a>
+              </div>
               {inviteError && (
                 <div style={{
                   marginTop: 8,
@@ -879,6 +984,50 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
         )}
 
       </div>
+
+      {/* Bulk invite modal (opens from the "Add up to 20 people at once" link) */}
+      {showBulkModal && (
+        <BulkInviteModal
+          tripId={trip.id}
+          userId={userId}
+          theme={th}
+          existingEmails={existingMemberEmails}
+          insertMember={insertMemberForBulk}
+          onClose={handleBulkClose}
+          onSuccess={handleBulkSuccess}
+        />
+      )}
+
+      {/* Lightweight toast — only fired from bulk-invite success today */}
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 80, // sit above the sub-nav
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1100,
+            background: "#1a1a1a",
+            color: "#fff",
+            padding: "10px 18px",
+            borderRadius: 999,
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: "'DM Sans', sans-serif",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
+            animation: "fadeIn 0.18s ease-out",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {toast}
+        </div>
+      )}
+
+      {/* Modal keyframes — scoped here to match Add Booking modal's pattern */}
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+      `}</style>
 
       <TripSubNav tripId={trip.id} theme={th} role={currentUserRole} />
     </div>
