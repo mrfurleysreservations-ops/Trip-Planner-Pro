@@ -1129,12 +1129,25 @@ export default function NotesPage({ trip, notes: initialNotes, members, userId, 
                               } else if (opt.value === "meal") {
                                 await convertNote(selectedNote.id, "meal");
                                 const params = new URLSearchParams({
+                                  view: "meals",
+                                  newMeal: "1",
                                   fromNote: selectedNote.id,
                                   title: selectedNote.title,
                                   ...(selectedNote.body ? { body: selectedNote.body } : {}),
                                   ...(selectedNote.link_url ? { link_url: selectedNote.link_url } : {}),
                                 });
-                                router.push(`/trip/${trip.id}/meals?${params.toString()}`);
+                                router.push(`/trip/${trip.id}/supplies?${params.toString()}`);
+                              } else if (opt.value === "supply") {
+                                await convertNote(selectedNote.id, "supply");
+                                const params = new URLSearchParams({
+                                  view: "supplies",
+                                  newSupply: "1",
+                                  fromNote: selectedNote.id,
+                                  title: selectedNote.title,
+                                  ...(selectedNote.body ? { body: selectedNote.body } : {}),
+                                  ...(selectedNote.link_url ? { link_url: selectedNote.link_url } : {}),
+                                });
+                                router.push(`/trip/${trip.id}/supplies?${params.toString()}`);
                               } else if (opt.value === "reference") {
                                 await convertNote(selectedNote.id, "reference");
                                 setShowConvertMenu(false);

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Concept F — Full Page (Inspo + Sticky CTA + Header)</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px 12px 60px; background: #2e2723; font-family: 'DM Sans', sans-serif; color: #2a2a2a; }
+
+  h1 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 22px; margin: 0 0 6px; text-align: center; color: #f5f0e8; }
+  .intro { max-width: 720px; margin: 0 auto 28px; text-align: center; color: #d8c9a8; font-size: 13px; line-height: 1.6; }
+  .intro strong { color: #e8943a; }
+
+  .phones { display: flex; flex-wrap: wrap; gap: 40px; justify-content: center; align-items: flex-start; }
+
+  /* Phone frame — makes sticky CTA feel like it's inside a device */
+  .phone { width: 400px; max-width: 100%; }
+  .phone-caption { color: #f4b871; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; text-align: center; margin-bottom: 6px; }
+  .phone-note { color: #a89985; font-size: 12px; text-align: center; margin-bottom: 12px; line-height: 1.5; }
+
+  .device { width: 400px; height: 820px; background: #111; border-radius: 40px; padding: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); position: relative; }
+  .screen { width: 100%; height: 100%; background: #faf6ef; border-radius: 28px; overflow: hidden; position: relative; }
+  .notch { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: 110px; height: 22px; background: #111; border-radius: 14px; z-index: 1000; }
+  .screen-scroll { height: 100%; overflow-y: auto; padding-bottom: 160px; position: relative; }
+
+  /* ───────── Page header ───────── */
+  .hdr { background: #c77013; padding: 42px 20px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); position: sticky; top: 0; z-index: 5; }
+  .hdr .back { background: none; border: none; color: #fff; font-size: 20px; padding: 2px; cursor: pointer; }
+  .hdr h2 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 19px; color: #fff; margin: 0; }
+  .hdr .trip { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 11px; color: rgba(255,255,255,0.7); margin-left: auto; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* ───────── Sub-nav (Itinerary / Expenses / Packing / Notes / Meals / Group) ───────── */
+  .subnav { background: #a85d10; display: flex; gap: 0; padding: 0 4px; border-bottom: 1px solid rgba(0,0,0,0.1); overflow-x: auto; }
+  .subnav button { flex: 0 0 auto; padding: 10px 14px; background: none; border: none; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.7); cursor: pointer; font-family: 'DM Sans', sans-serif; border-bottom: 3px solid transparent; }
+  .subnav button.active { color: #fff; border-bottom-color: #fff; }
+
+  /* ───────── Person tabs ───────── */
+  .ptabs { background: #faf6ef; display: flex; gap: 0; padding: 0 12px; border-bottom: 1px solid #e8e0d0; overflow-x: auto; }
+  .ptabs button { flex: 0 0 auto; padding: 10px 12px; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; border-bottom: 3px solid transparent; font-family: 'DM Sans', sans-serif; }
+  .ptabs button.active { border-bottom-color: #e8943a; }
+  .ptabs .nm { font-size: 13px; font-weight: 500; color: #888; }
+  .ptabs button.active .nm { color: #2a2a2a; font-weight: 700; }
+  .ptabs .host { font-size: 9px; padding: 1px 5px; border-radius: 8px; background: #e8943a18; color: #e8943a; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* ───────── View tabs ───────── */
+  .vtabs { background: #faf6ef; display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #e8e0d0; }
+  .vtabs button { flex: 1; padding: 8px; background: white; border: 1px solid #e8e0d0; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; color: #888; font-family: 'DM Sans', sans-serif; }
+  .vtabs button.active { background: #e8943a; color: white; border-color: #e8943a; }
+
+  /* ───────── Step indicator ───────── */
+  .step { padding: 12px 16px 6px; }
+  .step-title { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 16px; color: #2a2a2a; }
+  .step-sub { font-size: 11px; color: #888; margin-top: 2px; }
+
+  /* ───────── Outfit card ───────── */
+  .card { margin: 8px 14px 18px; background: white; border-radius: 18px; border: 1px solid #e8e0d0; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+
+  .band { padding: 9px 16px; color: #fff; display: flex; justify-content: space-between; align-items: center; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; background: linear-gradient(90deg, #f9c876, #c75a2a); }
+  .chip { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; background: rgba(255,255,255,0.25); padding: 3px 9px; border-radius: 12px; }
+
+  .events-pill { padding: 10px 16px; border-bottom: 1px solid #f0ebe4; display: flex; align-items: center; justify-content: space-between; background: #faf6ef; cursor: pointer; }
+  .events-pill .left { font-size: 12px; font-weight: 600; color: #444; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .events-pill .dc-pill { font-size: 9px; padding: 2px 7px; border-radius: 8px; background: #0097a718; color: #0097a7; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .events-pill .caret { font-size: 11px; color: #999; }
+
+  /* ───── Saved inspo (inline, small) ───── */
+  .inspo-saved { padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0ebe4; }
+  .inspo-saved img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: linear-gradient(135deg, #f9c876, #c75a2a); }
+  .inspo-saved .thumb-ph { width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: linear-gradient(135deg, #f9c876, #c75a2a); color: #fff; }
+  .inspo-saved .txt { flex: 1; min-width: 0; }
+  .inspo-saved .lbl { font-size: 10px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .inspo-saved .nm { font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .inspo-saved button.clr { font-size: 10px; padding: 4px 8px; border-radius: 6px; background: #ffebee; color: #c62828; border: none; font-weight: 700; cursor: pointer; }
+
+  .inspo-btn { width: 100%; padding: 11px 16px; background: #e8943a06; border: none; border-bottom: 1px solid #f0ebe4; cursor: pointer; font-size: 12px; font-weight: 700; color: #e8943a; text-align: left; font-family: 'DM Sans', sans-serif; }
+
+  .inspo-panel { padding: 14px 16px; border-bottom: 1px solid #f0ebe4; background: #fffbf3; }
+  .inspo-search { font-size: 10px; color: #999; margin-bottom: 8px; }
+  .inspo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .inspo-grid .img { aspect-ratio: 1; background: linear-gradient(135deg, #f9c876, #c75a2a); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
+  .inspo-grid .img.v2 { background: linear-gradient(135deg, #e8943a, #7c4a9e); }
+  .inspo-grid .img.v3 { background: linear-gradient(135deg, #c75a2a, #452a66); }
+  .inspo-grid .img.v4 { background: linear-gradient(135deg, #6b9c5a, #3a5a2a); }
+  .inspo-grid .img.v5 { background: linear-gradient(135deg, #c77013, #6e3c08); }
+  .inspo-grid .img.v6 { background: linear-gradient(135deg, #9c5a77, #5a2a42); }
+  .inspo-more { width: 100%; padding: 7px; margin-top: 8px; background: none; border: 1px solid #e8e0d0; border-radius: 8px; font-size: 11px; font-weight: 600; color: #e8943a; cursor: pointer; }
+  .inspo-upload { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e8e0d0; font-size: 11px; font-weight: 600; color: #e8943a; cursor: pointer; }
+
+  /* ───── Slot grid (2×3) ───── */
+  .grid { padding: 14px 14px 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile { background: #fdfaf3; border: 1px dashed #d8cfbd; border-radius: 14px; padding: 12px 11px; min-height: 78px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; }
+  .tile.filled { background: white; border-style: solid; border-color: #e8e0d0; }
+  .tile .hdr { display: flex; align-items: center; gap: 6px; }
+  .tile .hdr .emj { font-size: 18px; }
+  .tile .hdr .lbl { font-size: 10px; color: #999; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .tile .val { font-size: 12px; font-weight: 700; margin-top: 6px; color: #2a2a2a; line-height: 1.2; }
+  .tile .emp { font-size: 12px; font-weight: 500; color: #b0a690; margin-top: 6px; }
+  .tile .more { font-size: 9px; color: #e8943a; font-weight: 700; margin-top: 3px; }
+  .tile.dress .hdr .emj::before { content: ''; }
+  .tile.dress .hdr .lbl { color: #c4659c; }
+  .tile.dress { border-color: #e8c4d8; background: #fff0f7; border-style: dashed; }
+  .tile.dress.filled { border-style: solid; background: #fff; border-color: #e8c4d8; }
+
+  /* ───── Reuse strip ───── */
+  .reuse { padding: 10px 14px 12px; background: #fffbf3; border-top: 1px solid #f0ebe4; }
+  .reuse-hdr { font-size: 10px; font-weight: 700; color: #c77013; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .reuse-row { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; margin: 0; }
+  .reuse-chip { font-size: 11px; font-weight: 600; padding: 5px 10px; border: 1px solid #e8e0d0; border-radius: 14px; background: white; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; flex-shrink: 0; }
+  .reuse-chip .cnt { font-size: 9px; background: #fff0d8; color: #c77013; padding: 0 5px; border-radius: 6px; font-weight: 700; }
+  .reuse-chip.added { background: #e8f5e9; border-color: #c8e6c9; color: #2e7d32; }
+  .reuse-chip.added .cnt { background: #c8e6c9; color: #2e7d32; }
+
+  /* ───── Smart input ───── */
+  .smart-input { margin: 10px 14px 4px; border: 2px solid #e8943a; border-radius: 14px; padding: 10px 12px; background: #fff8ec; }
+  .smart-input input { width: 100%; border: none; outline: none; background: transparent; font-size: 14px; font-weight: 600; font-family: inherit; color: #2a2a2a; }
+  .smart-input input::placeholder { color: #bda380; }
+  .smart-input .hint { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #977a5a; margin-top: 6px; }
+
+  /* ───── Sticky bottom CTA ───── */
+  .sticky-cta { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 14px 18px; background: linear-gradient(to top, #faf6ef 70%, rgba(250,246,239,0)); pointer-events: none; z-index: 50; }
+  .sticky-cta .inner { pointer-events: auto; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.97); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 14px; padding: 10px 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  .sticky-cta .prev { padding: 10px 14px; border-radius: 10px; border: 1px solid #e8e0d0; background: white; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; color: #2a2a2a; }
+  .sticky-cta .prev.disabled { opacity: 0.4; cursor: not-allowed; }
+  .sticky-cta .step { flex: 1; text-align: center; font-size: 12px; font-weight: 700; color: #e8943a; padding: 0; }
+  .sticky-cta .next { padding: 10px 14px; border-radius: 10px; background: linear-gradient(135deg, #e8943a 0%, #c77013 100%); color: white; border: none; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; box-shadow: 0 2px 10px rgba(232,148,58,0.3); }
+
+  /* ───── Annotation boxes ───── */
+  .note { background: #fff8e1; border-left: 4px solid #e8943a; padding: 12px 14px; border-radius: 6px; font-size: 12px; line-height: 1.6; margin: 14px auto 0; max-width: 380px; }
+  .note strong { color: #c77013; }
+
+  .divider { border-top: 2px solid #4a3c30; margin: 50px auto 30px; max-width: 900px; }
+
+  .callouts { max-width: 720px; margin: 0 auto; color: #e5d9bf; font-size: 13px; line-height: 1.7; }
+  .callouts h3 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px; color: #e8943a; margin: 20px 0 8px; }
+</style>
+</head>
+<body>
+
+<h1>Concept F — full page with inspo, sticky CTA, and header</h1>
+<p class="intro">
+  Same outfit (Paso Robles Day 2 daytime · Emily's view since the Dress slot is woman-specific). Three states so you can see how clunky / not-clunky it feels at each step: <strong>compact</strong>, <strong>inspo expanded</strong>, and <strong>slot drawer open</strong>. Header, sub-nav, person tabs, view tabs, and sticky bottom CTA all visible.
+</p>
+
+<div class="phones">
+
+  <!-- ======================================================= -->
+  <!-- PHONE 1: Default / compact view -->
+  <!-- ======================================================= -->
+  <div class="phone">
+    <div class="phone-caption">1 — Default view</div>
+    <div class="phone-note">Saved inspo thumbnail inline (compact). Inspo grid is collapsed behind the button. Full page fits on one screen.</div>
+    <div class="device">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="screen-scroll">
+
+          <div class="hdr">
+            <button class="back">←</button>
+            <h2>Packing</h2>
+            <span class="trip">Paso · May 22–25</span>
+          </div>
+
+          <div class="subnav">
+            <button>Itinerary</button>
+            <button>Expenses</button>
+            <button class="active">Packing</button>
+            <button>Notes</button>
+            <button>Meals</button>
+            <button>Group</button>
+          </div>
+
+          <div class="ptabs">
+            <button><span class="nm">Joe</span><span class="host">Host</span></button>
+            <button class="active"><span class="nm">Emily</span></button>
+          </div>
+
+          <div class="vtabs">
+            <button>Group</button>
+            <button class="active">Outfits</button>
+            <button>Pack & Go ✓</button>
+          </div>
+
+          <div class="step">
+            <div class="step-title">Outfit 6 of 10</div>
+            <div class="step-sub">Sat morning wine tasting loop</div>
+          </div>
+
+          <div class="card">
+            <div class="band">
+              <span>🌅 → ☀️ Morning-Afternoon</span>
+              <span class="chip">☀️ 78°/52°</span>
+            </div>
+
+            <div class="events-pill">
+              <span class="left">
+                <span class="dc-pill">Smart Casual</span>
+                <span>☕🍷🍝 3 events</span>
+              </span>
+              <span class="caret">▸ details</span>
+            </div>
+
+            <div class="inspo-saved">
+              <div class="thumb-ph">👗</div>
+              <div class="txt">
+                <div class="lbl">Outfit inspo</div>
+                <div class="nm">Wine country summer look</div>
+              </div>
+              <button class="clr">Clear</button>
+            </div>
+
+            <button class="inspo-btn">✨ Get Outfit Inspo ▾</button>
+
+            <div class="grid">
+              <div class="tile dress">
+                <div class="hdr"><span class="emj">👗</span><span class="lbl">Dress</span></div>
+                <div class="emp">+ add dress</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr"><span class="emj">👕</span><span class="lbl">Top</span></div>
+                <div class="val">Linen button-down</div>
+              </div>
+              <div class="tile">
+                <div class="hdr"><span class="emj">🧥</span><span class="lbl">Layer</span></div>
+                <div class="emp">+ optional</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr"><span class="emj">👖</span><span class="lbl">Bottom</span></div>
+                <div class="val">Chino shorts</div>
+              </div>
+              <div class="tile">
+                <div class="hdr"><span class="emj">👟</span><span class="lbl">Shoes</span></div>
+                <div class="emp">+ add shoes</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr"><span class="emj">💼</span><span class="lbl">Accessories</span></div>
+                <div class="val">Sunglasses · Watch</div>
+                <div class="more">+1 more ▸</div>
+              </div>
+            </div>
+
+            <div class="reuse">
+              <div class="reuse-hdr">📦 Reuse from your suitcase</div>
+              <div class="reuse-row">
+                <span class="reuse-chip">👟 White sneakers <span class="cnt">×4</span></span>
+                <span class="reuse-chip">🕶️ Sunglasses <span class="cnt">×5</span></span>
+                <span class="reuse-chip">🧢 Paso hat <span class="cnt">×2</span></span>
+                <span class="reuse-chip">👞 Loafers <span class="cnt">×2</span></span>
+                <span class="reuse-chip">🧥 Jacket <span class="cnt">×1</span></span>
+                <span class="reuse-chip">👗 Sundress <span class="cnt">×1</span></span>
+              </div>
+            </div>
+
+            <div class="smart-input">
+              <input placeholder="+ Type anything (auto-sorted)…" />
+              <div class="hint">
+                <span>Dresses → 👗 · Tops → 👕 · Hats → 💼 · etc.</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: 20px"></div>
+
+        </div>
+
+        <div class="sticky-cta">
+          <div class="inner">
+            <button class="prev">← Prev</button>
+            <span class="step">Outfit 6 of 10</span>
+            <button class="next">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><strong>Feel:</strong> Grid at-a-glance, saved inspo sits compact, sticky CTA always visible. Full card above the fold on most phones.</div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- PHONE 2: Inspo panel expanded -->
+  <!-- ======================================================= -->
+  <div class="phone">
+    <div class="phone-caption">2 — Inspo expanded</div>
+    <div class="phone-note">User tapped "✨ Get Outfit Inspo". Grid of 6 suggestions appears above the slots. You'll need to scroll to see the bottom slots + CTA.</div>
+    <div class="device">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="screen-scroll">
+
+          <div class="hdr">
+            <button class="back">←</button>
+            <h2>Packing</h2>
+            <span class="trip">Paso · May 22–25</span>
+          </div>
+
+          <div class="subnav">
+            <button>Itinerary</button>
+            <button>Expenses</button>
+            <button class="active">Packing</button>
+            <button>Notes</button>
+            <button>Meals</button>
+            <button>Group</button>
+          </div>
+
+          <div class="ptabs">
+            <button><span class="nm">Joe</span><span class="host">Host</span></button>
+            <button class="active"><span class="nm">Emily</span></button>
+          </div>
+
+          <div class="vtabs">
+            <button>Group</button>
+            <button class="active">Outfits</button>
+            <button>Pack & Go ✓</button>
+          </div>
+
+          <div class="step">
+            <div class="step-title">Outfit 6 of 10</div>
+            <div class="step-sub">Sat morning wine tasting loop</div>
+          </div>
+
+          <div class="card">
+            <div class="band">
+              <span>🌅 → ☀️ Morning-Afternoon</span>
+              <span class="chip">☀️ 78°/52°</span>
+            </div>
+
+            <div class="events-pill">
+              <span class="left">
+                <span class="dc-pill">Smart Casual</span>
+                <span>☕🍷🍝 3 events</span>
+              </span>
+              <span class="caret">▸ details</span>
+            </div>
+
+            <button class="inspo-btn" style="background: #e8943a14; border-top: 1px solid #f0ebe4; color: #c77013">✨ Hide Inspo ▲</button>
+
+            <div class="inspo-panel">
+              <div class="inspo-search">Search: "smart casual wine tasting women"</div>
+              <div class="inspo-grid">
+                <div class="img">👗</div>
+                <div class="img v2">👒</div>
+                <div class="img v3">🍷</div>
+                <div class="img v4">🌿</div>
+                <div class="img v5">☀️</div>
+                <div class="img v6">💃</div>
+              </div>
+              <button class="inspo-more">Load more</button>
+              <div class="inspo-upload">📷 Upload your own</div>
+            </div>
+
+            <div class="grid">
+              <div class="tile dress">
+                <div class="hdr"><span class="emj">👗</span><span class="lbl">Dress</span></div>
+                <div class="emp">+ add</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr"><span class="emj">👕</span><span class="lbl">Top</span></div>
+                <div class="val">Linen button-down</div>
+              </div>
+              <div class="tile">
+                <div class="hdr"><span class="emj">🧥</span><span class="lbl">Layer</span></div>
+                <div class="emp">+ optional</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr"><span class="emj">👖</span><span class="lbl">Bottom</span></div>
+                <div class="val">Chino shorts</div>
+              </div>
+              <div class="tile">
+                <div class="hdr"><span class="emj">👟</span><span class="lbl">Shoes</span></div>
+                <div class="emp">+ add</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr"><span class="emj">💼</span><span class="lbl">Accessories</span></div>
+                <div class="val">Sunglasses · Watch</div>
+                <div class="more">+1 ▸</div>
+              </div>
+            </div>
+
+            <div class="reuse">
+              <div class="reuse-hdr">📦 Reuse from your suitcase</div>
+              <div class="reuse-row">
+                <span class="reuse-chip">👟 White sneakers <span class="cnt">×4</span></span>
+                <span class="reuse-chip">🕶️ Sunglasses <span class="cnt">×5</span></span>
+                <span class="reuse-chip">🧢 Paso hat <span class="cnt">×2</span></span>
+                <span class="reuse-chip">👞 Loafers <span class="cnt">×2</span></span>
+              </div>
+            </div>
+
+            <div class="smart-input">
+              <input placeholder="+ Type anything…" />
+              <div class="hint"><span>Auto-sorted into slot</span></div>
+            </div>
+          </div>
+
+          <div style="height: 20px"></div>
+
+        </div>
+
+        <div class="sticky-cta">
+          <div class="inner">
+            <button class="prev">← Prev</button>
+            <span class="step">Outfit 6 of 10</span>
+            <button class="next">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><strong>Clunky check:</strong> Inspo grid adds ~260px. You have to scroll ~40% to reach the slots. Fine since inspo is explicitly opt-in (tap to show). Users who don't want inspo never see the weight. Consider: remember the inspo-expanded state per trip so users who always want it don't re-tap every outfit.</div>
+  </div>
+
+</div>
+
+<!-- ======================================================= -->
+<!-- PHONE 3 (centered below) -->
+<!-- ======================================================= -->
+<div style="display: flex; justify-content: center; margin-top: 40px;">
+  <div class="phone">
+    <div class="phone-caption">3 — Slot drawer open (Shoes)</div>
+    <div class="phone-note">You tapped the 👟 Shoes tile. A drawer expands below the grid showing that slot's pool + dress-code suggestions + "+ new shoes" option. Smart input still live at the bottom.</div>
+    <div class="device">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="screen-scroll">
+
+          <div class="hdr">
+            <button class="back">←</button>
+            <h2>Packing</h2>
+            <span class="trip">Paso · May 22–25</span>
+          </div>
+
+          <div class="subnav">
+            <button>Itinerary</button>
+            <button>Expenses</button>
+            <button class="active">Packing</button>
+            <button>Notes</button>
+            <button>Meals</button>
+            <button>Group</button>
+          </div>
+
+          <div class="ptabs">
+            <button><span class="nm">Joe</span><span class="host">Host</span></button>
+            <button class="active"><span class="nm">Emily</span></button>
+          </div>
+
+          <div class="vtabs">
+            <button>Group</button>
+            <button class="active">Outfits</button>
+            <button>Pack & Go ✓</button>
+          </div>
+
+          <div class="step">
+            <div class="step-title">Outfit 6 of 10</div>
+            <div class="step-sub">Sat morning wine tasting loop</div>
+          </div>
+
+          <div class="card">
+            <div class="band">
+              <span>🌅 → ☀️ Morning-Afternoon</span>
+              <span class="chip">☀️ 78°/52°</span>
+            </div>
+            <div class="events-pill">
+              <span class="left">
+                <span class="dc-pill">Smart Casual</span>
+                <span>☕🍷🍝 3 events</span>
+              </span>
+              <span class="caret">▸ details</span>
+            </div>
+
+            <div class="grid">
+              <div class="tile dress">
+                <div class="hdr"><span class="emj">👗</span><span class="lbl">Dress</span></div>
+                <div class="emp">+ add</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr"><span class="emj">👕</span><span class="lbl">Top</span></div>
+                <div class="val">Linen button-down</div>
+              </div>
+              <div class="tile">
+                <div class="hdr"><span class="emj">🧥</span><span class="lbl">Layer</span></div>
+                <div class="emp">+ optional</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr"><span class="emj">👖</span><span class="lbl">Bottom</span></div>
+                <div class="val">Chino shorts</div>
+              </div>
+              <div class="tile" style="outline: 2px solid #e8943a; outline-offset: -2px">
+                <div class="hdr"><span class="emj">👟</span><span class="lbl" style="color: #e8943a">Shoes</span></div>
+                <div class="emp" style="color: #e8943a">picking…</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr"><span class="emj">💼</span><span class="lbl">Accessories</span></div>
+                <div class="val">Sunglasses · Watch</div>
+                <div class="more">+1 ▸</div>
+              </div>
+            </div>
+
+            <!-- Drawer for selected tile -->
+            <div style="margin: 4px 14px 12px; background: #fff8ec; border: 1px dashed #e8943a; border-radius: 12px; padding: 12px">
+              <div style="font-size: 10px; font-weight: 700; color: #c77013; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">👟 Pick shoes</div>
+              <div style="font-size: 10px; color: #999; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px">From your suitcase</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px">
+                <span class="reuse-chip">👟 White sneakers <span class="cnt">×4</span></span>
+                <span class="reuse-chip">👞 Dress loafers <span class="cnt">×2</span></span>
+                <span class="reuse-chip">👡 Sandals <span class="cnt">×1</span></span>
+              </div>
+              <div style="font-size: 10px; color: #999; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px">Suggested for Smart Casual</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px">
+                <span class="reuse-chip">Boat shoes</span>
+                <span class="reuse-chip">Block heels</span>
+                <span class="reuse-chip">Leather flats</span>
+              </div>
+              <div style="border-top: 1px dashed #e8c490; padding-top: 10px;">
+                <input placeholder="Or type new shoes…" style="width: 100%; padding: 7px 10px; border: 1px solid #e8c490; border-radius: 8px; font-size: 12px; outline: none; font-family: inherit; background: white;" />
+              </div>
+            </div>
+
+            <div class="reuse">
+              <div class="reuse-hdr">📦 Reuse (all slots)</div>
+              <div class="reuse-row">
+                <span class="reuse-chip">🕶️ Sunglasses <span class="cnt">×5</span></span>
+                <span class="reuse-chip">🧢 Paso hat <span class="cnt">×2</span></span>
+                <span class="reuse-chip">🧥 Jacket <span class="cnt">×1</span></span>
+              </div>
+            </div>
+
+            <div class="smart-input">
+              <input placeholder="+ Type anything…" />
+              <div class="hint"><span>Auto-sorted into slot</span></div>
+            </div>
+          </div>
+
+          <div style="height: 20px"></div>
+
+        </div>
+
+        <div class="sticky-cta">
+          <div class="inner">
+            <button class="prev">← Prev</button>
+            <span class="step">Outfit 6 of 10</span>
+            <button class="next">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><strong>Decision point:</strong> The drawer currently repeats the reuse chip idea <em>inside</em> the slot (filtered to that slot) AND keeps the global reuse strip visible below. Might be redundant — we could hide the bottom reuse strip when a drawer is open, or drop the drawer's reuse section (let the global strip do that job). Leaning: keep drawer reuse, hide bottom strip when drawer is open.</div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<div class="divider"></div>
+
+<div class="callouts">
+
+  <h3>On the Dress slot being woman-only</h3>
+  <p>In the woman's view (what you see above), the first tile is <strong>Dress</strong> — tinted slightly pink to feel distinct. In the man's view, that tile disappears and the grid becomes 5 tiles: Top / Layer / Bottom / Shoes / Accessories (or 2×2 with one centered, or we collapse Layer + Accessories into one row). Gender is pulled from <code>userProfile.gender</code>, which you already store. Non-binary / no preference → show Dress by default (it's additive, never blocks).</p>
+  <p>When a dress is added, the <strong>Bottom</strong> tile gets dimmed (not hidden) with a subtle "— not needed with dress" label. This way someone who wants leggings under a dress can still tap Bottom and add them; we just don't push it.</p>
+
+  <h3>On Head merging into Accessories</h3>
+  <p>Good call. Accessories now covers hats, sunglasses, watches, jewelry, belts, bags, scarves, ties. Hats still get their own icon (🧢) in the item list so you can distinguish visually, but they all live in the same slot — which is correct, because they all serve the same mental role: "optional finishing pieces." This also frees the first tile for Dress without making the grid taller.</p>
+
+  <h3>On the sticky CTA</h3>
+  <p>Sticky bottom nav stays pinned throughout — works the same as today. Gradient fade behind it so card content scrolls underneath without a hard edge. Step label ("Outfit 6 of 10") is centered so you always know where you are in the 10-outfit march.</p>
+
+  <h3>Open questions</h3>
+  <p><strong>a)</strong> When a dress is added, dim Bottom or hide it outright?<br>
+  <strong>b)</strong> In the slot drawer (Phone 3), keep the reuse chips filtered-to-slot, or remove and rely on the bottom global strip?<br>
+  <strong>c)</strong> Inspo button — collapsed by default (as shown) or auto-expand on the first outfit only, then remember preference?<br>
+  <strong>d)</strong> Events pill — stay as emoji + count ("☕🍷🍝 3 events"), or show the time range ("8:30 AM → 1:15 PM")?</p>
+</div>
+
+</body>
+</html>

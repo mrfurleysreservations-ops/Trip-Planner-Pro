@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Role Picker Mockup — Trip Planner Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: #111; color: #fff; padding: 24px; }
+
+  .page-title { font-family: 'Outfit', sans-serif; text-align: center; margin-bottom: 4px; font-size: 22px; font-weight: 800; }
+  .page-sub { text-align: center; color: #888; font-size: 13px; margin-bottom: 32px; }
+
+  .key-change { background: #1a2a1a; border: 1px solid #2a4a2a; border-radius: 12px; max-width: 900px; margin: 0 auto 32px; padding: 18px 22px; }
+  .key-change h3 { color: #4caf50; font-family: 'Outfit', sans-serif; margin-bottom: 8px; font-size: 15px; }
+  .key-change p { color: #bbb; font-size: 13px; line-height: 1.6; }
+  .key-change strong { color: #fff; }
+
+  .section-title { text-align: center; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; margin: 40px 0 20px; color: #e8943a; border-bottom: 1px solid #333; padding-bottom: 8px; max-width: 900px; margin-left: auto; margin-right: auto; }
+
+  .phone-row { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; }
+  .phone-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; color: #e8943a; }
+
+  .phone {
+    width: 375px; height: 812px; border: 2px solid #444; border-radius: 36px;
+    overflow: hidden; background: #f8f8f8; position: relative; flex-shrink: 0;
+    display: flex; flex-direction: column;
+  }
+
+  .chrome-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px; background: #fff; border-bottom: 1px solid #e5e5e5; flex-shrink: 0;
+  }
+  .chrome-header .logo { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 17px; color: #1a1a1a; }
+  .chrome-header .skip { font-size: 13px; color: #999; }
+
+  /* Content area */
+  .content { flex: 1; overflow-y: auto; padding: 20px 20px 12px; font-family: 'Outfit', system-ui, sans-serif; color: #1a1a1a; }
+
+  /* Invite context banner */
+  .invite-banner {
+    background: linear-gradient(135deg, rgba(232,148,58,0.12) 0%, rgba(199,90,42,0.08) 100%);
+    border: 1px solid rgba(232,148,58,0.3);
+    border-radius: 16px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+  }
+  .invite-banner .avatar { width: 40px; height: 40px; border-radius: 50%; background: #e8943a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; flex-shrink: 0; }
+  .invite-banner .meta { flex: 1; }
+  .invite-banner .meta .from { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.06em; }
+  .invite-banner .meta .trip { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-top: 2px; }
+
+  /* Heading */
+  .picker-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; line-height: 1.25; }
+  .picker-sub { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.5; }
+
+  /* Role cards */
+  .role-cards { display: flex; flex-direction: column; gap: 10px; }
+  .role-card {
+    border: 2px solid #e5e5e5; background: #fff; border-radius: 16px; padding: 14px;
+    display: flex; gap: 12px; align-items: flex-start; cursor: pointer; transition: all 0.15s;
+  }
+  .role-card:hover { border-color: #e8943a; box-shadow: 0 4px 12px rgba(232,148,58,0.12); }
+  .role-card.selected { border-color: #e8943a; background: rgba(232,148,59,0.06); box-shadow: 0 4px 12px rgba(232,148,58,0.18); }
+  .role-icon { font-size: 28px; flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; background: #f4f4f4; display: flex; align-items: center; justify-content: center; }
+  .role-card.selected .role-icon { background: rgba(232,148,58,0.18); }
+  .role-body { flex: 1; }
+  .role-name { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #1a1a1a; }
+  .role-tag { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+  .role-desc { font-size: 12.5px; color: #555; line-height: 1.4; margin-top: 6px; font-family: 'DM Sans', sans-serif; }
+  .role-perks { font-size: 11px; color: #c75a2a; margin-top: 8px; font-weight: 600; font-family: 'DM Sans', sans-serif; }
+
+  /* Sticky bottom nav */
+  .sticky-nav {
+    flex-shrink: 0; padding: 12px 20px 16px;
+    background: #fff; border-top: 1px solid #e5e5e5;
+    display: flex; gap: 10px; align-items: center;
+  }
+  .sticky-nav .back-btn {
+    padding: 14px 20px; border-radius: 14px; border: none;
+    background: #f0f0f0; color: #555; font-size: 15px; font-weight: 600;
+  }
+  .sticky-nav .next-btn {
+    padding: 14px 28px; border-radius: 14px; border: none;
+    background: #e8943a; color: #fff; font-size: 16px; font-weight: 700;
+    flex: 1; text-align: center;
+  }
+  .sticky-nav .next-btn.disabled { background: #e5e5e5; color: #aaa; }
+
+  /* Annotations */
+  .callout { background: rgba(76,175,80,0.15); border-left: 3px solid #4caf50; padding: 10px 14px; border-radius: 0 8px 8px 0; max-width: 780px; margin: 16px auto; font-size: 12.5px; color: #b6e3b6; line-height: 1.55; }
+  .callout strong { color: #fff; display: block; margin-bottom: 3px; }
+
+  /* Flow diagram */
+  .flow-box { max-width: 900px; margin: 0 auto; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 20px 24px; font-family: 'DM Sans', sans-serif; }
+  .flow-box h4 { color: #e8943a; font-family: 'Outfit', sans-serif; font-size: 14px; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .flow-step { display: flex; gap: 14px; align-items: flex-start; padding: 10px 0; border-bottom: 1px dashed #2a2a2a; }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-step .num { background: #e8943a; color: #111; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; font-size: 13px; }
+  .flow-step .txt { font-size: 13px; color: #ddd; line-height: 1.5; }
+  .flow-step .txt strong { color: #fff; }
+  .flow-step .txt .tag { display: inline-block; background: rgba(232,148,58,0.2); color: #e8943a; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-left: 6px; }
+  .flow-step .txt .tag.green { background: rgba(76,175,80,0.2); color: #4caf50; }
+  .flow-step .txt .tag.red { background: rgba(231,76,60,0.18); color: #e74c3c; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">Role Picker Mockup</h1>
+<p class="page-sub">The RSVP-energy wizard — fires per trip, not per account</p>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- THE BIG IDEA -->
+<!-- ════════════════════════════════════════════ -->
+<div class="key-change">
+  <h3>🎯 The Idea in One Line</h3>
+  <p>
+    Every trip, every person picks one of four energy levels. The pick drives
+    <strong>how much onboarding they see</strong>, <strong>which tab they land on</strong>,
+    and <strong>how loud the app gets</strong>. Planners get the full experience; reluctant
+    downloaders get a Venmo-grade app that respects their time.
+  </p>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SCREEN 1: THE ROLE PICKER -->
+<!-- ════════════════════════════════════════════ -->
+<h2 class="section-title">Screen — Role Picker (after invite accept)</h2>
+
+<div class="phone-row">
+
+  <!-- STATE A: NOTHING SELECTED -->
+  <div class="phone-wrap">
+    <div class="phone-label">STATE A — NOTHING SELECTED</div>
+    <div class="phone">
+      <div class="chrome-header">
+        <span class="logo">Trip Planner Pro</span>
+        <span class="skip">Skip →</span>
+      </div>
+
+      <div class="content">
+
+        <div class="invite-banner">
+          <div class="avatar">D</div>
+          <div class="meta">
+            <div class="from">Dan invited you to</div>
+            <div class="trip">🎸 Nashville Bachelor Weekend</div>
+          </div>
+        </div>
+
+        <h1 class="picker-title">What's your energy on this trip?</h1>
+        <p class="picker-sub">Be honest. We'll set the app up so it actually matches how you want to travel.</p>
+
+        <div class="role-cards">
+
+          <div class="role-card">
+            <div class="role-icon">🔥</div>
+            <div class="role-body">
+              <div class="role-name">All In</div>
+              <div class="role-tag">I'm doing this, get out of my way</div>
+              <div class="role-desc">You plan the trip. You research the restaurants. You make the spreadsheet. You send five reminders. No one says thank you. We see you.</div>
+              <div class="role-perks">→ Full itinerary, group tools, nudge buttons</div>
+            </div>
+          </div>
+
+          <div class="role-card">
+            <div class="role-icon">🙌</div>
+            <div class="role-body">
+              <div class="role-name">Helping Out</div>
+              <div class="role-tag">I've got you on whatever you need</div>
+              <div class="role-desc">You're not running the show, but you want to pitch in. You pack on time. You Venmo promptly. You might even bring snacks.</div>
+              <div class="role-perks">→ Claim-a-task, packing checklists, gentle reminders</div>
+            </div>
+          </div>
+
+          <div class="role-card">
+            <div class="role-icon">🎟️</div>
+            <div class="role-body">
+              <div class="role-name">Just Here</div>
+              <div class="role-tag">I showed up, that's the contribution</div>
+              <div class="role-desc">You were told to download this. You just want to know where to be, when, and how much you owe.</div>
+              <div class="role-perks">→ Expenses-first, today's plan only, minimal nags</div>
+            </div>
+          </div>
+
+          <div class="role-card">
+            <div class="role-icon">✌️</div>
+            <div class="role-body">
+              <div class="role-name">Vibes Only</div>
+              <div class="role-tag">Don't @ me, I'll see you there</div>
+              <div class="role-desc">You'll show up. You don't need a schedule. What day is it?</div>
+              <div class="role-perks">→ One screen: today + owe. That's it.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="sticky-nav">
+        <button class="next-btn disabled">Pick one to continue</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STATE B: JUST HERE SELECTED -->
+  <div class="phone-wrap">
+    <div class="phone-label">STATE B — "JUST HERE" PICKED</div>
+    <div class="phone">
+      <div class="chrome-header">
+        <span class="logo">Trip Planner Pro</span>
+        <span class="skip">Skip →</span>
+      </div>
+
+      <div class="content">
+
+        <div class="invite-banner">
+          <div class="avatar">D</div>
+          <div class="meta">
+            <div class="from">Dan invited you to</div>
+            <div class="trip">🎸 Nashville Bachelor Weekend</div>
+          </div>
+        </div>
+
+        <h1 class="picker-title">What's your energy on this trip?</h1>
+        <p class="picker-sub">Be honest. We'll set the app up so it actually matches how you want to travel.</p>
+
+        <div class="role-cards">
+
+          <div class="role-card">
+            <div class="role-icon">🔥</div>
+            <div class="role-body">
+              <div class="role-name">All In</div>
+              <div class="role-tag">I'm doing this, get out of my way</div>
+              <div class="role-desc">You plan the trip. You research the restaurants. You make the spreadsheet. You send five reminders. No one says thank you. We see you.</div>
+            </div>
+          </div>
+
+          <div class="role-card">
+            <div class="role-icon">🙌</div>
+            <div class="role-body">
+              <div class="role-name">Helping Out</div>
+              <div class="role-tag">I've got you on whatever you need</div>
+              <div class="role-desc">You're not running the show, but you want to pitch in. You pack on time. You Venmo promptly. You might even bring snacks.</div>
+            </div>
+          </div>
+
+          <div class="role-card selected">
+            <div class="role-icon">🎟️</div>
+            <div class="role-body">
+              <div class="role-name">Just Here</div>
+              <div class="role-tag">I showed up, that's the contribution</div>
+              <div class="role-desc">You were told to download this. You just want to know where to be, when, and how much you owe.</div>
+              <div class="role-perks">✓ You'll skip packing prefs, style quiz, friend suggestions. Straight to the trip.</div>
+            </div>
+          </div>
+
+          <div class="role-card">
+            <div class="role-icon">✌️</div>
+            <div class="role-body">
+              <div class="role-name">Vibes Only</div>
+              <div class="role-tag">Don't @ me, I'll see you there</div>
+              <div class="role-desc">You'll show up. You don't need a schedule. What day is it?</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="sticky-nav">
+        <button class="next-btn">Continue as Just Here →</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="callout">
+  <strong>Design notes</strong>
+  • <strong>Invite banner</strong> at the top reminds them why they're here — keeps the emotional context of "Dan asked me to download this" visible.
+  • <strong>Energy-level labels, not role titles</strong> — "All In" doesn't out-rank "Vibes Only." They're just different stances. Removes the pecking-order feel entirely.
+  • <strong>Self-deprecating copy</strong> validates every pick including the reluctant ones. The roast lands and then the app delivers on it.
+  • <strong>Perk hint appears on selection</strong> so the user sees the payoff ("skip packing prefs, straight to the trip") before they commit.
+  • <strong>"Skip →"</strong> in the top-right is a safety valve — never block a user from entering the trip. Default them to Helping Out and let them re-pick later in Group.
+  • Follows the existing sticky-bottom-nav pattern from <code style="background:#2a2a2a; padding:1px 5px; border-radius:3px; color:#e8943a;">tab-layout-standard.md</code>.
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- FLOW DIAGRAM -->
+<!-- ════════════════════════════════════════════ -->
+<h2 class="section-title">Where the Role Picker Fires — 3 Entry Flows</h2>
+
+<div class="flow-box">
+  <h4>Flow 1 — Invited user (the hardest case)</h4>
+  <div class="flow-step"><div class="num">1</div><div class="txt">Tap invite link → <strong>/invite/[code]</strong></div></div>
+  <div class="flow-step"><div class="num">2</div><div class="txt">Lightweight signup (name, email, password) <span class="tag">~30 seconds</span></div></div>
+  <div class="flow-step"><div class="num">3</div><div class="txt"><strong>Role Picker fires</strong> → /trip/[id]/role <span class="tag green">NEW</span></div></div>
+  <div class="flow-step"><div class="num">4a</div><div class="txt">If <strong>All In / Helping Out</strong>: run full 8-step onboarding <span class="tag">profile, style, packing prefs, friends</span></div></div>
+  <div class="flow-step"><div class="num">4b</div><div class="txt">If <strong>Just Here / Vibes Only</strong>: <strong>skip onboarding entirely</strong> — capture name only, drop into trip <span class="tag red">skips 6 steps</span></div></div>
+  <div class="flow-step"><div class="num">5</div><div class="txt">Land on /trip/[id] with sub-nav + default tab set by pick</div></div>
+</div>
+
+<div class="flow-box" style="margin-top: 20px;">
+  <h4>Flow 2 — Existing user creates a trip</h4>
+  <div class="flow-step"><div class="num">1</div><div class="txt">/trip/new → enter destination, dates, type</div></div>
+  <div class="flow-step"><div class="num">2</div><div class="txt">Save trip → <strong>Role Picker fires, pre-selected All In 🔥</strong> <span class="tag">"Looks like you're running this one. Sound right?"</span></div></div>
+  <div class="flow-step"><div class="num">3</div><div class="txt">One-tap confirm or re-pick</div></div>
+  <div class="flow-step"><div class="num">4</div><div class="txt">Land on /trip/[id] with All In UI density</div></div>
+</div>
+
+<div class="flow-box" style="margin-top: 20px;">
+  <h4>Flow 3 — Existing user accepts invite to new trip</h4>
+  <div class="flow-step"><div class="num">1</div><div class="txt">Tap invite (already signed in)</div></div>
+  <div class="flow-step"><div class="num">2</div><div class="txt">Accept modal on /trip/[id]/group</div></div>
+  <div class="flow-step"><div class="num">3</div><div class="txt"><strong>Role Picker fires — pre-filled with smart default</strong> based on last-used pick for similar trip type</div></div>
+  <div class="flow-step"><div class="num">4</div><div class="txt">One tap to confirm → land on /trip/[id]</div></div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- DATA MODEL -->
+<!-- ════════════════════════════════════════════ -->
+<h2 class="section-title">Data Model — Where the Role Lives</h2>
+
+<div class="flow-box">
+  <h4>New column on trip_members</h4>
+  <div class="flow-step"><div class="num">+</div><div class="txt"><strong>trip_members.role_preference</strong> <span class="tag">TEXT NOT NULL DEFAULT 'helping_out'</span><br>Values: <code style="background:#2a2a2a; padding:1px 6px; border-radius:3px; color:#e8943a;">all_in | helping_out | just_here | vibes_only</code></div></div>
+  <div class="flow-step"><div class="num">ℹ</div><div class="txt">This is <strong>separate from the existing <code style="background:#2a2a2a; padding:1px 6px; border-radius:3px; color:#e8943a;">role</code> column</strong> (host/member) — that one is about permissions. This one is about UX preference.</div></div>
+  <div class="flow-step"><div class="num">+</div><div class="txt"><strong>user_profiles.default_role_preference</strong> <span class="tag">optional</span><br>Remembers last pick to suggest smart defaults on new trips.</div></div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- UI DENSITY BY ROLE -->
+<!-- ════════════════════════════════════════════ -->
+<h2 class="section-title">What Each Role Sees on /trip/[id]</h2>
+
+<div class="flow-box">
+  <h4>🔥 All In</h4>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Default tab:</strong> Itinerary — full day-by-day editor with create/edit/reorder</div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Sub-nav:</strong> Itinerary → Expenses → Packing → Notes → Meals → Group <span class="tag">all 6</span></div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Notifications:</strong> All on by default (group joins, new notes, event changes)</div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Special:</strong> "Nudge the group" button surfaces on every tab</div></div>
+</div>
+
+<div class="flow-box" style="margin-top: 20px;">
+  <h4>🙌 Helping Out</h4>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Default tab:</strong> Itinerary — read-first view (create events possible but de-emphasized)</div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Sub-nav:</strong> Itinerary → Packing → Expenses → Notes → Meals → Group</div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Notifications:</strong> On for events & tasks; off for pure discussion noise</div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Special:</strong> "Claim a task" card on trip hub showing open All-In tasks</div></div>
+</div>
+
+<div class="flow-box" style="margin-top: 20px;">
+  <h4>🎟️ Just Here</h4>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Default tab:</strong> Expenses — home screen is Splitwise-grade</div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Sub-nav:</strong> Expenses → Itinerary (today-only) → Group → Packing → Notes → Meals <span class="tag">all 6, reordered</span></div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Notifications:</strong> Day-of reminders only + new expense settles</div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Special:</strong> Events default to one-tap opt-in (no auto-yes); packing surfaced as opt-in upsell on hub</div></div>
+</div>
+
+<div class="flow-box" style="margin-top: 20px;">
+  <h4>✌️ Vibes Only</h4>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Default tab:</strong> Itinerary in Today-mode — single hero card for next event + amount owed</div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Sub-nav:</strong> Itinerary → Expenses → Group → Packing → Notes → Meals <span class="tag">all 6, reachable</span></div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Notifications:</strong> Morning-of only. Nothing else.</div></div>
+  <div class="flow-step"><div class="num">✓</div><div class="txt"><strong>Special:</strong> A gentle "Want the full trip view?" link at bottom — opt-in escape hatch</div></div>
+</div>
+
+</body>
+</html>

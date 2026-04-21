@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gear — Lives on Packing Tab</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #eae3da;
+    color: #1a1a1a;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+  h1.page-h1 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .page-sub {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 32px;
+    max-width: 820px;
+    margin-left: auto; margin-right: auto;
+  }
+
+  .phones {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .phone-col { display: flex; flex-direction: column; align-items: center; width: 420px; }
+  .phone-label {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4a7c59;
+    margin-bottom: 10px;
+  }
+  .phone {
+    width: 420px;
+    background: #f5f0eb;
+    border-radius: 28px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    overflow: hidden;
+    position: relative;
+    min-height: 860px;
+    border: 1px solid #d8cfc2;
+  }
+
+  /* ─── Sticky page header ─── */
+  .page-header {
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #e8e8e8;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px 10px;
+  }
+  .back-btn {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    border: 1px solid #e8e8e8;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .page-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    flex: 1;
+  }
+  .header-action-btn {
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: #4a7c59;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    border: none;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* ─── Person tabs ─── */
+  .person-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 16px;
+    background: #f5f0eb;
+    border-bottom: 1px solid #e8e8e8;
+    overflow-x: auto;
+  }
+  .person-tab {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border: none;
+    background: none;
+    border-bottom: 3px solid transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: #777;
+  }
+  .person-tab.active {
+    border-bottom-color: #4a7c59;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  .host-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 8px;
+    background: #4a7c5918;
+    color: #4a7c59;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* ─── View pill (inside header) ─── */
+  .view-pill-row {
+    padding: 8px 16px 10px;
+    display: flex;
+    justify-content: center;
+    background: #f5f0eb;
+  }
+  .view-pill {
+    display: inline-flex;
+    background: #fff;
+    border: 1.5px solid #e0dacd;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .view-pill-btn {
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #777;
+    white-space: nowrap;
+  }
+  .view-pill-btn.active {
+    background: #4a7c59;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  /* ─── Body ─── */
+  .body { padding: 14px 16px 40px; }
+
+  /* ─── Section hdr ─── */
+  .sec-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 16px 2px 10px;
+  }
+  .sec-hdr:first-child { margin-top: 0; }
+  .sec-hdr-main {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #4a7c59;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sec-count { font-size: 11px; color: #999; font-weight: 600; }
+  .sec-hint {
+    font-size: 11.5px;
+    color: #888;
+    font-weight: 500;
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+
+  /* ─── Gear item row ─── */
+  .grow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    margin-bottom: 6px;
+  }
+  .gcheck {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    border: 2px solid #c5c0b7;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff;
+  }
+  .gcheck.checked {
+    background: #4a7c59;
+    border-color: #4a7c59;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .grow.packed .gname { text-decoration: line-through; color: #aaa; }
+  .grow.packed .gcat  { opacity: 0.5; }
+  .gmain { flex: 1; min-width: 0; }
+  .gname {
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.25;
+  }
+  .gmeta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 3px;
+  }
+  .gcat {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    background: #4a7c5914;
+    color: #4a7c59;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .gnote {
+    font-size: 11px;
+    color: #999;
+  }
+  .gqty {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: #555;
+    background: #f2edea;
+    padding: 2px 8px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ─── Group roll-up row (who else is bringing what) ─── */
+  .group-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    margin-bottom: 6px;
+  }
+  .claim-ava {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .ava-joe { background: #4a7c59; }
+  .ava-sar { background: #c75a2a; }
+  .ava-mik { background: #5a7cb5; }
+  .ava-ell { background: #b55a8c; }
+  .ava-dad { background: #7a5aa8; }
+  .group-main { flex: 1; min-width: 0; }
+  .group-item-name {
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.25;
+  }
+  .group-sub {
+    font-size: 11.5px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .group-status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+  .group-status.packed   { background: #eaf2ec; color: #4a7c59; }
+  .group-status.not-yet  { background: #fff3e0; color: #b8651d; }
+
+  /* ─── Pull-from-library button ─── */
+  .pull-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 13px;
+    border: 1.5px dashed #c5bdae;
+    border-radius: 12px;
+    background: transparent;
+    color: #4a7c59;
+    font-weight: 700;
+    font-size: 13.5px;
+    margin-top: 8px;
+  }
+
+  /* ─── Gap divider ─── */
+  .divider {
+    height: 1px;
+    background: #e0dacd;
+    margin: 20px 0;
+  }
+
+  /* ─── Bottom sheet (pull from library modal) ─── */
+  .bg-dim {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 15;
+  }
+  .sheet {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    max-width: 480px;
+    margin: 0 auto;
+    max-height: 85%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.15);
+    z-index: 20;
+  }
+  .handle {
+    width: 44px; height: 4px;
+    background: #d4cec3;
+    border-radius: 2px;
+    margin: 10px auto 6px;
+  }
+  .sheet-header {
+    padding: 6px 20px 14px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .sheet-hmain { flex: 1; }
+  .sheet-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 19px;
+    line-height: 1.2;
+  }
+  .sheet-sub {
+    font-size: 12.5px;
+    color: #777;
+    margin-top: 3px;
+  }
+  .sheet-close {
+    width: 30px; height: 30px;
+    border-radius: 15px;
+    background: #f2edea;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    color: #777;
+    flex-shrink: 0;
+  }
+  .sheet-body { padding: 14px 20px 16px; overflow-y: auto; flex: 1; }
+  .lib-search {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e0dacd;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    background: #faf7f2;
+    margin-bottom: 12px;
+  }
+  .lib-section-hdr {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #888;
+    text-transform: uppercase;
+    margin: 14px 2px 6px;
+  }
+  .lib-section-hdr:first-child { margin-top: 4px; }
+  .lib-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    margin-bottom: 5px;
+  }
+  .lib-pick {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    border: 2px solid #c5c0b7;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff;
+  }
+  .lib-pick.picked {
+    background: #4a7c59;
+    border-color: #4a7c59;
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+  }
+  .lib-main { flex: 1; }
+  .lib-name { font-weight: 600; font-size: 13.5px; }
+  .lib-sub  { font-size: 11px; color: #888; margin-top: 2px; }
+  .lib-indicator {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: #f2edea;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .lib-indicator.on-trip {
+    background: #4a7c5914;
+    color: #4a7c59;
+  }
+  .sheet-footer {
+    padding: 12px 20px 18px;
+    border-top: 1px solid #eee;
+    background: #fff;
+    border-radius: 0 0 20px 20px;
+  }
+  .btn-full-primary {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    background: #4a7c59;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+  }
+  .lib-empty-link {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 12.5px;
+    color: #4a7c59;
+    font-weight: 700;
+  }
+
+  /* ─── Annotations ─── */
+  .annotations {
+    width: 420px;
+    margin-top: 16px;
+    padding: 16px 18px;
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e8e8e8;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .annotations h3 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 8px;
+    color: #4a7c59;
+  }
+  .annotations ul { padding-left: 18px; }
+  .annotations li { margin-bottom: 4px; color: #444; }
+  .annotations li strong { color: #1a1a1a; }
+
+  /* ─── The explainer block (top of page) ─── */
+  .explainer {
+    max-width: 820px;
+    margin: 0 auto 40px;
+    padding: 24px 28px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #d8cfc2;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    font-size: 14.5px;
+    line-height: 1.6;
+  }
+  .explainer h2 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 19px;
+    margin-bottom: 10px;
+    color: #4a7c59;
+  }
+  .explainer p { margin-bottom: 10px; color: #333; }
+  .explainer strong { color: #1a1a1a; }
+  .explainer .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 14px;
+  }
+  .explainer .box {
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #f9f5f0;
+    border: 1px solid #e8e1d3;
+  }
+  .explainer .box h4 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #4a7c59;
+    margin-bottom: 6px;
+  }
+  .explainer .box ul {
+    padding-left: 18px;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<h1 class="page-h1">Gear Lives on the Packing Tab</h1>
+<p class="page-sub">The two-tab split: Packing is "what I'm physically transporting" (clothes + outfits + my gear). Supplies is "what the group is buying for this trip." No overlap.</p>
+
+<!-- ════════════════ EXPLAINER ════════════════ -->
+<div class="explainer">
+  <h2>The clean line</h2>
+  <p>The question I use to decide where something belongs: <strong>"If this trip gets cancelled, does the item still exist and have value to me?"</strong> Yes → Gear (Packing tab). No → Supply (Supplies tab).</p>
+
+  <p>Gear is a persistent library that lives in your profile, built up across trips. When you're planning a specific trip, you <em>pull from the library</em> to say "this tent and those sleeping pads are coming on this trip." Other trip members see a group roll-up so nobody double-packs and the tent doesn't get forgotten.</p>
+
+  <p>Supplies stays trip-scoped: things bought or sourced for this specific weekend that get consumed or thrown away. Firewood, propane, ice, bachelor-party sashes. It doesn't care about your gear library.</p>
+
+  <div class="compare">
+    <div class="box">
+      <h4>Packing → Gear</h4>
+      <ul>
+        <li>4-person tent</li>
+        <li>Coleman 2-burner stove</li>
+        <li>Sleeping pads / bags</li>
+        <li>Camp chairs</li>
+        <li>Cookware set, lanterns, hatchet</li>
+        <li>First aid kit</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h4>Supplies</h4>
+      <ul>
+        <li>Firewood, propane, charcoal</li>
+        <li>Ice, batteries, duct tape</li>
+        <li>Paper plates, trash bags</li>
+        <li>Sunscreen, bug spray</li>
+        <li>Party decorations, sashes, games</li>
+      </ul>
+    </div>
+  </div>
+
+  <p style="margin-top: 14px;"><strong>Power users</strong> (your preference): build the gear library once in your profile, then assemble trips from it. <strong>Casual users</strong>: skip the library and just add items to Supplies per-trip. The Gear pill on Packing is opt-in — if you haven't built a library, it shows a "Start your gear library" empty state. One doesn't gate the other.</p>
+</div>
+
+<div class="phones">
+
+  <!-- ════════════════ FRAME 1: GEAR VIEW ON PACKING ════════════════ -->
+  <div class="phone-col">
+    <div class="phone-label">1. Gear View — Packing Tab</div>
+    <div class="phone">
+      <div class="page-header">
+        <div class="header-row">
+          <div class="back-btn">‹</div>
+          <div class="page-title">Packing</div>
+        </div>
+        <div class="person-tabs">
+          <button class="person-tab active">
+            <span>Joe</span>
+            <span class="host-badge">Host</span>
+          </button>
+          <button class="person-tab">Sarah</button>
+          <button class="person-tab">Mike</button>
+          <button class="person-tab">Ellie</button>
+          <button class="person-tab">Everyone</button>
+        </div>
+        <div class="view-pill-row">
+          <div class="view-pill">
+            <button class="view-pill-btn">Group</button>
+            <button class="view-pill-btn">Outfits</button>
+            <button class="view-pill-btn active">Gear</button>
+            <button class="view-pill-btn">Pack &amp; Go ✓</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="body">
+
+        <div class="sec-hdr">
+          <div class="sec-hdr-main">Your Gear for this trip</div>
+          <div class="sec-count">3 of 5 packed</div>
+        </div>
+        <div class="sec-hint">Pulled from your gear library in <strong>Profile → My Gear</strong>. Check off as you load the car.</div>
+
+        <div class="grow packed">
+          <div class="gcheck checked">✓</div>
+          <div class="gmain">
+            <div class="gname">Coleman 2-burner stove</div>
+            <div class="gmeta">
+              <span class="gcat">Cooking</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grow">
+          <div class="gcheck"></div>
+          <div class="gmain">
+            <div class="gname">4-person tent</div>
+            <div class="gmeta">
+              <span class="gcat">Shelter</span>
+              <span class="gnote">shared · sleeps family</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grow packed">
+          <div class="gcheck checked">✓</div>
+          <div class="gmain">
+            <div class="gname">Sleeping pad</div>
+            <div class="gmeta">
+              <span class="gcat">Sleeping</span>
+            </div>
+          </div>
+          <div class="gqty">×2</div>
+        </div>
+
+        <div class="grow">
+          <div class="gcheck"></div>
+          <div class="gmain">
+            <div class="gname">Headlamp</div>
+            <div class="gmeta">
+              <span class="gcat">Lighting</span>
+            </div>
+          </div>
+          <div class="gqty">×2</div>
+        </div>
+
+        <div class="grow packed">
+          <div class="gcheck checked">✓</div>
+          <div class="gmain">
+            <div class="gname">First aid kit</div>
+            <div class="gmeta">
+              <span class="gcat">Safety</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="pull-btn">＋ Pull from library</button>
+
+        <div class="divider"></div>
+
+        <div class="sec-hdr">
+          <div class="sec-hdr-main" style="color: #888;">Others are bringing</div>
+          <div class="sec-count">group roll-up</div>
+        </div>
+        <div class="sec-hint">What the rest of the trip has claimed. Read-only from here — so you don't double-pack.</div>
+
+        <div class="group-row">
+          <div class="claim-ava ava-mik">MK</div>
+          <div class="group-main">
+            <div class="group-item-name">6-person tent</div>
+            <div class="group-sub">Mike · Shelter</div>
+          </div>
+          <div class="group-status packed">Packed</div>
+        </div>
+
+        <div class="group-row">
+          <div class="claim-ava ava-sar">SP</div>
+          <div class="group-main">
+            <div class="group-item-name">Camp chairs · ×6</div>
+            <div class="group-sub">Sarah · Seating</div>
+          </div>
+          <div class="group-status not-yet">Not packed yet</div>
+        </div>
+
+        <div class="group-row">
+          <div class="claim-ava ava-mik">MK</div>
+          <div class="group-main">
+            <div class="group-item-name">Cooler · Yeti 45</div>
+            <div class="group-sub">Mike · Kitchen</div>
+          </div>
+          <div class="group-status packed">Packed</div>
+        </div>
+
+        <div class="group-row">
+          <div class="claim-ava ava-ell">EV</div>
+          <div class="group-main">
+            <div class="group-item-name">Bluetooth speaker</div>
+            <div class="group-sub">Ellie · Entertainment</div>
+          </div>
+          <div class="group-status not-yet">Not packed yet</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="annotations">
+      <h3>What's on screen</h3>
+      <ul>
+        <li><strong>New "Gear" pill</strong> joins the existing view switcher alongside Group / Outfits / Pack &amp; Go ✓.</li>
+        <li><strong>Person tabs scope the view</strong> — Joe's gear here, tap Sarah to see hers. "Everyone" tab shows the full aggregate.</li>
+        <li><strong>Your Gear section</strong> is interactive — check off as you load the car. Stored as a per-user, per-trip packed state (same pattern as existing packing_items).</li>
+        <li><strong>Others are bringing</strong> is a read-only roll-up. Gives you air-cover so the tent doesn't get forgotten.</li>
+        <li><strong>Pull from library</strong> opens the next frame — picks from your persistent gear library and adds to this trip.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════════════ FRAME 2: PULL FROM LIBRARY MODAL ════════════════ -->
+  <div class="phone-col">
+    <div class="phone-label">2. Pull from Library</div>
+    <div class="phone">
+      <!-- ghost page behind -->
+      <div class="page-header">
+        <div class="header-row">
+          <div class="back-btn">‹</div>
+          <div class="page-title">Packing</div>
+        </div>
+        <div class="person-tabs">
+          <button class="person-tab active"><span>Joe</span></button>
+          <button class="person-tab">Sarah</button>
+          <button class="person-tab">Mike</button>
+        </div>
+        <div class="view-pill-row">
+          <div class="view-pill">
+            <button class="view-pill-btn">Group</button>
+            <button class="view-pill-btn">Outfits</button>
+            <button class="view-pill-btn active">Gear</button>
+            <button class="view-pill-btn">Pack &amp; Go ✓</button>
+          </div>
+        </div>
+      </div>
+      <div class="body" style="opacity: 0.35;">
+        <div class="sec-hdr">
+          <div class="sec-hdr-main">Your Gear for this trip</div>
+        </div>
+        <div class="grow"><div class="gcheck"></div><div class="gmain"><div class="gname">Coleman 2-burner stove</div></div></div>
+        <div class="grow"><div class="gcheck"></div><div class="gmain"><div class="gname">4-person tent</div></div></div>
+      </div>
+
+      <div class="bg-dim"></div>
+
+      <div class="sheet" style="height: 680px;">
+        <div class="handle"></div>
+        <div class="sheet-header">
+          <div class="sheet-hmain">
+            <div class="sheet-title">Pull gear into trip</div>
+            <div class="sheet-sub">From your library · pick what's coming to Spring Camp Weekend</div>
+          </div>
+          <div class="sheet-close">✕</div>
+        </div>
+        <div class="sheet-body">
+          <input class="lib-search" placeholder="🔎 Search your library…" />
+
+          <div class="lib-section-hdr">Shelter</div>
+          <div class="lib-row">
+            <div class="lib-pick picked">✓</div>
+            <div class="lib-main">
+              <div class="lib-name">4-person tent</div>
+              <div class="lib-sub">REI Half Dome · 2022</div>
+            </div>
+            <span class="lib-indicator on-trip">On trip</span>
+          </div>
+          <div class="lib-row">
+            <div class="lib-pick"></div>
+            <div class="lib-main">
+              <div class="lib-name">Tarp &amp; stakes</div>
+              <div class="lib-sub">10'×12' · canopy</div>
+            </div>
+          </div>
+
+          <div class="lib-section-hdr">Sleeping</div>
+          <div class="lib-row">
+            <div class="lib-pick picked">✓</div>
+            <div class="lib-main">
+              <div class="lib-name">Sleeping pad</div>
+              <div class="lib-sub">Therm-a-Rest · ×2 in library</div>
+            </div>
+            <span class="lib-indicator on-trip">On trip</span>
+          </div>
+          <div class="lib-row">
+            <div class="lib-pick"></div>
+            <div class="lib-main">
+              <div class="lib-name">Down sleeping bag</div>
+              <div class="lib-sub">30°F · 1 adult + 1 kid</div>
+            </div>
+          </div>
+
+          <div class="lib-section-hdr">Cooking</div>
+          <div class="lib-row">
+            <div class="lib-pick picked">✓</div>
+            <div class="lib-main">
+              <div class="lib-name">Coleman 2-burner stove</div>
+              <div class="lib-sub">propane</div>
+            </div>
+            <span class="lib-indicator on-trip">On trip</span>
+          </div>
+          <div class="lib-row">
+            <div class="lib-pick"></div>
+            <div class="lib-main">
+              <div class="lib-name">Nesting cookware set</div>
+              <div class="lib-sub">GSI Outdoors · 8 pc</div>
+            </div>
+          </div>
+          <div class="lib-row">
+            <div class="lib-pick"></div>
+            <div class="lib-main">
+              <div class="lib-name">Percolator</div>
+              <div class="lib-sub">9-cup enamel</div>
+            </div>
+          </div>
+
+          <div class="lib-section-hdr">Lighting / Safety</div>
+          <div class="lib-row">
+            <div class="lib-pick picked">✓</div>
+            <div class="lib-main">
+              <div class="lib-name">Headlamp</div>
+              <div class="lib-sub">Black Diamond · ×2</div>
+            </div>
+            <span class="lib-indicator on-trip">On trip</span>
+          </div>
+          <div class="lib-row">
+            <div class="lib-pick picked">✓</div>
+            <div class="lib-main">
+              <div class="lib-name">First aid kit</div>
+              <div class="lib-sub">Adventure Medical</div>
+            </div>
+            <span class="lib-indicator on-trip">On trip</span>
+          </div>
+
+          <div class="lib-empty-link">＋ Don't have it yet? Add a new gear item</div>
+        </div>
+        <div class="sheet-footer">
+          <button class="btn-full-primary">Add 5 items to trip</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="annotations">
+      <h3>How the library pull works</h3>
+      <ul>
+        <li><strong>Source of truth is the library</strong> (`gear_items` in user profile). Adding to a trip creates a join row (`trip_gear`) — the library item itself isn't duplicated.</li>
+        <li><strong>"On trip" chip</strong> shows what's already pulled in, so you can see state at a glance when reopening.</li>
+        <li><strong>Search + section grouping</strong> — library will grow; search is the escape valve.</li>
+        <li><strong>"Don't have it yet?"</strong> link goes to Profile → My Gear to add new library items without leaving the flow.</li>
+        <li><strong>Removing from trip ≠ deleting from library</strong> — uncheck just removes the `trip_gear` join.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

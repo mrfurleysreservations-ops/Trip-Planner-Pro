@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Group — Interactive Mockup (exactly what the refactor delivers)</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8f8f8;
+    --headerBg: #fff;
+    --text: #1a1a1a;
+    --muted: #777;
+    --accent: #e8943a;
+    --accent2: #c75a2a;
+    --card: rgba(0,0,0,0.03);
+    --cardBorder: #e0e0e0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #c8ccd4; font-family: 'DM Sans', sans-serif; color: var(--text); }
+  body { display: flex; flex-direction: column; align-items: center; padding: 28px 20px 60px; gap: 16px; min-height: 100vh; }
+
+  .hint { font-size: 12px; color: #444; text-align: center; max-width: 420px; line-height: 1.5; }
+  .hint strong { color: var(--accent2); }
+
+  /* Phone */
+  .phone {
+    width: 400px; height: 840px;
+    background: var(--bg); border-radius: 32px;
+    overflow: hidden; position: relative;
+    box-shadow: 0 22px 55px rgba(0,0,0,0.25);
+  }
+  .phone-scroll {
+    width: 100%; height: 100%;
+    overflow-y: auto; overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ─── STICKY TOP ─── */
+  .sticky-top {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--headerBg);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--cardBorder);
+  }
+
+  /* Row 1 — header */
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px 8px; gap: 8px;
+  }
+  .back {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(232,148,58,0.1); border: 1.5px solid rgba(232,148,58,0.25);
+    color: var(--accent); font-size: 22px; font-weight: 700;
+    cursor: pointer; padding: 0; transition: all 0.15s;
+  }
+  .back:hover { background: rgba(232,148,58,0.18); border-color: var(--accent); }
+  .back:active { transform: scale(0.92); }
+  .page-title {
+    flex: 1; margin: 0 0 0 10px;
+    font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 20px; color: var(--text);
+  }
+  .hdr-save {
+    padding: 8px 14px; border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    color: #fff;
+    font-weight: 700; font-size: 12px; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(232,148,58,0.3);
+  }
+
+  /* Row 2 — Friends/Families pill (canonical) */
+  .pill-bar { display: flex; justify-content: center; padding: 6px 16px 8px; }
+  .pill {
+    display: inline-flex;
+    background: var(--card);
+    border: 1.5px solid var(--cardBorder);
+    border-radius: 20px;
+  }
+  .pill button {
+    background: transparent; border: none;
+    padding: 8px 18px; border-radius: 20px;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .pill button.active {
+    background: var(--accent); color: #fff; font-weight: 700;
+  }
+
+  /* Row 3 — Search */
+  .search-bar { padding: 2px 16px 10px; position: relative; }
+  .search-bar input {
+    width: 100%; padding: 9px 12px 9px 34px;
+    border: 1px solid var(--cardBorder); border-radius: 10px;
+    background: #fff; font-size: 13px; font-family: 'DM Sans', sans-serif;
+  }
+  .search-bar .icon {
+    position: absolute; left: 26px; top: 9px;
+    font-size: 14px; color: var(--muted);
+  }
+
+  /* Body */
+  .body { padding: 12px 16px 68px; }
+
+  /* Crew roster — compact, pinned */
+  .crew-strip {
+    display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+    padding: 4px 16px 10px;
+  }
+  .crew-strip::-webkit-scrollbar { display: none; }
+  .crew-chip {
+    flex-shrink: 0;
+    background: #fff; border: 1px solid var(--cardBorder); border-radius: 10px;
+    padding: 6px 8px; min-width: 62px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .crew-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 12px;
+    border: 2px solid transparent;
+  }
+  .crew-chip.status-accepted .crew-avatar { border-color: #2e7d32; }
+  .crew-chip.status-pending .crew-avatar { border-color: #856404; }
+  .crew-chip.status-declined .crew-avatar { border-color: #888; }
+  .crew-chip.status-host .crew-avatar { border-color: var(--accent); }
+  .crew-name { font-size: 10px; font-weight: 700; color: var(--text); }
+  .status-chip {
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 2px 6px; border-radius: 6px;
+  }
+  .status-chip.host { background: rgba(232,148,58,0.18); color: var(--accent); }
+  .status-chip.accepted { background: #d4edda; color: #155724; }
+  .status-chip.pending { background: #fff3cd; color: #856404; }
+  .status-chip.declined { background: #e4e4e4; color: #555; }
+
+  /* Compact status dot shown in pinned chip */
+  .status-dot {
+    font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .crew-chip.status-host .status-dot { color: var(--accent); }
+  .crew-chip.status-accepted .status-dot { color: #2e7d32; }
+  .crew-chip.status-pending .status-dot { color: #856404; }
+
+  /* Sections */
+  .section-h {
+    font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px;
+    margin: 16px 0 8px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .section-h .count { font-size: 11px; font-weight: 500; color: var(--muted); }
+
+  /* Friend/family row */
+  .member-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border: 1px solid var(--cardBorder); border-radius: 12px;
+    padding: 10px 12px; margin-bottom: 8px;
+  }
+  .member-row.dim { opacity: 0.55; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 13px; flex-shrink: 0;
+  }
+  .member-body { flex: 1; min-width: 0; }
+  .member-body h4 {
+    margin: 0; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 14px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .member-body p {
+    margin: 2px 0 0; font-size: 11px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .btn-add {
+    background: var(--accent); color: #fff; border: none;
+    padding: 6px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; white-space: nowrap;
+  }
+  .btn-added {
+    background: #d4edda; color: #155724; border: none;
+    padding: 6px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 700; cursor: default;
+    font-family: 'DM Sans', sans-serif; white-space: nowrap;
+  }
+
+  /* Family card */
+  .family-card {
+    background: #fff; border: 1px solid var(--cardBorder); border-radius: 12px;
+    padding: 12px; margin-bottom: 10px;
+  }
+  .family-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .family-head h4 {
+    margin: 0; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 14px;
+    flex: 1;
+  }
+  .family-head .owner {
+    font-size: 11px; color: var(--muted); font-weight: 500;
+  }
+  .member-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+  .mem-pill {
+    background: var(--card); padding: 3px 9px; border-radius: 12px;
+    font-size: 11px; color: var(--text); font-weight: 500;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+
+  /* External invite form */
+  .invite-form {
+    background: var(--card); border-radius: 12px; padding: 14px;
+    margin-top: 14px;
+  }
+  .invite-form h4 {
+    margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px;
+  }
+  .invite-form p { margin: 0 0 10px; font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .invite-form input {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--cardBorder);
+    border-radius: 8px; font-size: 12px; margin-bottom: 6px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .invite-form button {
+    width: 100%; padding: 10px; border-radius: 8px; border: none;
+    background: var(--accent); color: #fff; font-weight: 700; font-size: 13px;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: 2px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center; padding: 30px 20px; color: var(--muted); font-size: 13px;
+  }
+  .empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+
+  /* Sub-nav */
+  .sub-nav {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 56px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--cardBorder);
+    display: flex; align-items: center; justify-content: space-around; z-index: 100;
+  }
+  .sub-nav button {
+    background: transparent; border: none;
+    font-size: 10px; font-weight: 600; color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer;
+  }
+  .sub-nav button.active { color: var(--accent); font-weight: 700; }
+  .sub-nav button span:first-child { font-size: 17px; }
+
+  .scroll-anno {
+    position: absolute; top: 48%; transform: rotate(-90deg);
+    left: -42px; font-size: 11px; color: #333;
+    letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .anno-list {
+    max-width: 420px; background: #fff; border-radius: 12px; padding: 14px 18px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06); font-size: 12px; color: #333; line-height: 1.6;
+  }
+  .anno-list h4 { margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 13px; color: var(--accent2); }
+  .anno-list .check { color: #2e7d32; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="hint">
+  <strong>Interactive group mockup — try it:</strong><br>
+  Toggle <strong>Friends / Families</strong> · type in the search · click <strong>+ Add</strong> on any friend or family · scroll to see the header + pill + search stay pinned · hit <strong>Save</strong> (top right) to finish.
+</div>
+
+<div style="position: relative;">
+  <div class="scroll-anno">↑ sticky · body scrolls ↓</div>
+  <div class="phone">
+    <div class="phone-scroll">
+      <!-- ─── STICKY TOP ─── -->
+      <div class="sticky-top">
+        <div class="page-header">
+          <button class="back" title="Back to trip hub" onclick="alert('Back → /trip/[id] (trip hub)')">←</button>
+          <h1 class="page-title">Group</h1>
+          <button class="hdr-save" onclick="alert('Save → router.push(/trip/[id]?from=group)')">Save ✓</button>
+        </div>
+
+        <div class="pill-bar">
+          <div class="pill">
+            <button id="tabFriends" class="active">👥 Friends</button>
+            <button id="tabFamilies">🏠 Families</button>
+          </div>
+        </div>
+
+        <!-- Crew roster pinned -->
+        <div class="crew-strip" id="crewStrip"></div>
+
+        <div class="search-bar">
+          <span class="icon">🔍</span>
+          <input id="searchBox" placeholder="Search friends…" />
+        </div>
+      </div>
+
+      <!-- ─── BODY ─── -->
+      <div class="body">
+
+        <!-- Tab body -->
+        <div id="friendsBody"></div>
+        <div id="familiesBody" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Sub-nav -->
+    <div class="sub-nav">
+      <button><span>🗓</span><span>Itinerary</span></button>
+      <button><span>💸</span><span>Expenses</span></button>
+      <button><span>🎒</span><span>Packing</span></button>
+      <button><span>📝</span><span>Notes</span></button>
+      <button><span>🍽</span><span>Meals</span></button>
+      <button class="active"><span>👥</span><span>Group</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="anno-list">
+  <h4>✅ Behaviors preserved</h4>
+  <div>
+    <span class="check">✓</span> Crew roster (host locked, members with status chips)<br>
+    <span class="check">✓</span> Friends tab: app-user friends list + "Not on app yet" + external invite form<br>
+    <span class="check">✓</span> Families tab: Your Families + Friends' Families with member pills (age emoji + name)<br>
+    <span class="check">✓</span> Search filters within the active tab<br>
+    <span class="check">✓</span> Add / Added state toggles<br>
+    <span class="check">✓</span> Empty states for both tabs<br>
+    <span class="check">✓</span> Save & Continue routes to <code>/trip/[id]?from=group</code>
+  </div>
+  <h4 style="margin-top:12px;">🔀 What changes from today</h4>
+  <div>
+    <span class="check">1.</span> Header + compact crew roster + Friends/Families pill + search pinned in one sticky container (4 rows, always visible)<br>
+    <span class="check">2.</span> Crew chips made more compact (32px avatar with status-colored ring, short status indicator) so 4 pinned rows fit comfortably<br>
+    <span class="check">3.</span> Friends/Families toggle restyled from underline tabs → canonical pill (matches all other tabs)<br>
+    <span class="check">4.</span> Back button upgraded to 40x40 circular accent-tinted<br>
+    <span class="check">5.</span> "Save & Continue" button moves from sticky-bottom CTA → top-right header action (<em>Save ✓</em>) — same onClick handler<br>
+    <span class="check">6.</span> Friends tab reorders: <strong>Invite someone new</strong> → <strong>Your friends</strong> → <strong>Not on the app yet</strong>. First-time users land on the invite form instead of scrolling past friend lists.
+  </div>
+  <h4 style="margin-top:12px;">❌ NOT changed</h4>
+  <div>
+    Host lock preserved (host chip has accent-colored ring, can't be removed). Status logic preserved (accepted / pending / declined). Friend / family / invite rendering in body untouched. No FAB (inline "+ Add" per row).
+  </div>
+</div>
+
+<script>
+  // ─── Data ────────────
+  const CREW = [
+    { initial: "J", color: "#2188a8", name: "Joe", status: "host", locked: true },
+    { initial: "S", color: "#7b1fa2", name: "Sarah", status: "accepted" },
+    { initial: "E", color: "#e67e22", name: "Emma", status: "accepted" },
+    { initial: "O", color: "#c62828", name: "Sophia", status: "accepted" },
+    { initial: "R", color: "#888", name: "Ryan", status: "pending" },
+  ];
+
+  const FRIENDS = [
+    { id: "f1", initial: "A", color: "#2188a8", name: "Alex Rivera", email: "alex@example.com", added: true },
+    { id: "f2", initial: "J", color: "#7b1fa2", name: "Jordan Park", email: "jordan@example.com", added: false },
+    { id: "f3", initial: "C", color: "#2e7d32", name: "Casey Morgan", email: "casey@example.com", added: false },
+    { id: "f4", initial: "S", color: "#e67e22", name: "Sarah Chen", email: "sarah@example.com", added: true },
+  ];
+
+  const EXTERNALS = [
+    { id: "e1", initial: "M", color: "#888", name: "Max Thompson", sub: "Invited — hasn't joined yet" },
+    { id: "e2", initial: "J", color: "#888", name: "Jamie Okafor", sub: "Invited — hasn't joined yet" },
+  ];
+
+  const FAMILIES = [
+    { id: "fam1", name: "Sunshine Crew", is_own: true, owner: null, added: true, members: [
+      { name: "Emma", age: "kid" },
+      { name: "Sophia", age: "kid" },
+    ]},
+    { id: "fam2", name: "Adventure Squad", is_own: false, owner: "Sarah Chen", added: false, members: [
+      { name: "Lucas", age: "teen" },
+      { name: "Ava", age: "adult" },
+    ]},
+  ];
+
+  // ─── State ────────────
+  let activeTab = "friends";
+  let searchQuery = "";
+  const friendsState = Object.fromEntries(FRIENDS.map(f => [f.id, f.added]));
+  const familiesState = Object.fromEntries(FAMILIES.map(f => [f.id, f.added]));
+
+  // ─── Render ────────────
+  function ageEmoji(age) {
+    return age === "kid" ? "👶" : age === "teen" ? "🧒" : "👤";
+  }
+
+  function renderCrew() {
+    const el = document.getElementById("crewStrip");
+    el.innerHTML = CREW.map(m => `
+      <div class="crew-chip status-${m.status}" title="${m.name} — ${m.status}">
+        <div class="crew-avatar" style="background:${m.color};">${m.initial}</div>
+        <div class="crew-name">${m.name}</div>
+        <div class="status-dot">${m.status === 'host' ? 'HOST' : m.status === 'accepted' ? '✓' : m.status === 'pending' ? '…' : '×'}</div>
+      </div>
+    `).join("");
+  }
+
+  function renderFriends() {
+    const q = searchQuery.toLowerCase();
+    const friends = FRIENDS.filter(f => !q || f.name.toLowerCase().includes(q) || f.email.toLowerCase().includes(q));
+    const ext = EXTERNALS.filter(e => !q || e.name.toLowerCase().includes(q));
+    const friendsList = friends.map(f => `
+      <div class="member-row">
+        <div class="avatar" style="background:${f.color};">${f.initial}</div>
+        <div class="member-body">
+          <h4>${f.name}</h4>
+          <p>${f.email}</p>
+        </div>
+        ${friendsState[f.id]
+          ? `<button class="btn-added">✓ Added</button>`
+          : `<button class="btn-add" data-id="${f.id}">+ Add</button>`}
+      </div>
+    `).join("");
+    const extList = ext.map(e => `
+      <div class="member-row dim">
+        <div class="avatar" style="background:${e.color};">${e.initial}</div>
+        <div class="member-body">
+          <h4>${e.name}</h4>
+          <p>${e.sub}</p>
+        </div>
+        <span class="status-chip pending">PENDING</span>
+      </div>
+    `).join("");
+    document.getElementById("friendsBody").innerHTML = `
+      <div class="invite-form">
+        <h4>Invite someone new</h4>
+        <p>Send an email invite to a friend who doesn't use the app yet.</p>
+        <input placeholder="Name" />
+        <input placeholder="Email (optional)" />
+        <button>Send invite</button>
+      </div>
+
+      <div class="section-h"><span>Your friends</span><span class="count">${friends.length} matches</span></div>
+      ${friends.length
+        ? friendsList
+        : `<div class="empty-state"><div class="icon">👤</div>No friends match "${searchQuery}"</div>`}
+
+      ${ext.length
+        ? `<div class="section-h"><span>Not on the app yet</span><span class="count">${ext.length}</span></div>${extList}`
+        : ""}
+    `;
+    document.getElementById("friendsBody").querySelectorAll(".btn-add").forEach(b => {
+      b.onclick = () => { friendsState[b.dataset.id] = true; renderFriends(); };
+    });
+  }
+
+  function renderFamilies() {
+    const q = searchQuery.toLowerCase();
+    const own = FAMILIES.filter(f => f.is_own).filter(f => !q || f.name.toLowerCase().includes(q) || f.members.some(m => m.name.toLowerCase().includes(q)));
+    const others = FAMILIES.filter(f => !f.is_own).filter(f => !q || f.name.toLowerCase().includes(q) || f.members.some(m => m.name.toLowerCase().includes(q)));
+
+    const cardFor = (f) => `
+      <div class="family-card">
+        <div class="family-head">
+          <span style="font-size:20px;">🏠</span>
+          <h4>${f.name}</h4>
+          ${f.owner ? `<span class="owner">${f.owner}'s</span>` : ""}
+          ${familiesState[f.id]
+            ? `<button class="btn-added">✓ Added</button>`
+            : `<button class="btn-add" data-id="${f.id}">+ Add All</button>`}
+        </div>
+        <div class="member-pills">
+          ${f.members.map(m => `<span class="mem-pill">${ageEmoji(m.age)} ${m.name}</span>`).join("")}
+        </div>
+      </div>`;
+    document.getElementById("familiesBody").innerHTML = `
+      ${own.length ? `<div class="section-h"><span>Your families</span><span class="count">${own.length}</span></div>${own.map(cardFor).join("")}` : ""}
+      ${others.length ? `<div class="section-h"><span>Friends' families</span><span class="count">${others.length}</span></div>${others.map(cardFor).join("")}` : ""}
+      ${(!own.length && !others.length) ? `<div class="empty-state"><div class="icon">🏠</div>No families found${searchQuery ? ` for "${searchQuery}"` : ""}</div>` : ""}
+    `;
+    document.getElementById("familiesBody").querySelectorAll(".btn-add").forEach(b => {
+      b.onclick = () => { familiesState[b.dataset.id] = true; renderFamilies(); };
+    });
+  }
+
+  function applyTab() {
+    document.getElementById("tabFriends").classList.toggle("active", activeTab === "friends");
+    document.getElementById("tabFamilies").classList.toggle("active", activeTab === "families");
+    document.getElementById("friendsBody").style.display = activeTab === "friends" ? "block" : "none";
+    document.getElementById("familiesBody").style.display = activeTab === "families" ? "block" : "none";
+    document.getElementById("searchBox").placeholder = activeTab === "friends" ? "Search friends…" : "Search families…";
+    if (activeTab === "friends") renderFriends();
+    else renderFamilies();
+  }
+
+  document.getElementById("tabFriends").onclick = () => { activeTab = "friends"; applyTab(); };
+  document.getElementById("tabFamilies").onclick = () => { activeTab = "families"; applyTab(); };
+  document.getElementById("searchBox").oninput = (e) => {
+    searchQuery = e.target.value;
+    if (activeTab === "friends") renderFriends();
+    else renderFamilies();
+  };
+
+  // ─── Init ────────────
+  renderCrew();
+  applyTab();
+</script>
+</body>
+</html>

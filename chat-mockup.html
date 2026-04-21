@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trip Planner Pro — Chat Mockup (style-matched)</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #ece9e6;
+    padding: 40px 20px 60px;
+    color: #1a1a1a;
+  }
+  .page-title {
+    text-align: center;
+    font-family: 'Outfit', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .page-subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 36px;
+    font-size: 13px;
+  }
+  .frames {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .frame-wrap { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-size: 13px;
+    color: #333;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  .frame-label .route {
+    font-family: 'SF Mono', Menlo, monospace;
+    color: #0097a7;
+    font-weight: 500;
+    font-size: 12px;
+    margin-left: 6px;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 390px;
+    height: 820px;
+    border-radius: 36px;
+    border: 8px solid #2a2a2a;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    overflow: hidden;
+    position: relative;
+    background: #f8f8f8;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── Dashboard title bar (matches AppShell) ─── */
+  .title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #fff;
+    border-bottom: 1px solid #e5e5e5;
+    flex-shrink: 0;
+  }
+  .title-bar .brand {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    color: #1a1a1a;
+    letter-spacing: -0.3px;
+  }
+  .title-bar .right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .title-bar .avatar {
+    font-size: 20px;
+  }
+  .title-bar .signout {
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    color: #777;
+    font-size: 13px;
+    padding: 5px 14px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  /* ─── Dashboard top TabBar (matches app/components/tab-bar.tsx) ─── */
+  .top-tabbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 56px;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid #e5e5e5;
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+  .top-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 100%;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    padding: 0 4px;
+    position: relative;
+  }
+  .top-tab.active { border-bottom-color: #e8943a; }
+  .top-tab .icon { font-size: 22px; line-height: 1; position: relative; }
+  .top-tab .label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #999;
+  }
+  .top-tab.active .label { color: #e8943a; font-weight: 700; }
+  .top-tab .badge-dot {
+    position: absolute;
+    top: -4px;
+    right: -8px;
+    background: #e53935;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    lineHeight: 1;
+  }
+
+  /* ─── Dashboard body ─── */
+  .dash-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 16px 24px;
+    background: #f8f8f8;
+  }
+  .dash-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .dash-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .dash-sub {
+    font-size: 12px;
+    color: #888;
+    margin-top: -8px;
+    margin-bottom: 18px;
+  }
+  .section-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+  }
+  .card-glass {
+    background: #fff;
+    border: 1.5px solid #e5e5e5;
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    margin-bottom: 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .card-glass.has-accent { border-left-width: 4px; }
+  .chat-card-body { flex: 1; min-width: 0; }
+  .chat-card-trip {
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chat-card-preview {
+    font-size: 13px;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 6px;
+  }
+  .chat-card-preview .sender { color: #333; font-weight: 600; }
+  .chat-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .chat-card-dates { font-size: 12px; color: #999; }
+  .chat-card-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .chat-card-time { font-size: 11px; color: #999; white-space: nowrap; }
+  .unread-pill {
+    background: #e53935;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    min-width: 22px;
+    text-align: center;
+  }
+
+  /* ─── Trip tab layout (matches docs/tab-layout-standard.md) ─── */
+  .trip-root {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    /* per standard: background = theme.bg, paddingBottom: 56 */
+    background: #f2f8fa;             /* flying theme bg */
+    padding-bottom: 56px;
+  }
+  .trip-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #e8f4f6;             /* flying theme headerBg */
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .trip-row1 {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px 8px;
+    gap: 8px;
+  }
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0,151,167,0.1);         /* accent at 10% */
+    border: 1.5px solid rgba(0,151,167,0.25);/* accent at 25% */
+    color: #0097a7;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+  }
+  .trip-h1 {
+    flex: 1;
+    margin: 0 0 0 10px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: #1a1a1a;
+  }
+  .header-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    align-items: center;
+  }
+  .member-stack { display: flex; }
+  .member-stack .dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid #e8f4f6;
+    margin-left: -8px;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+  .member-stack .dot:first-child { margin-left: 0; }
+  .member-count {
+    font-size: 12px;
+    color: #5a7a8a;
+    margin-left: 6px;
+    font-weight: 600;
+  }
+
+  /* Scrollable messages body */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px 130px;  /* clears composer (~60) + sub-nav (56) */
+  }
+  .day-divider {
+    text-align: center;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #0097a7;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin: 14px 0 10px;
+  }
+  .msg-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    align-items: flex-end;
+  }
+  .msg-row.mine { justify-content: flex-end; }
+  .msg-row.grouped { margin-top: 3px; }
+  .msg-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .msg-row.grouped .msg-avatar { visibility: hidden; }
+  .msg-content { max-width: 78%; display: flex; flex-direction: column; }
+  .msg-sender {
+    font-size: 11px;
+    color: #5a7a8a;
+    font-weight: 700;
+    margin-bottom: 3px;
+    margin-left: 4px;
+  }
+  .msg-bubble {
+    background: #fff;
+    border: 1.5px solid #e5e5e5;
+    padding: 9px 13px;
+    border-radius: 16px 16px 16px 4px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: #1a1a1a;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .msg-row.mine .msg-bubble {
+    background: #0097a7;
+    border-color: #0097a7;
+    color: #fff;
+    border-radius: 16px 16px 4px 16px;
+  }
+  .msg-time {
+    font-size: 10px;
+    color: #999;
+    margin-top: 3px;
+    margin-left: 6px;
+  }
+  .msg-row.mine .msg-time { text-align: right; margin-right: 6px; }
+  .msg-bubble.deleted {
+    background: transparent;
+    border: 1px dashed rgba(0,0,0,0.18);
+    color: #999;
+    font-style: italic;
+    font-size: 13px;
+  }
+
+  /* Composer — docks above the bottom sub-nav */
+  .composer {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 56px;               /* sub-nav is 56px tall */
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid #e5e5e5;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .composer input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1.5px solid #ddd;
+    border-radius: 20px;
+    font-size: 14px;
+    background: #fff;
+    color: #1a1a1a;
+    outline: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .composer input::placeholder { color: #aaa; }
+  .send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #0097a7;
+    color: #fff;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* ─── Bottom trip sub-nav (matches app/trip/[id]/trip-sub-nav.tsx) ─── */
+  .trip-subnav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 56px;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid #e5e5e5;
+    padding: 0 4px;
+  }
+  .sub-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 100%;
+    background: none;
+    border: none;
+    border-top: 3px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    min-width: 0;
+  }
+  .sub-tab.active { border-top-color: #0097a7; }
+  .sub-tab .icon { font-size: 18px; line-height: 1; }
+  .sub-tab .label {
+    font-size: 10px;
+    font-weight: 500;
+    color: #999;
+    white-space: nowrap;
+  }
+  .sub-tab.active .label { color: #0097a7; font-weight: 700; }
+
+  /* Accent utility for cards in chats list */
+  .accent-flying   { border-left-color: #0097a7; }
+  .accent-meetup   { border-left-color: #9c27b0; }
+  .accent-roadtrip { border-left-color: #e65100; }
+  .accent-camping  { border-left-color: #5a9a2f; }
+
+  .badge-flying   { background: #0097a7; }
+  .badge-meetup   { background: #9c27b0; }
+  .badge-roadtrip { background: #e65100; }
+  .badge-camping  { background: #5a9a2f; }
+
+  /* Avatar palette */
+  .av-joe   { background: #0097a7; }
+  .av-sarah { background: #e91e63; }
+  .av-mike  { background: #f9a825; }
+  .av-dan   { background: #9c27b0; }
+
+  .notes {
+    margin-top: 44px;
+    max-width: 920px;
+    margin-left: auto;
+    margin-right: auto;
+    background: #fff;
+    border: 1.5px solid #e5e5e5;
+    border-radius: 14px;
+    padding: 20px 24px;
+    color: #333;
+    font-size: 13px;
+    line-height: 1.65;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .notes h3 {
+    font-family: 'Outfit', sans-serif;
+    margin-bottom: 10px;
+    font-size: 15px;
+  }
+  .notes code {
+    font-family: 'SF Mono', Menlo, monospace;
+    background: rgba(232,148,58,0.1);
+    color: #c66d1f;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-title">Chat — Using Your Actual Styles</div>
+<div class="page-subtitle">TabBar up top (orange accent), trip tabs fixed at the bottom, tab-layout-standard sticky header, DM Sans + Outfit, card-glass.</div>
+
+<div class="frames">
+
+  <!-- =================================================== -->
+  <!-- VIEW 1: /chats   (dashboard-level, uses top TabBar) -->
+  <!-- =================================================== -->
+  <div class="frame-wrap">
+    <div class="frame-label">Dashboard Chats<span class="route">/chats</span></div>
+    <div class="phone">
+      <div class="title-bar">
+        <span class="brand">🧭 Trip Planner Pro</span>
+        <div class="right">
+          <span class="avatar">👤</span>
+          <button class="signout">Sign Out</button>
+        </div>
+      </div>
+      <nav class="top-tabbar">
+        <button class="top-tab"><span class="icon">🧭</span><span class="label">Trips</span></button>
+        <button class="top-tab active"><span class="icon">💬<span class="badge-dot">15</span></span><span class="label">Chats</span></button>
+        <button class="top-tab"><span class="icon">⚙️</span><span class="label">Gear</span></button>
+        <button class="top-tab"><span class="icon">👥</span><span class="label">Friends</span></button>
+        <button class="top-tab"><span class="icon">👤</span><span class="label">Profile</span></button>
+        <button class="top-tab"><span class="icon">🔔</span><span class="label">Alerts</span></button>
+      </nav>
+
+      <div class="dash-body">
+        <div class="dash-header-row">
+          <div class="dash-title">Chats</div>
+        </div>
+        <div class="dash-sub">All your trip conversations in one place</div>
+
+        <div class="section-label">Active</div>
+
+        <div class="card-glass has-accent accent-flying">
+          <div class="chat-card-body">
+            <div class="chat-card-trip">✈️ Aspen Ski Week</div>
+            <div class="chat-card-preview"><span class="sender">Sarah:</span> should we book the 7pm at Element 47?</div>
+            <div class="chat-card-meta">
+              <span class="badge badge-flying">Flying</span>
+              <span class="chat-card-dates">Feb 14 — Feb 21</span>
+            </div>
+          </div>
+          <div class="chat-card-right">
+            <div class="chat-card-time">2m ago</div>
+            <div class="unread-pill">3</div>
+          </div>
+        </div>
+
+        <div class="card-glass has-accent accent-meetup">
+          <div class="chat-card-body">
+            <div class="chat-card-trip">🤝 Italy Summer 2026</div>
+            <div class="chat-card-preview"><span class="sender">Mike:</span> I'm down for Cinque Terre day 3, but the hike is no joke…</div>
+            <div class="chat-card-meta">
+              <span class="badge badge-meetup">Meetup</span>
+              <span class="chat-card-dates">Jul 8 — Jul 22</span>
+            </div>
+          </div>
+          <div class="chat-card-right">
+            <div class="chat-card-time">1h ago</div>
+            <div class="unread-pill">12</div>
+          </div>
+        </div>
+
+        <div class="card-glass has-accent accent-roadtrip">
+          <div class="chat-card-body">
+            <div class="chat-card-trip">🚗 Furley Family Beach Week</div>
+            <div class="chat-card-preview"><span class="sender">You:</span> grabbing groceries on the way in 👍</div>
+            <div class="chat-card-meta">
+              <span class="badge badge-roadtrip">Road Trip</span>
+              <span class="chat-card-dates">Aug 3 — Aug 10</span>
+            </div>
+          </div>
+          <div class="chat-card-right">
+            <div class="chat-card-time">Yesterday</div>
+          </div>
+        </div>
+
+        <div class="card-glass has-accent accent-camping">
+          <div class="chat-card-body">
+            <div class="chat-card-trip">🏕️ Cabin Weekend w/ the guys</div>
+            <div class="chat-card-preview"><span class="sender">Dan:</span> someone pls bring a decent bluetooth speaker</div>
+            <div class="chat-card-meta">
+              <span class="badge badge-camping">Camping</span>
+              <span class="chat-card-dates">Oct 17 — Oct 19</span>
+            </div>
+          </div>
+          <div class="chat-card-right">
+            <div class="chat-card-time">3d ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================== -->
+  <!-- VIEW 2: /trip/[id]/chat  (uses trip layout standard) -->
+  <!-- =================================================== -->
+  <div class="frame-wrap">
+    <div class="frame-label">In-Trip Chat tab<span class="route">/trip/[id]/chat</span></div>
+    <div class="phone">
+      <div class="trip-root">
+        <!-- Sticky top region — Row 1 only (no pill, no chips for chat) -->
+        <div class="trip-sticky">
+          <div class="trip-row1">
+            <button class="back-btn" aria-label="Back to trip hub">←</button>
+            <h1 class="trip-h1">Chat</h1>
+            <div class="header-actions">
+              <div class="member-stack">
+                <div class="dot av-joe">J</div>
+                <div class="dot av-sarah">S</div>
+                <div class="dot av-mike">M</div>
+                <div class="dot av-dan">D</div>
+              </div>
+              <span class="member-count">4</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scrollable body -->
+        <div class="messages">
+          <div class="day-divider">Wednesday, April 15</div>
+
+          <div class="msg-row">
+            <div class="msg-avatar av-mike">M</div>
+            <div class="msg-content">
+              <div class="msg-sender">Mike</div>
+              <div class="msg-bubble">Flights are booked ✈️ Landing Denver 2:15pm Saturday</div>
+              <div class="msg-time">9:42 AM</div>
+            </div>
+          </div>
+
+          <div class="msg-row">
+            <div class="msg-avatar av-sarah">S</div>
+            <div class="msg-content">
+              <div class="msg-sender">Sarah</div>
+              <div class="msg-bubble">Nice. I booked the shuttle DEN → Aspen for 3:30. 4 seats.</div>
+              <div class="msg-time">9:55 AM</div>
+            </div>
+          </div>
+          <div class="msg-row grouped">
+            <div class="msg-avatar av-sarah">S</div>
+            <div class="msg-content">
+              <div class="msg-bubble">Emma is hyped about kids ski school btw 🎿</div>
+              <div class="msg-time">9:56 AM</div>
+            </div>
+          </div>
+
+          <div class="msg-row mine">
+            <div class="msg-content">
+              <div class="msg-bubble">Perfect. I'll handle lift tickets tonight — cheaper 5+ days out.</div>
+              <div class="msg-time">10:12 AM</div>
+            </div>
+          </div>
+
+          <div class="day-divider">Today</div>
+
+          <div class="msg-row">
+            <div class="msg-avatar av-sarah">S</div>
+            <div class="msg-content">
+              <div class="msg-sender">Sarah</div>
+              <div class="msg-bubble">Should we book the 7pm reservation at Element 47?</div>
+              <div class="msg-time">8:02 AM</div>
+            </div>
+          </div>
+
+          <div class="msg-row">
+            <div class="msg-avatar av-dan">D</div>
+            <div class="msg-content">
+              <div class="msg-sender">Dan</div>
+              <div class="msg-bubble deleted">Message deleted</div>
+              <div class="msg-time">8:14 AM</div>
+            </div>
+          </div>
+
+          <div class="msg-row">
+            <div class="msg-avatar av-mike">M</div>
+            <div class="msg-content">
+              <div class="msg-sender">Mike</div>
+              <div class="msg-bubble">Yes. Dress code is smart-casual — I'll flag it on the itinerary event.</div>
+              <div class="msg-time">8:19 AM</div>
+            </div>
+          </div>
+
+          <div class="msg-row mine">
+            <div class="msg-content">
+              <div class="msg-bubble">Booked for 7pm, 4 people 🍷</div>
+              <div class="msg-time">8:31 AM</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Docked composer (above the sub-nav) -->
+        <div class="composer">
+          <input placeholder="Message the trip…" />
+          <button class="send-btn">➤</button>
+        </div>
+
+        <!-- Fixed bottom sub-nav (matches trip-sub-nav.tsx) -->
+        <nav class="trip-subnav">
+          <button class="sub-tab"><span class="icon">📅</span><span class="label">Itinerary</span></button>
+          <button class="sub-tab"><span class="icon">💰</span><span class="label">Expenses</span></button>
+          <button class="sub-tab active"><span class="icon">💬</span><span class="label">Chat</span></button>
+          <button class="sub-tab"><span class="icon">🧳</span><span class="label">Packing</span></button>
+          <button class="sub-tab"><span class="icon">📝</span><span class="label">Notes</span></button>
+          <button class="sub-tab"><span class="icon">🍽️</span><span class="label">Meals</span></button>
+          <button class="sub-tab"><span class="icon">👥</span><span class="label">Group</span></button>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="notes">
+  <h3>How this matches your existing code</h3>
+  Left frame is a dashboard-level page, so it uses the existing <code>TabBar</code> at the top (sticky, 56px, <code>#e8943a</code> accent, icons+labels, badge-dot support already built in). The Chats tab replaces Packing's slot. Each chat card is a <code>.card-glass</code> with <code>borderLeft: 4px solid theme.accent</code> tinted by the trip's <code>trip_type</code> — same pattern as <code>TripCard</code> on the dashboard.<br><br>
+  Right frame is a trip tab, so it follows <code>docs/tab-layout-standard.md</code> exactly: outer wrapper with <code>background: th.bg</code> (flying theme <code>#f2f8fa</code>), the sticky top region with Row 1 only (back button 40×40 circular accent-tinted, "Chat" title in Outfit 20/800, member stack in the header actions slot — no pill, no chips), scrollable body with day dividers + bubbles, composer docked above the sub-nav, and <code>TripSubNav</code> pinned at the bottom with Chat as the active tab (3px top border in the trip's accent). No FAB — the composer <em>is</em> the add action.
+</div>
+
+</body>
+</html>

@@ -15,7 +15,7 @@ const SUB_NAV_TABS = [
   { key: "chat", label: "Chat", icon: "💬", segment: "chat" },
   { key: "packing", label: "Packing", icon: "🧳", segment: "packing" },
   { key: "notes", label: "Notes", icon: "📝", segment: "notes" },
-  { key: "meals", label: "Meals", icon: "🍽️", segment: "meals" },
+  { key: "supplies", label: "Supplies", icon: "🛒", segment: "supplies" },
   { key: "group", label: "Group", icon: "👥", segment: "group" },
 ];
 

@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Concept C+F — Modal picker with full-page visualization</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px 12px 60px; background: #2e2723; font-family: 'DM Sans', sans-serif; color: #2a2a2a; }
+
+  h1 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 22px; margin: 0 0 6px; text-align: center; color: #f5f0e8; }
+  .intro { max-width: 720px; margin: 0 auto 28px; text-align: center; color: #d8c9a8; font-size: 13px; line-height: 1.6; }
+  .intro strong { color: #e8943a; }
+
+  .phones { display: flex; flex-wrap: wrap; gap: 40px; justify-content: center; align-items: flex-start; }
+
+  .phone { width: 400px; max-width: 100%; }
+  .phone-caption { color: #f4b871; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; text-align: center; margin-bottom: 6px; }
+  .phone-note { color: #a89985; font-size: 12px; text-align: center; margin-bottom: 12px; line-height: 1.5; }
+
+  .device { width: 400px; height: 820px; background: #111; border-radius: 40px; padding: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); position: relative; }
+  .screen { width: 100%; height: 100%; background: #faf6ef; border-radius: 28px; overflow: hidden; position: relative; }
+  .notch { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: 110px; height: 22px; background: #111; border-radius: 14px; z-index: 1000; }
+  .screen-scroll { height: 100%; overflow-y: auto; padding-bottom: 160px; position: relative; }
+
+  /* ───────── Page header ───────── */
+  .hdr { background: #c77013; padding: 42px 20px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); position: sticky; top: 0; z-index: 5; }
+  .hdr .back { background: none; border: none; color: #fff; font-size: 20px; padding: 2px; cursor: pointer; }
+  .hdr h2 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 19px; color: #fff; margin: 0; }
+  .hdr .trip { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 11px; color: rgba(255,255,255,0.7); margin-left: auto; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  .subnav { background: #a85d10; display: flex; gap: 0; padding: 0 4px; border-bottom: 1px solid rgba(0,0,0,0.1); overflow-x: auto; }
+  .subnav button { flex: 0 0 auto; padding: 10px 14px; background: none; border: none; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.7); cursor: pointer; font-family: 'DM Sans', sans-serif; border-bottom: 3px solid transparent; }
+  .subnav button.active { color: #fff; border-bottom-color: #fff; }
+
+  .ptabs { background: #faf6ef; display: flex; gap: 0; padding: 0 12px; border-bottom: 1px solid #e8e0d0; overflow-x: auto; }
+  .ptabs button { flex: 0 0 auto; padding: 10px 12px; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; border-bottom: 3px solid transparent; font-family: 'DM Sans', sans-serif; }
+  .ptabs button.active { border-bottom-color: #e8943a; }
+  .ptabs .nm { font-size: 13px; font-weight: 500; color: #888; }
+  .ptabs button.active .nm { color: #2a2a2a; font-weight: 700; }
+  .ptabs .host { font-size: 9px; padding: 1px 5px; border-radius: 8px; background: #e8943a18; color: #e8943a; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .vtabs { background: #faf6ef; display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #e8e0d0; }
+  .vtabs button { flex: 1; padding: 8px; background: white; border: 1px solid #e8e0d0; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; color: #888; font-family: 'DM Sans', sans-serif; }
+  .vtabs button.active { background: #e8943a; color: white; border-color: #e8943a; }
+
+  .step { padding: 12px 16px 6px; }
+  .step-title { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 16px; color: #2a2a2a; }
+  .step-sub { font-size: 11px; color: #888; margin-top: 2px; }
+
+  .card { margin: 8px 14px 18px; background: white; border-radius: 18px; border: 1px solid #e8e0d0; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+
+  .band { padding: 9px 16px; color: #fff; display: flex; justify-content: space-between; align-items: center; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; background: linear-gradient(90deg, #f9c876, #c75a2a); }
+  .chip { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; background: rgba(255,255,255,0.25); padding: 3px 9px; border-radius: 12px; }
+
+  .events-pill { padding: 10px 16px; border-bottom: 1px solid #f0ebe4; display: flex; align-items: center; justify-content: space-between; background: #faf6ef; cursor: pointer; }
+  .events-pill .left { font-size: 12px; font-weight: 600; color: #444; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .events-pill .dc-pill { font-size: 9px; padding: 2px 7px; border-radius: 8px; background: #0097a718; color: #0097a7; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .events-pill .caret { font-size: 11px; color: #999; }
+
+  .inspo-saved { padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0ebe4; }
+  .inspo-saved .thumb-ph { width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: linear-gradient(135deg, #f9c876, #c75a2a); color: #fff; }
+  .inspo-saved .txt { flex: 1; min-width: 0; }
+  .inspo-saved .lbl { font-size: 10px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .inspo-saved .nm { font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .inspo-saved button.clr { font-size: 10px; padding: 4px 8px; border-radius: 6px; background: #ffebee; color: #c62828; border: none; font-weight: 700; cursor: pointer; }
+
+  .inspo-btn { width: 100%; padding: 11px 16px; background: #e8943a06; border: none; border-bottom: 1px solid #f0ebe4; cursor: pointer; font-size: 12px; font-weight: 700; color: #e8943a; text-align: left; font-family: 'DM Sans', sans-serif; }
+
+  /* ───── Slot grid (2×3, 6 tiles) ───── */
+  .grid { padding: 14px 14px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile { background: #fdfaf3; border: 1px dashed #d8cfbd; border-radius: 14px; padding: 12px 11px; min-height: 84px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.15s; }
+  .tile:hover { border-color: #e8943a; }
+  .tile.filled { background: white; border-style: solid; border-color: #e8e0d0; }
+  .tile .hdr-row { display: flex; align-items: center; gap: 6px; }
+  .tile .hdr-row .emj { font-size: 18px; }
+  .tile .hdr-row .lbl { font-size: 10px; color: #999; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .tile .val { font-size: 12px; font-weight: 700; margin-top: 6px; color: #2a2a2a; line-height: 1.2; }
+  .tile .emp { font-size: 12px; font-weight: 500; color: #b0a690; margin-top: 6px; }
+  .tile .more { font-size: 9px; color: #e8943a; font-weight: 700; margin-top: 3px; }
+  .tile.dress .hdr-row .lbl { color: #c4659c; }
+  .tile.dress { border-color: #e8c4d8; background: #fff0f7; border-style: dashed; }
+  .tile.dress.filled { border-style: solid; background: #fff; border-color: #e8c4d8; }
+  .tile.active-tap { border-color: #e8943a; background: #fff8ec; box-shadow: 0 0 0 3px rgba(232,148,58,0.15); border-style: solid; }
+
+  /* ───── Reuse strip at bottom of card (always visible quick add) ───── */
+  .reuse { padding: 10px 14px 12px; background: #fffbf3; border-top: 1px solid #f0ebe4; }
+  .reuse-hdr { font-size: 10px; font-weight: 700; color: #c77013; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .reuse-row { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; margin: 0; }
+  .reuse-chip { font-size: 11px; font-weight: 600; padding: 5px 10px; border: 1px solid #e8e0d0; border-radius: 14px; background: white; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; flex-shrink: 0; }
+  .reuse-chip .cnt { font-size: 9px; background: #fff0d8; color: #c77013; padding: 0 5px; border-radius: 6px; font-weight: 700; }
+  .reuse-chip.added { background: #e8f5e9; border-color: #c8e6c9; color: #2e7d32; }
+  .reuse-chip.added .cnt { background: #c8e6c9; color: #2e7d32; }
+
+  /* ───── Sticky bottom CTA ───── */
+  .sticky-cta { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 14px 18px; background: linear-gradient(to top, #faf6ef 70%, rgba(250,246,239,0)); pointer-events: none; z-index: 50; }
+  .sticky-cta .inner { pointer-events: auto; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.97); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 14px; padding: 10px 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  .sticky-cta .prev { padding: 10px 14px; border-radius: 10px; border: 1px solid #e8e0d0; background: white; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; color: #2a2a2a; }
+  .sticky-cta .prev.disabled { opacity: 0.4; cursor: not-allowed; }
+  .sticky-cta .step-txt { flex: 1; text-align: center; font-size: 12px; font-weight: 700; color: #e8943a; padding: 0; }
+  .sticky-cta .next { padding: 10px 14px; border-radius: 10px; background: linear-gradient(135deg, #e8943a 0%, #c77013 100%); color: white; border: none; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; box-shadow: 0 2px 10px rgba(232,148,58,0.3); }
+
+  /* ───── Modal / bottom sheet (Concept C) ───── */
+  .scrim { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 90; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: white; border-radius: 22px 22px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.35); z-index: 100; display: flex; flex-direction: column; max-height: 85%; }
+  .sheet-handle { width: 38px; height: 4px; background: #d0c8b8; border-radius: 2px; margin: 8px auto 4px; flex-shrink: 0; }
+  .sheet-hdr { padding: 8px 18px 12px; border-bottom: 1px solid #f0ebe4; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .sheet-hdr .emj { font-size: 24px; }
+  .sheet-hdr .txt { flex: 1; }
+  .sheet-hdr .title { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 16px; color: #2a2a2a; }
+  .sheet-hdr .sub { font-size: 11px; color: #888; margin-top: 1px; }
+  .sheet-hdr .close { background: #f4efe4; border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 16px; cursor: pointer; color: #666; }
+  .sheet-body { overflow-y: auto; flex: 1; padding: 10px 16px 14px; }
+
+  .sheet-section-lbl { font-size: 10px; font-weight: 700; color: #c77013; text-transform: uppercase; letter-spacing: 0.06em; margin: 8px 0 6px; display: flex; align-items: center; gap: 6px; }
+  .sheet-section-lbl .count { font-weight: 600; color: #888; letter-spacing: 0; text-transform: none; font-size: 10px; }
+
+  .sheet-reuse-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin: 0; }
+  .sheet-reuse-chip { font-size: 12px; font-weight: 600; padding: 7px 11px; border: 1px solid #e8e0d0; border-radius: 16px; background: white; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; flex-shrink: 0; }
+  .sheet-reuse-chip .cnt { font-size: 9px; background: #fff0d8; color: #c77013; padding: 0 5px; border-radius: 6px; font-weight: 700; }
+  .sheet-reuse-chip.added { background: #e8f5e9; border-color: #c8e6c9; color: #2e7d32; }
+
+  .suggest-row { display: flex; flex-wrap: wrap; gap: 5px; }
+  .suggest-chip { font-size: 11px; font-weight: 500; padding: 5px 10px; border: 1px dashed #d8cfbd; border-radius: 14px; background: #fffbf3; cursor: pointer; color: #977a5a; }
+
+  .sheet-input { margin-top: 10px; border: 2px solid #e8943a; border-radius: 14px; padding: 10px 12px; background: #fff8ec; display: flex; align-items: center; gap: 8px; }
+  .sheet-input input { flex: 1; border: none; outline: none; background: transparent; font-size: 14px; font-weight: 600; font-family: inherit; color: #2a2a2a; caret-color: #e8943a; }
+  .sheet-input input::placeholder { color: #bda380; }
+  .sheet-input .caret-demo { display: inline-block; width: 2px; height: 16px; background: #e8943a; animation: blink 1s steps(1) infinite; vertical-align: -3px; margin-left: 1px; }
+  .sheet-input .add-btn { padding: 6px 12px; border-radius: 10px; background: #e8943a; color: white; border: none; font-size: 11px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .sheet-input .add-btn.disabled { background: #e8e0d0; color: #888; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .sheet-hint { font-size: 10px; color: #977a5a; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+
+  /* ───── iOS-style keyboard mock ───── */
+  .keyboard { position: absolute; left: 0; right: 0; bottom: 0; background: #d1d4db; padding: 6px 3px 8px; z-index: 110; box-shadow: 0 -1px 0 rgba(0,0,0,0.1); user-select: none; }
+  .kb-bar { display: flex; gap: 6px; padding: 4px 6px 6px; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.08); font-size: 10px; color: #555; }
+  .kb-bar .suggestion { flex: 1; text-align: center; padding: 4px 6px; background: rgba(255,255,255,0.0); border-radius: 6px; font-weight: 600; color: #333; }
+  .kb-bar .suggestion.mid { background: #fff; color: #000; font-weight: 700; }
+  .kb-row { display: flex; gap: 4px; margin-top: 6px; justify-content: center; }
+  .kb-key { background: #fff; border-radius: 5px; padding: 9px 0; width: 8.5%; text-align: center; font-size: 14px; color: #000; box-shadow: 0 1px 0 rgba(0,0,0,0.25); font-weight: 400; }
+  .kb-key.wide { width: 12%; background: #abb0bb; color: #000; font-size: 12px; font-weight: 600; }
+  .kb-key.space { width: 45%; }
+  .kb-key.accent { background: #abb0bb; color: #000; }
+  .kb-bottom { display: flex; gap: 4px; margin-top: 6px; padding: 0 3px; align-items: center; }
+  .kb-bottom .key-123 { background: #abb0bb; color: #000; font-size: 11px; padding: 10px 0; width: 12%; text-align: center; border-radius: 5px; font-weight: 600; }
+  .kb-bottom .key-emoji { background: #abb0bb; font-size: 14px; padding: 9px 0; width: 8%; text-align: center; border-radius: 5px; }
+  .kb-bottom .key-space { background: #fff; flex: 1; text-align: center; padding: 10px 0; border-radius: 5px; font-size: 12px; color: #888; }
+  .kb-bottom .key-return { background: #abb0bb; font-size: 11px; padding: 10px 0; width: 18%; text-align: center; border-radius: 5px; font-weight: 600; }
+  .kb-bottom .key-mic { background: #abb0bb; font-size: 14px; padding: 9px 0; width: 8%; text-align: center; border-radius: 5px; }
+  .kb-indicator { height: 5px; width: 120px; background: #333; border-radius: 3px; margin: 10px auto 2px; }
+
+  /* ───── Annotation boxes ───── */
+  .note { background: #fff8e1; border-left: 4px solid #e8943a; padding: 12px 14px; border-radius: 6px; font-size: 12px; line-height: 1.6; margin: 14px auto 0; max-width: 380px; }
+  .note strong { color: #c77013; }
+
+  .divider { border-top: 2px solid #4a3c30; margin: 50px auto 30px; max-width: 900px; }
+
+  .callouts { max-width: 720px; margin: 0 auto; color: #e5d9bf; font-size: 13px; line-height: 1.7; }
+  .callouts h3 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px; color: #e8943a; margin: 20px 0 8px; }
+  .callouts .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 14px; }
+  .callouts .box { background: rgba(255,255,255,0.04); padding: 16px; border-radius: 10px; border-left: 3px solid #e8943a; }
+  .callouts .box h4 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 14px; color: #f4b871; margin: 0 0 6px; }
+  .callouts .box p { margin: 0; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Concept C+F — modal picker with full-page visualization</h1>
+<p class="intro">
+  Same <strong>full-page layout as Concept F</strong> (header, sub-nav, person tabs, view tabs, step indicator, slot card, reuse strip, sticky Prev/Next CTA), but tapping a slot opens a <strong>Concept-C bottom-sheet modal</strong>. The modal knows which slot you tapped, so there's no category picker or auto-routing — tap Top, you get tops. <strong>No Head slot</strong>: headwear (hats, beanies) lives inside Accessories. <strong>No smart input at the card level</strong> — you add items through the sheet.
+</p>
+
+<div class="phones">
+
+  <!-- ======================================================= -->
+  <!-- PHONE 1: Default / compact view — no modal -->
+  <!-- ======================================================= -->
+  <div class="phone">
+    <div class="phone-caption">1 — Default view</div>
+    <div class="phone-note">Clean card: slots + reuse strip + sticky CTA. No smart input. Tapping any tile opens the sheet for that slot.</div>
+    <div class="device">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="screen-scroll">
+
+          <div class="hdr">
+            <button class="back">←</button>
+            <h2>Packing</h2>
+            <span class="trip">Paso · May 22–25</span>
+          </div>
+
+          <div class="subnav">
+            <button>Itinerary</button>
+            <button>Expenses</button>
+            <button class="active">Packing</button>
+            <button>Notes</button>
+            <button>Meals</button>
+            <button>Group</button>
+          </div>
+
+          <div class="ptabs">
+            <button><span class="nm">Joe</span><span class="host">Host</span></button>
+            <button class="active"><span class="nm">Emily</span></button>
+          </div>
+
+          <div class="vtabs">
+            <button>Group</button>
+            <button class="active">Outfits</button>
+            <button>Pack &amp; Go ✓</button>
+          </div>
+
+          <div class="step">
+            <div class="step-title">Outfit 6 of 10</div>
+            <div class="step-sub">Sat morning wine tasting loop</div>
+          </div>
+
+          <div class="card">
+            <div class="band">
+              <span>🌅 → ☀️ Morning-Afternoon</span>
+              <span class="chip">☀️ 78°/52°</span>
+            </div>
+
+            <div class="events-pill">
+              <span class="left">
+                <span class="dc-pill">Smart Casual</span>
+                <span>☕🍷🍝 3 events</span>
+              </span>
+              <span class="caret">▸ details</span>
+            </div>
+
+            <div class="inspo-saved">
+              <div class="thumb-ph">👗</div>
+              <div class="txt">
+                <div class="lbl">Outfit inspo</div>
+                <div class="nm">Wine country summer look</div>
+              </div>
+              <button class="clr">Clear</button>
+            </div>
+
+            <button class="inspo-btn">✨ Get Outfit Inspo ▾</button>
+
+            <div class="grid">
+              <div class="tile dress">
+                <div class="hdr-row"><span class="emj">👗</span><span class="lbl">Dress</span></div>
+                <div class="emp">+ add dress</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr-row"><span class="emj">👕</span><span class="lbl">Top</span></div>
+                <div class="val">Linen button-down</div>
+              </div>
+              <div class="tile">
+                <div class="hdr-row"><span class="emj">🧥</span><span class="lbl">Layer</span></div>
+                <div class="emp">+ optional</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr-row"><span class="emj">👖</span><span class="lbl">Bottom</span></div>
+                <div class="val">Chino shorts</div>
+              </div>
+              <div class="tile">
+                <div class="hdr-row"><span class="emj">👟</span><span class="lbl">Shoes</span></div>
+                <div class="emp">+ add shoes</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr-row"><span class="emj">💼</span><span class="lbl">Accessories</span></div>
+                <div class="val">Sunglasses · Watch</div>
+                <div class="more">+ hat, jewelry… ▸</div>
+              </div>
+            </div>
+
+            <div class="reuse">
+              <div class="reuse-hdr">📦 Reuse from your suitcase</div>
+              <div class="reuse-row">
+                <span class="reuse-chip">👟 White sneakers <span class="cnt">×4</span></span>
+                <span class="reuse-chip">🕶️ Sunglasses <span class="cnt">×5</span></span>
+                <span class="reuse-chip">🧢 Paso hat <span class="cnt">×2</span></span>
+                <span class="reuse-chip">👞 Loafers <span class="cnt">×2</span></span>
+                <span class="reuse-chip">👕 Linen shirt <span class="cnt">×3</span></span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="sticky-cta">
+          <div class="inner">
+            <button class="prev">← Prev</button>
+            <div class="step-txt">Outfit 6 of 10</div>
+            <button class="next">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      <strong>Changes vs. F:</strong> (1) Head slot removed — hats now live in Accessories. (2) Smart auto-type input removed — tapping a tile opens a slot-scoped sheet instead. (3) The accessories tile hints at what else fits there: "+ hat, jewelry…".
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- PHONE 2: Tapped "Top" tile — modal sheet opens (no keyboard) -->
+  <!-- ======================================================= -->
+  <div class="phone">
+    <div class="phone-caption">2 — Tap Top → Sheet opens</div>
+    <div class="phone-note">Sheet is scoped to Tops only. Reuse chips filtered to tops, then dress-code suggestions, then the "+ Add new" input. User can grab a chip without opening the keyboard.</div>
+    <div class="device">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="screen-scroll" style="overflow: hidden;">
+
+          <div class="hdr">
+            <button class="back">←</button>
+            <h2>Packing</h2>
+            <span class="trip">Paso · May 22–25</span>
+          </div>
+
+          <div class="subnav">
+            <button>Itinerary</button>
+            <button>Expenses</button>
+            <button class="active">Packing</button>
+            <button>Notes</button>
+            <button>Meals</button>
+            <button>Group</button>
+          </div>
+
+          <div class="ptabs">
+            <button><span class="nm">Joe</span><span class="host">Host</span></button>
+            <button class="active"><span class="nm">Emily</span></button>
+          </div>
+
+          <div class="vtabs">
+            <button>Group</button>
+            <button class="active">Outfits</button>
+            <button>Pack &amp; Go ✓</button>
+          </div>
+
+          <div class="step">
+            <div class="step-title">Outfit 6 of 10</div>
+            <div class="step-sub">Sat morning wine tasting loop</div>
+          </div>
+
+          <div class="card">
+            <div class="band">
+              <span>🌅 → ☀️ Morning-Afternoon</span>
+              <span class="chip">☀️ 78°/52°</span>
+            </div>
+
+            <div class="events-pill">
+              <span class="left">
+                <span class="dc-pill">Smart Casual</span>
+                <span>☕🍷🍝 3 events</span>
+              </span>
+              <span class="caret">▸ details</span>
+            </div>
+
+            <button class="inspo-btn">✨ Get Outfit Inspo ▾</button>
+
+            <div class="grid">
+              <div class="tile dress">
+                <div class="hdr-row"><span class="emj">👗</span><span class="lbl">Dress</span></div>
+                <div class="emp">+ add dress</div>
+              </div>
+              <div class="tile active-tap">
+                <div class="hdr-row"><span class="emj">👕</span><span class="lbl">Top</span></div>
+                <div class="emp">+ add top</div>
+              </div>
+              <div class="tile">
+                <div class="hdr-row"><span class="emj">🧥</span><span class="lbl">Layer</span></div>
+                <div class="emp">+ optional</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr-row"><span class="emj">👖</span><span class="lbl">Bottom</span></div>
+                <div class="val">Chino shorts</div>
+              </div>
+              <div class="tile">
+                <div class="hdr-row"><span class="emj">👟</span><span class="lbl">Shoes</span></div>
+                <div class="emp">+ add shoes</div>
+              </div>
+              <div class="tile filled">
+                <div class="hdr-row"><span class="emj">💼</span><span class="lbl">Accessories</span></div>
+                <div class="val">Sunglasses · Watch</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal -->
+        <div class="scrim"></div>
+        <div class="sheet" style="max-height: 60%;">
+          <div class="sheet-handle"></div>
+          <div class="sheet-hdr">
+            <span class="emj">👕</span>
+            <div class="txt">
+              <div class="title">Add a Top</div>
+              <div class="sub">Smart Casual · Morning–Afternoon</div>
+            </div>
+            <button class="close">✕</button>
+          </div>
+          <div class="sheet-body">
+
+            <div class="sheet-section-lbl">📦 Reuse from suitcase <span class="count">· 4 tops already packed</span></div>
+            <div class="sheet-reuse-row">
+              <span class="sheet-reuse-chip">👕 Linen button-down <span class="cnt">×3</span></span>
+              <span class="sheet-reuse-chip">👕 White tee <span class="cnt">×2</span></span>
+              <span class="sheet-reuse-chip">👚 Silk blouse <span class="cnt">×1</span></span>
+              <span class="sheet-reuse-chip">👕 Striped polo <span class="cnt">×1</span></span>
+            </div>
+
+            <div class="sheet-section-lbl" style="margin-top: 14px;">💡 Suggestions for Smart Casual</div>
+            <div class="suggest-row">
+              <span class="suggest-chip">+ Cotton blouse</span>
+              <span class="suggest-chip">+ Button-up shirt</span>
+              <span class="suggest-chip">+ Tank top</span>
+              <span class="suggest-chip">+ Henley</span>
+              <span class="suggest-chip">+ Sundress top</span>
+            </div>
+
+            <div class="sheet-section-lbl" style="margin-top: 14px;">➕ Add new</div>
+            <div class="sheet-input">
+              <input type="text" placeholder="Type a top you want to pack…" />
+              <button class="add-btn disabled">Add</button>
+            </div>
+            <div class="sheet-hint">↩︎ Tap the input to open keyboard — saves as a Top automatically.</div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="note">
+      <strong>Why this beats the smart-input approach:</strong> the sheet already knows you tapped Top, so there's no guessing. The top half (chips + suggestions) handles 80% of adds in one tap — keyboard only appears when nothing fits.
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- PHONE 3: Modal with keyboard up — user typing "Fl..." -->
+  <!-- ======================================================= -->
+  <div class="phone">
+    <div class="phone-caption">3 — Typing with keyboard up</div>
+    <div class="phone-note">User tapped the input. Keyboard slides up, sheet compresses above it. Typeahead filters reuse chips. Suggestion bar shows "Flannel / Floral / Fleece".</div>
+    <div class="device">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="screen-scroll" style="overflow: hidden;">
+
+          <div class="hdr">
+            <button class="back">←</button>
+            <h2>Packing</h2>
+            <span class="trip">Paso · May 22–25</span>
+          </div>
+
+          <div class="subnav">
+            <button>Itinerary</button>
+            <button>Expenses</button>
+            <button class="active">Packing</button>
+            <button>Notes</button>
+            <button>Meals</button>
+            <button>Group</button>
+          </div>
+
+          <div class="ptabs">
+            <button><span class="nm">Joe</span><span class="host">Host</span></button>
+            <button class="active"><span class="nm">Emily</span></button>
+          </div>
+          <!-- rest of page is hidden behind modal + keyboard; trimmed for clarity -->
+        </div>
+
+        <!-- Scrim -->
+        <div class="scrim"></div>
+
+        <!-- Sheet compressed to top half since keyboard is up -->
+        <div class="sheet" style="bottom: 305px; max-height: 360px; border-radius: 22px 22px 0 0;">
+          <div class="sheet-handle"></div>
+          <div class="sheet-hdr">
+            <span class="emj">👕</span>
+            <div class="txt">
+              <div class="title">Add a Top</div>
+              <div class="sub">Smart Casual · Morning–Afternoon</div>
+            </div>
+            <button class="close">✕</button>
+          </div>
+          <div class="sheet-body">
+
+            <div class="sheet-section-lbl">📦 Matches in your suitcase</div>
+            <div class="sheet-reuse-row">
+              <span class="sheet-reuse-chip">👕 Flannel shirt <span class="cnt">×2</span></span>
+              <span class="sheet-reuse-chip">👕 Floral blouse <span class="cnt">×1</span></span>
+            </div>
+
+            <div class="sheet-section-lbl" style="margin-top: 12px;">➕ Add new</div>
+            <div class="sheet-input">
+              <input type="text" value="Fl" readonly style="color:#2a2a2a;" />
+              <span class="caret-demo"></span>
+              <button class="add-btn">Add</button>
+            </div>
+            <div class="sheet-hint">Will be saved as a <strong style="color:#c77013;">Top</strong>. No category picker needed.</div>
+
+          </div>
+        </div>
+
+        <!-- Keyboard -->
+        <div class="keyboard">
+          <div class="kb-bar">
+            <div class="suggestion">"Fl"</div>
+            <div class="suggestion mid">Flannel</div>
+            <div class="suggestion">Floral</div>
+          </div>
+          <div class="kb-row">
+            <div class="kb-key">q</div>
+            <div class="kb-key">w</div>
+            <div class="kb-key">e</div>
+            <div class="kb-key">r</div>
+            <div class="kb-key">t</div>
+            <div class="kb-key">y</div>
+            <div class="kb-key">u</div>
+            <div class="kb-key">i</div>
+            <div class="kb-key">o</div>
+            <div class="kb-key">p</div>
+          </div>
+          <div class="kb-row" style="padding: 0 18px;">
+            <div class="kb-key">a</div>
+            <div class="kb-key">s</div>
+            <div class="kb-key">d</div>
+            <div class="kb-key">f</div>
+            <div class="kb-key">g</div>
+            <div class="kb-key">h</div>
+            <div class="kb-key">j</div>
+            <div class="kb-key">k</div>
+            <div class="kb-key">l</div>
+          </div>
+          <div class="kb-row">
+            <div class="kb-key wide">⇧</div>
+            <div class="kb-key">z</div>
+            <div class="kb-key">x</div>
+            <div class="kb-key">c</div>
+            <div class="kb-key">v</div>
+            <div class="kb-key">b</div>
+            <div class="kb-key">n</div>
+            <div class="kb-key">m</div>
+            <div class="kb-key wide">⌫</div>
+          </div>
+          <div class="kb-bottom">
+            <div class="key-123">123</div>
+            <div class="key-emoji">🙂</div>
+            <div class="key-space">space</div>
+            <div class="key-return">return</div>
+            <div class="key-mic">🎤</div>
+          </div>
+          <div class="kb-indicator"></div>
+        </div>
+
+      </div>
+    </div>
+    <div class="note">
+      <strong>Keyboard behavior:</strong> sheet compresses above the keyboard, reuse chips filter live as the user types, and the suggestion bar reuses the native iOS/Android typeahead. Pressing <em>return</em> or <em>Add</em> commits as a Top and closes the sheet — no follow-up category tap.
+    </div>
+  </div>
+
+</div>
+
+<div class="divider"></div>
+
+<div class="callouts">
+  <h3>What changed vs. Concept F</h3>
+
+  <div class="pair">
+    <div class="box">
+      <h4>Removed: Head slot</h4>
+      <p>Hats, beanies, caps, visors live inside Accessories. Keeps the 6-tile grid tight and matches how people think about hats — an accessory, not a top.</p>
+    </div>
+    <div class="box">
+      <h4>Removed: Smart auto-type input</h4>
+      <p>No floor-of-card input. No auto-routing guesswork. The slot you tap is the slot the item lands in.</p>
+    </div>
+    <div class="box">
+      <h4>Kept: Bottom-sheet modal (Concept C)</h4>
+      <p>Modal stays consistent with the app's other "add thing" flows. Reuse chips → dress-code suggestions → keyboard input, in priority order.</p>
+    </div>
+    <div class="box">
+      <h4>Kept: Dress slot for women</h4>
+      <p>Replaces where Head used to live. Pink-tinted to signal it's a "whole outfit" choice — filling it dims/hides Top &amp; Bottom (design TBD).</p>
+    </div>
+  </div>
+
+  <h3>Open questions</h3>
+  <p>① When Dress is filled, dim or hide Top + Bottom tiles?<br>
+  ② Should the card-level reuse strip (below the slot grid) stay, or does the modal make it redundant?<br>
+  ③ Accessory slot — one modal with multi-add (tap several chips, then "Done"), or one add per open like other slots?</p>
+</div>
+
+</body>
+</html>

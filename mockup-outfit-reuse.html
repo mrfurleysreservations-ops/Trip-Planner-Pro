@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Outfit Reuse — Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 12px 60px; background: #f5f0e8; font-family: 'DM Sans', sans-serif; color: #2a2a2a; }
+  h1 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 22px; margin: 0 0 4px; text-align: center; }
+  .sub { text-align: center; color: #777; font-size: 13px; margin-bottom: 24px; }
+  .phones { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; align-items: flex-start; }
+  .phone { width: 400px; max-width: 100%; }
+  .phone-label { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 14px; color: #e8943a; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; text-align: center; }
+  .phone-sublabel { font-size: 12px; color: #777; text-align: center; margin-bottom: 14px; }
+  .card { background: white; border-radius: 16px; border: 1px solid #e8e0d0; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin-bottom: 14px; }
+
+  /* TOD band */
+  .band { padding: 9px 16px; color: #fff; display: flex; justify-content: space-between; align-items: center; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
+  .band-day-eve { background: linear-gradient(90deg, #f9c876, #c75a2a); }
+  .band-eve { background: linear-gradient(90deg, #7c4a9e, #452a66); }
+  .chip { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; background: rgba(255,255,255,0.25); padding: 3px 9px; border-radius: 12px; }
+
+  /* Meta row */
+  .meta { padding: 10px 16px; border-bottom: 1px solid #f0ebe4; display: flex; justify-content: space-between; align-items: center; }
+  .meta .dc { padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .meta .dc.smart { background: #0097a718; color: #0097a7; }
+  .meta .dc.casual { background: #4caf5018; color: #4caf50; }
+  .meta .count { font-size: 11px; color: #777; }
+
+  /* Timeline */
+  .tline { padding: 10px 16px; display: flex; align-items: flex-start; position: relative; }
+  .tline::before { content: ''; position: absolute; left: 23px; top: 0; bottom: 0; width: 2px; background: #e8e8e8; }
+  .tline.first::before { top: 50%; }
+  .tline.last::before { bottom: 50%; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #e8943a; margin-left: 7px; margin-right: 14px; margin-top: 4px; border: 2px solid #fff; box-shadow: 0 0 0 1px #e8943a; position: relative; z-index: 1; flex-shrink: 0; }
+  .tline-content { flex: 1; min-width: 0; }
+  .tline-title { font-size: 13px; font-weight: 700; }
+  .tline-sub { font-size: 10px; color: #777; margin-top: 2px; }
+  .tline-desc { font-size: 11px; color: #555; margin-top: 4px; line-height: 1.4; }
+
+  /* Section dividers */
+  .divider { border-top: 1px solid #f0ebe4; }
+
+  /* Borrow section */
+  .borrow { padding: 10px 16px; background: #e8943a0a; border-top: 1px solid #f0ebe4; }
+  .borrow-trig { display: flex; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; font-size: 12px; font-weight: 700; color: #e8943a; padding: 0; font-family: 'DM Sans', sans-serif; }
+  .borrow-options { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .borrow-opt { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: white; border: 1px solid #e8e0d0; border-radius: 8px; font-size: 12px; text-align: left; }
+  .borrow-opt .title { font-weight: 600; }
+  .borrow-opt .meta { font-size: 10px; color: #aaa; margin-left: auto; padding: 0; border: none; }
+
+  /* Inspo button */
+  .inspo-btn { width: 100%; padding: 12px 18px; background: #e8943a0a; border: none; border-top: 1px solid #e8e0d0; cursor: pointer; font-size: 12px; font-weight: 700; color: #e8943a; text-align: left; font-family: 'DM Sans', sans-serif; }
+
+  /* Items list */
+  .items { }
+  .item-row { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid #e8e0d0; }
+  .item-row:last-child { border-bottom: none; }
+  .item-icon { font-size: 14px; }
+  .item-name { flex: 1; font-size: 13px; font-weight: 600; }
+  .item-cat { font-size: 9px; padding: 2px 6px; border-radius: 8px; background: #e8943a10; color: #e8943a; font-weight: 700; text-transform: uppercase; }
+  .item-multi { font-size: 9px; padding: 2px 6px; border-radius: 8px; background: #e8f5e9; color: #2e7d32; font-weight: 700; }
+  .item-del { background: none; border: none; color: #e57373; cursor: pointer; font-size: 14px; padding: 2px; line-height: 1; }
+
+  .add-row { padding: 10px 18px; display: flex; gap: 6px; align-items: center; border-top: 1px solid #e8e0d0; position: relative; }
+  .add-input { flex: 1; font-size: 13px; padding: 8px 10px; border-radius: 8px; border: 1px solid #e8e0d0; outline: none; font-family: 'DM Sans', sans-serif; }
+  .add-input:focus { border-color: #e8943a; }
+  .add-cat { font-size: 11px; padding: 8px 6px; border-radius: 8px; border: 1px solid #e8e0d0; font-family: 'DM Sans', sans-serif; }
+  .add-btn { padding: 8px 14px; background: #e8943a; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .add-stub { width: 100%; padding: 12px 18px; background: none; border: none; border-top: 1px solid #e8e0d0; cursor: pointer; font-size: 12px; font-weight: 600; color: #e8943a; text-align: left; }
+
+  /* Typeahead */
+  .typeahead { position: absolute; left: 18px; right: 18px; top: calc(100% - 4px); background: white; border-radius: 10px; border: 1px solid #e8e0d0; box-shadow: 0 8px 24px rgba(0,0,0,0.08); max-height: 200px; overflow-y: auto; z-index: 10; }
+  .typeahead-hdr { padding: 8px 12px 4px; font-size: 10px; color: #aaa; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .typeahead-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f7f3ec; }
+  .typeahead-row:hover { background: #fdf7ee; }
+  .typeahead-row:last-child { border-bottom: none; }
+  .typeahead-name { font-size: 12px; font-weight: 600; flex: 1; }
+  .typeahead-badge { font-size: 10px; padding: 2px 6px; border-radius: 8px; background: #e8f5e9; color: #2e7d32; font-weight: 700; }
+  .typeahead-hint { font-size: 10px; color: #999; padding: 6px 12px 10px; font-style: italic; }
+
+  /* Reuse chip row */
+  .reuse { padding: 12px 18px; border-top: 1px solid #e8e0d0; background: #fffbf3; }
+  .reuse-hdr { font-size: 11px; font-weight: 700; color: #e8943a; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+  .reuse-hdr .lbl { flex: 1; }
+  .reuse-hdr .filter { font-size: 9px; background: white; border: 1px solid #e8e0d0; padding: 2px 8px; border-radius: 8px; color: #666; font-weight: 600; }
+  .reuse-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; margin: 0 -4px; padding: 0 4px 4px; }
+  .reuse-scroll::-webkit-scrollbar { height: 4px; }
+  .reuse-scroll::-webkit-scrollbar-thumb { background: #e8e0d0; border-radius: 2px; }
+  .reuse-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; background: white; border: 1px solid #e8e0d0; border-radius: 18px; font-size: 11px; font-weight: 600; white-space: nowrap; cursor: pointer; flex-shrink: 0; }
+  .reuse-pill .cnt { font-size: 9px; background: #e8943a18; color: #e8943a; padding: 1px 5px; border-radius: 8px; font-weight: 700; }
+  .reuse-pill.added { background: #e8f5e9; border-color: #c8e6c9; color: #2e7d32; cursor: default; }
+  .reuse-pill.added .cnt { background: #c8e6c9; color: #2e7d32; }
+
+  /* Suggestion chips */
+  .sugg { padding: 12px 18px; border-top: 1px solid #e8e0d0; background: #e8943a04; }
+  .sugg-hdr { font-size: 11px; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .sugg-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sugg-chip { padding: 5px 10px; border-radius: 16px; border: 1px solid #e8e0d0; background: white; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+  .sugg-chip.added { background: #e8f5e9; border-color: #c8e6c9; color: #2e7d32; }
+
+  /* annotations */
+  .callout { margin: 0 0 18px; padding: 14px 16px; background: #fff8e1; border-left: 4px solid #e8943a; border-radius: 6px; font-size: 12px; line-height: 1.5; }
+  .callout strong { color: #e8943a; }
+  .section-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 12px; color: #777; text-transform: uppercase; letter-spacing: 0.08em; margin: 28px 0 10px; text-align: center; }
+
+  .highlight { outline: 3px dashed #e8943a; outline-offset: 4px; border-radius: 18px; position: relative; }
+  .highlight::after { content: 'NEW'; position: absolute; top: -10px; right: 12px; background: #e8943a; color: white; font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 8px; letter-spacing: 0.1em; }
+
+  .legend { display: flex; justify-content: center; gap: 20px; font-size: 11px; color: #777; margin-top: 16px; }
+  .legend span::before { content: '■'; color: #e8943a; margin-right: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Outfit-builder: reuse flow mockup</h1>
+<p class="sub">Three views of the same outfit card. Paso Robles Day 2 — Saturday lunch at Tin City (Smart Casual · Daytime).</p>
+
+<div class="phones">
+
+  <!-- ============================================================= -->
+  <!-- PHONE 1: Resting state -->
+  <!-- ============================================================= -->
+  <div class="phone">
+    <div class="phone-label">1. Arriving at outfit #6</div>
+    <div class="phone-sublabel">You just added a couple items. Reuse row shows what's already in your suitcase pool from earlier outfits.</div>
+
+    <div class="callout">
+      <strong>What changed:</strong> The <strong>📦 Reuse from your outfits</strong> row (highlighted below) is new. It shows every clothing item you've entered in any earlier outfit, sorted by how often you've reused it. One tap adds it to this outfit.
+    </div>
+
+    <div class="card">
+      <div class="band band-day-eve">
+        <span>🌅 → ☀️ Morning-Afternoon</span>
+        <span class="chip">☀️ 78° / 52° clear</span>
+      </div>
+      <div class="meta">
+        <span class="dc smart">Smart Casual</span>
+        <span class="count">3 events · 2 items</span>
+      </div>
+
+      <div class="tline first">
+        <span class="dot"></span>
+        <div class="tline-content">
+          <div class="tline-title">☕ Breakfast at General Store</div>
+          <div class="tline-sub">8:30 AM · 841 12th St</div>
+        </div>
+      </div>
+      <div class="tline">
+        <span class="dot"></span>
+        <div class="tline-content">
+          <div class="tline-title">🍷 JUSTIN Vineyards Tasting</div>
+          <div class="tline-sub">10:00 AM · Chimney Rock Rd</div>
+        </div>
+      </div>
+      <div class="tline last">
+        <span class="dot"></span>
+        <div class="tline-content">
+          <div class="tline-title">🍝 Lunch at Etto Pastificio</div>
+          <div class="tline-sub">12:00 PM · Tin City</div>
+        </div>
+      </div>
+
+      <div class="borrow">
+        <button class="borrow-trig">↻ Borrow outfit from…</button>
+      </div>
+      <button class="inspo-btn">✨ Get Outfit Inspo</button>
+
+      <!-- Current items -->
+      <div class="items">
+        <div class="item-row">
+          <span class="item-icon">👕</span>
+          <span class="item-name">Linen button-down</span>
+          <span class="item-cat">tops</span>
+          <span class="item-multi">↻ ×2</span>
+          <button class="item-del">✕</button>
+        </div>
+        <div class="item-row">
+          <span class="item-icon">👖</span>
+          <span class="item-name">Chino shorts</span>
+          <span class="item-cat">bottoms</span>
+          <button class="item-del">✕</button>
+        </div>
+        <button class="add-stub">+ Add Item</button>
+      </div>
+
+      <!-- NEW: Reuse row -->
+      <div class="reuse highlight">
+        <div class="reuse-hdr">
+          <span class="lbl">📦 Reuse from your outfits</span>
+          <span class="filter">All 8 ▾</span>
+        </div>
+        <div class="reuse-scroll">
+          <div class="reuse-pill"><span>👟</span> White sneakers <span class="cnt">×4</span></div>
+          <div class="reuse-pill"><span>🕶️</span> Sunglasses <span class="cnt">×5</span></div>
+          <div class="reuse-pill"><span>👖</span> Dark jeans <span class="cnt">×3</span></div>
+          <div class="reuse-pill added"><span>✓</span> Linen button-down <span class="cnt">×2</span></div>
+          <div class="reuse-pill"><span>🧢</span> Paso Robles hat <span class="cnt">×2</span></div>
+          <div class="reuse-pill"><span>👟</span> Dress loafers <span class="cnt">×2</span></div>
+          <div class="reuse-pill"><span>🧥</span> Light jacket <span class="cnt">×1</span></div>
+          <div class="reuse-pill"><span>⌚</span> Watch <span class="cnt">×3</span></div>
+        </div>
+      </div>
+
+      <!-- Dress-code suggestions (existing) -->
+      <div class="sugg">
+        <div class="sugg-hdr">Suggested for Smart Casual</div>
+        <div class="sugg-chips">
+          <span class="sugg-chip"><span>👕</span> Polo shirt</span>
+          <span class="sugg-chip"><span>👖</span> Chinos</span>
+          <span class="sugg-chip"><span>👟</span> Loafers</span>
+          <span class="sugg-chip added">✓ Linen button-down</span>
+          <span class="sugg-chip"><span>⌚</span> Belt</span>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span>= new</span></div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- PHONE 2: Typeahead in the add input -->
+  <!-- ============================================================= -->
+  <div class="phone">
+    <div class="phone-label">2. Typeahead while adding</div>
+    <div class="phone-sublabel">You tap <em>+ Add Item</em> and start typing "wh…" — matches from your suitcase pool show below the input.</div>
+
+    <div class="callout">
+      <strong>What changed:</strong> The add-item input (highlighted) now auto-suggests items you've already entered elsewhere. One tap fills the name AND category AND commits. The header separates "already in your suitcase" from "new (fuzzy match)".
+    </div>
+
+    <div class="card">
+      <div class="band band-day-eve">
+        <span>🌅 → ☀️ Morning-Afternoon</span>
+        <span class="chip">☀️ 78° / 52° clear</span>
+      </div>
+      <div class="meta">
+        <span class="dc smart">Smart Casual</span>
+        <span class="count">3 events · 2 items</span>
+      </div>
+      <div class="tline first">
+        <span class="dot"></span>
+        <div class="tline-content">
+          <div class="tline-title">☕ Breakfast at General Store</div>
+          <div class="tline-sub">8:30 AM · 841 12th St</div>
+        </div>
+      </div>
+      <div class="tline">
+        <span class="dot"></span>
+        <div class="tline-content">
+          <div class="tline-title">🍷 JUSTIN Vineyards Tasting</div>
+          <div class="tline-sub">10:00 AM</div>
+        </div>
+      </div>
+      <div class="tline last">
+        <span class="dot"></span>
+        <div class="tline-content">
+          <div class="tline-title">🍝 Lunch at Etto Pastificio</div>
+          <div class="tline-sub">12:00 PM · Tin City</div>
+        </div>
+      </div>
+
+      <div class="items">
+        <div class="item-row">
+          <span class="item-icon">👕</span>
+          <span class="item-name">Linen button-down</span>
+          <span class="item-cat">tops</span>
+          <span class="item-multi">↻ ×2</span>
+          <button class="item-del">✕</button>
+        </div>
+        <div class="item-row">
+          <span class="item-icon">👖</span>
+          <span class="item-name">Chino shorts</span>
+          <span class="item-cat">bottoms</span>
+          <button class="item-del">✕</button>
+        </div>
+
+        <div class="add-row highlight">
+          <input class="add-input" value="wh" />
+          <select class="add-cat"><option>👟 shoes</option></select>
+          <button class="add-btn">Add</button>
+
+          <div class="typeahead">
+            <div class="typeahead-hdr">Already in your suitcase</div>
+            <div class="typeahead-row">
+              <span>👟</span>
+              <span class="typeahead-name">White sneakers</span>
+              <span class="typeahead-badge">×4 outfits</span>
+            </div>
+            <div class="typeahead-row">
+              <span>👕</span>
+              <span class="typeahead-name">White tee</span>
+              <span class="typeahead-badge">×2 outfits</span>
+            </div>
+            <div class="typeahead-hdr">Add as new</div>
+            <div class="typeahead-row">
+              <span>+</span>
+              <span class="typeahead-name">"wh"</span>
+            </div>
+            <div class="typeahead-hint">Press Enter to add "wh" · tap a row to reuse</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reuse">
+        <div class="reuse-hdr">
+          <span class="lbl">📦 Reuse from your outfits</span>
+          <span class="filter">All 8 ▾</span>
+        </div>
+        <div class="reuse-scroll">
+          <div class="reuse-pill"><span>👟</span> White sneakers <span class="cnt">×4</span></div>
+          <div class="reuse-pill"><span>🕶️</span> Sunglasses <span class="cnt">×5</span></div>
+          <div class="reuse-pill"><span>👖</span> Dark jeans <span class="cnt">×3</span></div>
+          <div class="reuse-pill added"><span>✓</span> Linen button-down <span class="cnt">×2</span></div>
+          <div class="reuse-pill"><span>🧢</span> Paso Robles hat <span class="cnt">×2</span></div>
+          <div class="reuse-pill"><span>👟</span> Dress loafers <span class="cnt">×2</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span>= new</span></div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- PHONE 3: Expanded "Borrow outfit from…" -->
+  <!-- ============================================================= -->
+  <div class="phone">
+    <div class="phone-label">3. "Borrow outfit from…" expanded</div>
+    <div class="phone-sublabel">You tap the existing borrow button and see both <em>copy the whole outfit</em> and <em>pick individual items</em>.</div>
+
+    <div class="callout">
+      <strong>What changed:</strong> The existing "Wear same outfit as…" becomes a picker that lets you either copy the entire outfit <em>or</em> cherry-pick individual items from an earlier outfit. Also: it's no longer gated on the current outfit being empty.
+    </div>
+
+    <div class="card">
+      <div class="band band-day-eve">
+        <span>🌅 → ☀️ Morning-Afternoon</span>
+        <span class="chip">☀️ 78° / 52° clear</span>
+      </div>
+      <div class="meta">
+        <span class="dc smart">Smart Casual</span>
+        <span class="count">3 events · 2 items</span>
+      </div>
+      <div class="tline first last">
+        <span class="dot"></span>
+        <div class="tline-content">
+          <div class="tline-title">🍷 JUSTIN · Etto · General Store</div>
+          <div class="tline-sub">3 events collapsed</div>
+        </div>
+      </div>
+
+      <div class="borrow highlight" style="padding: 14px 16px">
+        <div style="display:flex; gap:8px; margin-bottom: 10px;">
+          <button style="flex:1; padding: 8px; border-radius: 10px; border: 2px solid #e8943a; background: #fff8ec; color: #e8943a; font-weight: 700; font-size: 12px;">📋 Copy whole outfit</button>
+          <button style="flex:1; padding: 8px; border-radius: 10px; border: 1px solid #e8e0d0; background: white; color: #666; font-weight: 700; font-size: 12px;">✂️ Pick items</button>
+        </div>
+        <div style="font-size: 11px; color: #666; font-weight: 600; margin-bottom: 6px;">From:</div>
+
+        <div style="background: white; border: 1px solid #e8e0d0; border-radius: 10px; padding: 10px; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: 700;">🍽️ Dinner at The Hatch · Fri 5/22</span>
+            <span style="font-size: 10px; color: #999; margin-left: auto;">4 items</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px;"><input type="checkbox" checked /> 👕 Linen button-down</label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px;"><input type="checkbox" /> 👖 Dark jeans</label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px;"><input type="checkbox" checked /> 👟 Dress loafers</label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px;"><input type="checkbox" /> ⌚ Watch</label>
+          </div>
+        </div>
+
+        <div style="background: white; border: 1px solid #e8e0d0; border-radius: 10px; padding: 10px; margin-bottom: 10px; opacity: 0.6;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 700;">🚗 Drive Up from LA · Fri 5/22</span>
+            <span style="font-size: 10px; color: #999; margin-left: auto;">3 items</span>
+          </div>
+        </div>
+
+        <button style="width: 100%; padding: 10px; background: #e8943a; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 13px;">Borrow 2 items →</button>
+      </div>
+
+      <!-- existing items + reuse row still below -->
+      <div class="items">
+        <div class="item-row">
+          <span class="item-icon">👕</span>
+          <span class="item-name">Linen button-down</span>
+          <span class="item-cat">tops</span>
+          <span class="item-multi">↻ ×2</span>
+          <button class="item-del">✕</button>
+        </div>
+        <div class="item-row">
+          <span class="item-icon">👖</span>
+          <span class="item-name">Chino shorts</span>
+          <span class="item-cat">bottoms</span>
+          <button class="item-del">✕</button>
+        </div>
+        <button class="add-stub">+ Add Item</button>
+      </div>
+
+      <div class="reuse">
+        <div class="reuse-hdr">
+          <span class="lbl">📦 Reuse from your outfits</span>
+          <span class="filter">All 8 ▾</span>
+        </div>
+        <div class="reuse-scroll">
+          <div class="reuse-pill"><span>👟</span> White sneakers <span class="cnt">×4</span></div>
+          <div class="reuse-pill"><span>🕶️</span> Sunglasses <span class="cnt">×5</span></div>
+          <div class="reuse-pill"><span>👖</span> Dark jeans <span class="cnt">×3</span></div>
+          <div class="reuse-pill added"><span>✓</span> Linen button-down <span class="cnt">×2</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span>= new</span></div>
+  </div>
+
+</div>
+
+<p class="section-title">Open questions I'd love your take on</p>
+<div style="max-width: 720px; margin: 0 auto; font-size: 13px; line-height: 1.6; color: #444;">
+  <p><strong>A. Placement of the reuse row.</strong> I put it below <em>+ Add Item</em> so the "this outfit's current state" stays visually primary. An alternative: pin the reuse row to the top (under the timeline) so it's the first thing you reach for. Phone thumbs are at the bottom though, so lower = easier.</p>
+  <p><strong>B. Category filter chip ("All 8 ▾").</strong> On a 10-day trip your pool could grow to 30+ items. The dropdown could filter by category (Tops / Bottoms / Shoes / Accessories) so scrolling stays manageable. Needed now or later?</p>
+  <p><strong>C. Sort.</strong> Most-reused first means white shoes rise to the top fast. Alternatives: alphabetical (predictable), most-recently-added (good for new items), by category (grouped). Most-reused is my default.</p>
+  <p><strong>D. Typeahead vs. chip row.</strong> Both cover the same ground but serve different muscle memory: typeahead = "I know what I want, let me type a few letters." Chip row = "remind me what I've got." I'd ship both since they share the same data source.</p>
+</div>
+
+</body>
+</html>

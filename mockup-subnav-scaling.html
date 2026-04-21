@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Trip Planner Pro — Sub-Nav Scaling Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    /* camping theme — pulled directly from lib/constants.ts */
+    --bg:#f5f8f2;
+    --accent:#5a9a2f;
+    --accent2:#e68a00;
+    --text:#1a1a1a;
+    --muted:#6a7a5a;
+    --card:rgba(90,154,47,0.06);
+    --cardBorder:rgba(90,154,47,0.2);
+    --headerBg:#eef4e8;
+    --vibeBg:radial-gradient(ellipse at 20% 80%, rgba(90,154,47,0.06) 0%, transparent 50%);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'DM Sans',sans-serif;
+    background:#e6ece0;
+    color:var(--text);
+    min-height:100vh;
+    padding:24px 16px 80px;
+  }
+  h1,h2,h3{font-family:'Outfit',sans-serif;margin:0}
+  .page-title{text-align:center;margin-bottom:6px;font-weight:900;font-size:26px}
+  .page-sub{text-align:center;color:#555;margin-bottom:22px;font-size:14px}
+
+  /* ── Variant switcher ── */
+  .switcher{
+    display:flex;gap:8px;justify-content:center;margin:0 auto 24px;
+    background:#fff;border-radius:14px;padding:6px;
+    width:max-content;box-shadow:0 2px 10px rgba(0,0,0,0.05);
+  }
+  .switcher button{
+    border:0;background:transparent;padding:10px 16px;border-radius:10px;
+    font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;
+    cursor:pointer;color:#666;transition:all 0.2s;
+  }
+  .switcher button.on{background:var(--accent);color:#fff}
+
+  /* ── Phone frames (side-by-side) ── */
+  .frames{
+    display:flex;gap:28px;justify-content:center;flex-wrap:wrap;align-items:flex-start;
+  }
+  .frame-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .frame-label{font-weight:700;font-size:13px;color:#333;letter-spacing:0.3px}
+  .frame-note{font-size:11px;color:#888;max-width:320px;text-align:center;line-height:1.4}
+  .phone{
+    width:390px;height:720px;border-radius:42px;
+    background:#000;padding:12px;box-shadow:0 20px 50px rgba(0,0,0,0.18);
+    position:relative;flex-shrink:0;
+  }
+  .phone-screen{
+    width:100%;height:100%;border-radius:32px;overflow:hidden;
+    background:var(--bg);position:relative;
+  }
+  .phone-screen::before{
+    /* vibe bg */
+    content:"";position:absolute;inset:0;background:var(--vibeBg);
+    pointer-events:none;z-index:0;
+  }
+
+  /* ── Sticky top header (matches trip-page.tsx) ── */
+  .top-header{
+    position:sticky;top:0;z-index:20;
+    background:rgba(255,255,255,0.95);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--cardBorder);
+  }
+  .header-row{
+    background:var(--headerBg);padding:14px 18px;
+    border-bottom:1px solid var(--cardBorder);
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    position:relative;
+  }
+  .back-btn{
+    width:36px;height:36px;border-radius:50%;
+    background:rgba(90,154,47,0.1);
+    border:1.5px solid rgba(90,154,47,0.25);
+    color:var(--accent);font-size:20px;font-weight:700;
+    cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .header-left{display:flex;align-items:center;gap:10px;min-width:0}
+  .trip-meta{min-width:0}
+  .trip-name{font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;line-height:1.1}
+  .trip-sub{font-size:10.5px;opacity:0.55;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .edit-btn{
+    background:transparent;border:1.5px solid var(--cardBorder);
+    border-radius:8px;padding:6px 10px;font-size:12px;color:var(--muted);
+    cursor:pointer;flex-shrink:0;
+  }
+
+  /* ── Body ── */
+  .body{
+    padding:16px;padding-bottom:90px;position:relative;z-index:1;
+    height:calc(100% - 0px);overflow-y:auto;
+  }
+  .body.has-top-nav{padding-bottom:30px}
+  .hero-card{
+    background:#fff;border:1px solid var(--cardBorder);border-radius:16px;
+    padding:14px 16px;margin-bottom:12px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.03);
+  }
+  .hero-eyebrow{font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--accent);text-transform:uppercase}
+  .hero-title{font-family:'Outfit',sans-serif;font-size:17px;font-weight:700;margin:4px 0}
+  .hero-meta{font-size:12px;color:var(--muted)}
+  .list-card{
+    background:#fff;border:1px solid var(--cardBorder);border-radius:14px;
+    padding:12px 14px;margin-bottom:8px;
+  }
+  .list-title{font-size:13px;font-weight:700}
+  .list-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+  /* ── TOP sub-nav variant (4 + More) ── */
+  .top-subnav{
+    display:flex;align-items:center;gap:2px;padding:6px 10px 10px;
+    background:rgba(255,255,255,0.7);backdrop-filter:blur(8px);
+  }
+  .top-tab{
+    flex:1;min-width:0;border:0;background:transparent;
+    padding:8px 4px;border-radius:10px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    font-family:'DM Sans',sans-serif;
+  }
+  .top-tab .ic{font-size:17px;line-height:1}
+  .top-tab .lb{font-size:10.5px;font-weight:500;color:#999;white-space:nowrap}
+  .top-tab.active{background:rgba(90,154,47,0.12)}
+  .top-tab.active .lb{color:var(--accent);font-weight:700}
+  .top-tab.more .ic{font-weight:900;letter-spacing:1px}
+
+  /* ── BOTTOM sub-nav (existing pattern) ── */
+  .bottom-nav{
+    position:absolute;left:0;right:0;bottom:0;
+    height:58px;background:rgba(255,255,255,0.97);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-top:1px solid #e5e5e5;
+    display:flex;justify-content:space-around;align-items:center;padding:0 4px;z-index:30;
+  }
+  .bnav-tab{
+    flex:1;height:100%;background:none;border:0;cursor:pointer;padding:0;
+    border-top:3px solid transparent;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    min-width:0;position:relative;transition:all 0.2s;
+    font-family:'DM Sans',sans-serif;
+  }
+  .bnav-tab .ic{font-size:18px;line-height:1}
+  .bnav-tab .lb{font-size:10px;font-weight:500;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;padding:0 2px}
+  .bnav-tab.active{border-top-color:var(--accent)}
+  .bnav-tab.active .lb{color:var(--accent);font-weight:700}
+  .badge{
+    position:absolute;top:6px;right:calc(50% - 18px);
+    background:#d32f2f;color:#fff;font-size:9px;font-weight:800;
+    min-width:14px;height:14px;border-radius:7px;padding:0 4px;
+    display:inline-flex;align-items:center;justify-content:center;line-height:1;
+  }
+  .more-badge{background:var(--accent2)}
+
+  /* ── Sheet (opens from More) ── */
+  .sheet-backdrop{
+    position:absolute;inset:0;background:rgba(0,0,0,0.28);
+    z-index:40;opacity:0;pointer-events:none;transition:opacity 0.2s;
+  }
+  .sheet-backdrop.open{opacity:1;pointer-events:auto}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:50;
+    background:#fff;border-radius:20px 20px 0 0;
+    transform:translateY(100%);transition:transform 0.25s ease-out;
+    max-height:72%;display:flex;flex-direction:column;
+    box-shadow:0 -10px 30px rgba(0,0,0,0.15);
+  }
+  .sheet.open{transform:translateY(0)}
+  .sheet-handle{
+    width:40px;height:4px;border-radius:2px;background:#ddd;
+    margin:10px auto 2px;
+  }
+  .sheet-head{padding:10px 20px 4px}
+  .sheet-title{font-family:'Outfit',sans-serif;font-weight:700;font-size:15px}
+  .sheet-sub{font-size:11px;color:var(--muted);margin-top:1px}
+  .sheet-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 16px 24px;
+  }
+  .sheet-tile{
+    background:var(--card);border:1px solid var(--cardBorder);
+    border-radius:14px;padding:14px 8px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    font-family:'DM Sans',sans-serif;
+  }
+  .sheet-tile .ic{font-size:22px}
+  .sheet-tile .lb{font-size:12px;font-weight:600}
+  .sheet-tile .dot{
+    width:6px;height:6px;border-radius:50%;background:var(--accent2);
+    position:absolute;top:10px;right:10px;
+  }
+  .sheet-tile{position:relative}
+
+  /* Top-nav dropdown (the "More" variant on top) */
+  .top-sheet{
+    position:absolute;top:100%;right:10px;
+    background:#fff;border:1px solid var(--cardBorder);
+    border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,0.1);
+    z-index:25;width:200px;padding:6px;
+    display:none;
+  }
+  .top-sheet.open{display:block}
+  .top-sheet-row{
+    display:flex;align-items:center;gap:10px;padding:9px 10px;
+    border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;
+  }
+  .top-sheet-row:hover{background:var(--card)}
+  .top-sheet-row .ic{font-size:16px}
+
+  /* ── Annotations ── */
+  .callout{
+    background:#fffbe6;border:1px solid #f0d070;border-radius:10px;
+    padding:10px 12px;font-size:12px;line-height:1.5;
+    margin:14px auto 0;max-width:720px;
+  }
+
+  @media (max-width:860px){
+    .phone{transform:scale(0.82);transform-origin:top center}
+  }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">Trip Planner Pro — Sub-Nav Scaling</h1>
+<p class="page-sub">Same trip hub, same camping theme — three scaling strategies side-by-side.</p>
+
+<div class="switcher" id="switcher">
+  <button data-view="compare" class="on">Compare all 3</button>
+  <button data-view="current">Current (7 flat)</button>
+  <button data-view="bottom">Bottom · 4 + More</button>
+  <button data-view="top">Top · 4 + More</button>
+</div>
+
+<div class="frames" id="frames">
+
+  <!-- ───────────────── Frame A: CURRENT 7-flat ───────────────── -->
+  <div class="frame-wrap" data-frame="current">
+    <div class="frame-label">A · Current — 7 flat tabs</div>
+    <div class="phone">
+      <div class="phone-screen" id="screenA">
+        <div class="top-header">
+          <div class="header-row">
+            <div class="header-left">
+              <button class="back-btn" title="Back to dashboard">←</button>
+              <div class="trip-meta">
+                <div class="trip-name">Weekend in Asheville</div>
+                <div class="trip-sub">📍 Asheville, NC · Apr 24–26 · 6 people</div>
+              </div>
+            </div>
+            <button class="edit-btn">✏️ Edit</button>
+          </div>
+        </div>
+        <div class="body">
+          <div class="hero-card">
+            <div class="hero-eyebrow">NEXT UP</div>
+            <div class="hero-title">Cabin check-in at The Old Mill</div>
+            <div class="hero-meta">Fri Apr 24 · 4:00 PM · 4 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">🥾 Hike to Looking Glass Falls</div>
+            <div class="list-sub">Sat 9:00 AM · Dress: athletic · 5 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">🍖 Group dinner at Cúrate</div>
+            <div class="list-sub">Sat 7:30 PM · Dress: smart casual · 6 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">☕ Farewell brunch</div>
+            <div class="list-sub">Sun 10:00 AM · Dress: casual · 6 attending</div>
+          </div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="bnav-tab active"><span class="ic">📅</span><span class="lb">Itinerary</span></button>
+          <button class="bnav-tab"><span class="ic">💰</span><span class="lb">Expenses</span></button>
+          <button class="bnav-tab"><span class="ic">💬</span><span class="lb">Chat</span><span class="badge">3</span></button>
+          <button class="bnav-tab"><span class="ic">🧳</span><span class="lb">Packing</span></button>
+          <button class="bnav-tab"><span class="ic">📝</span><span class="lb">Notes</span></button>
+          <button class="bnav-tab"><span class="ic">🍽️</span><span class="lb">Meals</span></button>
+          <button class="bnav-tab"><span class="ic">👥</span><span class="lb">Group</span></button>
+        </nav>
+      </div>
+    </div>
+    <div class="frame-note">All 7 tabs visible. Labels are tight at 10px; an 8th tab breaks the row.</div>
+  </div>
+
+  <!-- ───────────────── Frame B: BOTTOM 4+More ───────────────── -->
+  <div class="frame-wrap" data-frame="bottom">
+    <div class="frame-label">B · Bottom — 4 primary + More</div>
+    <div class="phone">
+      <div class="phone-screen" id="screenB">
+        <div class="top-header">
+          <div class="header-row">
+            <div class="header-left">
+              <button class="back-btn" title="Back to dashboard">←</button>
+              <div class="trip-meta">
+                <div class="trip-name">Weekend in Asheville</div>
+                <div class="trip-sub">📍 Asheville, NC · Apr 24–26 · 6 people</div>
+              </div>
+            </div>
+            <button class="edit-btn">✏️ Edit</button>
+          </div>
+        </div>
+        <div class="body">
+          <div class="hero-card">
+            <div class="hero-eyebrow">NEXT UP</div>
+            <div class="hero-title">Cabin check-in at The Old Mill</div>
+            <div class="hero-meta">Fri Apr 24 · 4:00 PM · 4 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">🥾 Hike to Looking Glass Falls</div>
+            <div class="list-sub">Sat 9:00 AM · Dress: athletic · 5 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">🍖 Group dinner at Cúrate</div>
+            <div class="list-sub">Sat 7:30 PM · Dress: smart casual · 6 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">☕ Farewell brunch</div>
+            <div class="list-sub">Sun 10:00 AM · Dress: casual · 6 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">🎸 Live music at The Grey Eagle</div>
+            <div class="list-sub">Sat 10:00 PM · Dress: casual · 3 attending</div>
+          </div>
+        </div>
+        <div class="sheet-backdrop" id="sheetBack"></div>
+        <div class="sheet" id="sheet">
+          <div class="sheet-handle"></div>
+          <div class="sheet-head">
+            <div class="sheet-title">More in this trip</div>
+            <div class="sheet-sub">Room for everything without cluttering the main bar.</div>
+          </div>
+          <div class="sheet-grid">
+            <div class="sheet-tile"><span class="ic">📝</span><span class="lb">Notes</span></div>
+            <div class="sheet-tile"><span class="ic">🍽️</span><span class="lb">Meals</span><span class="dot"></span></div>
+            <div class="sheet-tile"><span class="ic">👥</span><span class="lb">Group</span></div>
+            <div class="sheet-tile"><span class="ic">✈️</span><span class="lb">Flights</span></div>
+            <div class="sheet-tile"><span class="ic">🏨</span><span class="lb">Lodging</span></div>
+            <div class="sheet-tile"><span class="ic">📄</span><span class="lb">Docs</span></div>
+            <div class="sheet-tile"><span class="ic">⛅</span><span class="lb">Weather</span></div>
+            <div class="sheet-tile"><span class="ic">🎒</span><span class="lb">Gear</span></div>
+            <div class="sheet-tile"><span class="ic">⚙️</span><span class="lb">Settings</span></div>
+          </div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="bnav-tab active"><span class="ic">📅</span><span class="lb">Itinerary</span></button>
+          <button class="bnav-tab"><span class="ic">💰</span><span class="lb">Expenses</span></button>
+          <button class="bnav-tab"><span class="ic">💬</span><span class="lb">Chat</span><span class="badge">3</span></button>
+          <button class="bnav-tab"><span class="ic">🧳</span><span class="lb">Packing</span></button>
+          <button class="bnav-tab" id="moreBtn"><span class="ic">⋯</span><span class="lb">More</span><span class="badge more-badge">2</span></button>
+        </nav>
+      </div>
+    </div>
+    <div class="frame-note">Tap <b>More</b> → bottom sheet. The sheet is infinitely extensible — drop in Flights, Docs, Weather, anything.</div>
+  </div>
+
+  <!-- ───────────────── Frame C: TOP 4+More ───────────────── -->
+  <div class="frame-wrap" data-frame="top">
+    <div class="frame-label">C · Top — 4 primary + More</div>
+    <div class="phone">
+      <div class="phone-screen" id="screenC">
+        <div class="top-header">
+          <div class="header-row">
+            <div class="header-left">
+              <button class="back-btn" title="Back to dashboard">←</button>
+              <div class="trip-meta">
+                <div class="trip-name">Weekend in Asheville</div>
+                <div class="trip-sub">📍 Asheville, NC · Apr 24–26 · 6 people</div>
+              </div>
+            </div>
+            <button class="edit-btn">✏️ Edit</button>
+          </div>
+          <div class="top-subnav">
+            <button class="top-tab active"><span class="ic">📅</span><span class="lb">Itinerary</span></button>
+            <button class="top-tab"><span class="ic">💰</span><span class="lb">Expenses</span></button>
+            <button class="top-tab" style="position:relative"><span class="ic">💬</span><span class="lb">Chat</span><span class="badge" style="top:2px;right:10px">3</span></button>
+            <button class="top-tab"><span class="ic">🧳</span><span class="lb">Packing</span></button>
+            <button class="top-tab more" id="topMoreBtn" style="position:relative">
+              <span class="ic">⋯</span><span class="lb">More</span>
+              <span class="badge more-badge" style="top:2px;right:10px">2</span>
+            </button>
+          </div>
+          <div class="top-sheet" id="topSheet">
+            <div class="top-sheet-row"><span class="ic">📝</span>Notes</div>
+            <div class="top-sheet-row"><span class="ic">🍽️</span>Meals</div>
+            <div class="top-sheet-row"><span class="ic">👥</span>Group</div>
+            <div class="top-sheet-row"><span class="ic">✈️</span>Flights</div>
+            <div class="top-sheet-row"><span class="ic">🏨</span>Lodging</div>
+            <div class="top-sheet-row"><span class="ic">📄</span>Docs</div>
+            <div class="top-sheet-row"><span class="ic">⛅</span>Weather</div>
+          </div>
+        </div>
+        <div class="body has-top-nav">
+          <div class="hero-card">
+            <div class="hero-eyebrow">NEXT UP</div>
+            <div class="hero-title">Cabin check-in at The Old Mill</div>
+            <div class="hero-meta">Fri Apr 24 · 4:00 PM · 4 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">🥾 Hike to Looking Glass Falls</div>
+            <div class="list-sub">Sat 9:00 AM · Dress: athletic · 5 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">🍖 Group dinner at Cúrate</div>
+            <div class="list-sub">Sat 7:30 PM · Dress: smart casual · 6 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">☕ Farewell brunch</div>
+            <div class="list-sub">Sun 10:00 AM · Dress: casual · 6 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">🎸 Live music at The Grey Eagle</div>
+            <div class="list-sub">Sat 10:00 PM · Dress: casual · 3 attending</div>
+          </div>
+          <div class="list-card">
+            <div class="list-title">🚗 Drive home</div>
+            <div class="list-sub">Sun 1:00 PM · ~4 hrs · 6 attending</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-note">Tap <b>More</b> → dropdown. Nav sits with trip name; bottom of screen stays free for content.</div>
+  </div>
+
+</div>
+
+<div class="callout" style="margin-top:28px">
+<b>My read:</b> Keep the nav on the <b>bottom</b> (Frame B). Your app is mobile-first, the thumb zone is where the primary tabs belong, and you've already trained your users there. The unlock is the <b>⋯ More</b> tile: it gives you a growth slot for Flights, Docs, Weather, Gear, Settings — forever — without ever touching the main bar. It also pairs perfectly with your role-density rule: a Planner persona might see Meals in primary and Chat in More; a Guest sees it the other way around. Only swap to top (Frame C) if you start caring about desktop/tablet as first-class surfaces. Until then, top nav just adds another sticky row on mobile without solving anything the sheet doesn't already solve.
+</div>
+
+<script>
+  // ── Variant switcher
+  const switcher = document.getElementById('switcher');
+  const frames = document.getElementById('frames');
+  switcher.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-view]');
+    if(!btn) return;
+    switcher.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b===btn));
+    const view = btn.dataset.view;
+    [...frames.children].forEach(f=>{
+      const key = f.dataset.frame;
+      f.style.display = (view==='compare' || view===key) ? 'flex' : 'none';
+    });
+  });
+
+  // ── Bottom sheet open/close
+  const moreBtn = document.getElementById('moreBtn');
+  const sheet   = document.getElementById('sheet');
+  const sheetBack = document.getElementById('sheetBack');
+  const openSheet = ()=>{ sheet.classList.add('open'); sheetBack.classList.add('open'); };
+  const closeSheet = ()=>{ sheet.classList.remove('open'); sheetBack.classList.remove('open'); };
+  moreBtn.addEventListener('click', openSheet);
+  sheetBack.addEventListener('click', closeSheet);
+  sheet.querySelectorAll('.sheet-tile').forEach(t=>t.addEventListener('click', closeSheet));
+
+  // ── Top dropdown open/close
+  const topMoreBtn = document.getElementById('topMoreBtn');
+  const topSheet = document.getElementById('topSheet');
+  topMoreBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    topSheet.classList.toggle('open');
+  });
+  document.addEventListener('click', ()=>topSheet.classList.remove('open'));
+  topSheet.addEventListener('click', (e)=>e.stopPropagation());
+</script>
+</body>
+</html>

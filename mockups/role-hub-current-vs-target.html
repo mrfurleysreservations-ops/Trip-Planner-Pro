@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trip Hub — Current vs Target (by role)</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 20px;
+    background: #f3f4f6;
+    font-family: 'DM Sans', sans-serif;
+    color: #1a1a1a;
+  }
+  h1 { font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 28px; margin: 0 0 6px; text-align: center; }
+  .sub { text-align: center; color: #666; margin: 0 0 28px; font-size: 14px; }
+  .intro {
+    max-width: 920px; margin: 0 auto 40px; background: #fff;
+    border: 1px solid #e5e5e5; border-radius: 16px; padding: 20px 24px;
+  }
+  .intro h2 { font-family: 'Outfit'; font-size: 18px; margin: 0 0 10px; }
+  .intro p { font-size: 14px; line-height: 1.55; margin: 0 0 8px; }
+  .intro ul { padding-left: 20px; margin: 6px 0; font-size: 14px; }
+  .intro code { background: #f5f5f5; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
+  .row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 24px; margin-bottom: 48px; max-width: 920px; margin-left: auto; margin-right: auto;
+  }
+  .col { display: flex; flex-direction: column; align-items: center; }
+  .col-label {
+    font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 14px;
+    margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .col-label.current { color: #c62828; }
+  .col-label.target { color: #2e7d32; }
+
+  .phone {
+    width: 360px; max-width: 100%;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  /* Theme accents per role */
+  .role-all-in   { --acc: #e8943a; --acc2: #d97706; }
+  .role-helping  { --acc: #1fa67a; --acc2: #16a085; }
+  .role-just     { --acc: #5e35b1; --acc2: #7e57c2; }
+  .role-vibes    { --acc: #ec407a; --acc2: #f06292; }
+
+  .phone-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid #eee;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,0.95);
+  }
+  .phone-header .nm {
+    font-family: 'Outfit'; font-weight: 800; font-size: 14px;
+  }
+  .phone-header .role-chip {
+    padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;
+    color: #fff; background: var(--acc);
+  }
+
+  .content { padding: 12px 12px 60px; }
+
+  .trip-head {
+    padding: 10px 12px; border-radius: 10px;
+    background: #fafafa; margin-bottom: 10px;
+    border: 1px solid #eee;
+  }
+  .trip-head .tnm { font-family: 'Outfit'; font-weight: 800; font-size: 15px; }
+  .trip-head .tmt { font-size: 11px; color: #777; margin-top: 2px; }
+
+  .hero {
+    color: #fff; border-radius: 14px; padding: 14px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, var(--acc), var(--acc2));
+  }
+  .hero .lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
+  .hero .ttl { font-family: 'Outfit'; font-weight: 800; font-size: 15px; margin-top: 4px; }
+  .hero .mta { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+  .hero .btn-wrap { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .hero .btn {
+    background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.3);
+    padding: 5px 11px; border-radius: 8px; font-size: 11px; font-weight: 700;
+  }
+
+  .amount-card {
+    border-radius: 14px; padding: 16px 14px;
+    margin-bottom: 10px; text-align: center;
+    background: #fff; border: 2px solid var(--acc);
+  }
+  .amount-card .lbl {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: #777;
+  }
+  .amount-card .amt {
+    font-family: 'Outfit'; font-weight: 900; font-size: 34px; color: var(--acc);
+    line-height: 1.05; margin: 4px 0 2px;
+  }
+  .amount-card .note { font-size: 11px; color: #888; }
+  .amount-card .pay {
+    display: inline-block; background: var(--acc); color: #fff;
+    padding: 8px 18px; border-radius: 10px; font-weight: 700; font-size: 12px;
+    margin-top: 8px;
+  }
+  .amount-card.settled { border-color: #2e7d32; }
+  .amount-card.settled .amt { color: #2e7d32; font-size: 22px; }
+
+  .mini-section {
+    border: 1px solid #eee; border-radius: 12px;
+    padding: 10px 12px; margin-bottom: 8px;
+    background: #fafafa;
+  }
+  .mini-section .hd {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 700; margin-bottom: 4px;
+  }
+  .mini-section .bd { font-size: 11px; color: #555; }
+  .mini-section.dim { opacity: 0.65; }
+
+  .booking-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 10px; background: #f5f5f5;
+    margin-bottom: 4px; font-size: 11px;
+  }
+  .booking-row .ic { font-size: 14px; }
+
+  .subnav {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    border-top: 1px solid #eee; padding: 6px 0;
+    background: rgba(255,255,255,0.97); backdrop-filter: blur(10px);
+  }
+  .subnav .tab {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-size: 8px; color: #888; position: relative;
+  }
+  .subnav .tab .ic { font-size: 13px; position: relative; }
+  .subnav .tab.active { color: var(--acc); font-weight: 700; border-top: 3px solid var(--acc); margin-top: -3px; padding-top: 2px; }
+  .subnav .unread {
+    position: absolute; top: -2px; right: -6px;
+    background: #d32f2f; color: #fff; font-size: 8px; font-weight: 800;
+    padding: 1px 4px; border-radius: 6px; min-width: 10px; text-align: center;
+  }
+  .subnav .muted-dot {
+    position: absolute; top: 0; right: -3px;
+    width: 5px; height: 5px; border-radius: 50%; background: #bbb;
+  }
+
+  .redirect-banner {
+    padding: 40px 16px; text-align: center;
+    background: #fff3cd; border: 2px dashed #e0a800;
+    border-radius: 10px; margin: 30px 12px;
+  }
+  .redirect-banner .big {
+    font-family: 'Outfit'; font-weight: 800; font-size: 16px; color: #856404;
+    margin-bottom: 6px;
+  }
+  .redirect-banner .sm { font-size: 11px; color: #856404; }
+
+  .diff-callout {
+    background: #fef3c7; border-left: 4px solid #f59e0b;
+    padding: 10px 14px; border-radius: 0 8px 8px 0;
+    font-size: 13px; color: #78350f;
+    max-width: 920px; margin: 0 auto 20px;
+  }
+  .diff-callout strong { color: #92400e; }
+
+  .role-heading {
+    font-family: 'Outfit'; font-weight: 900; font-size: 22px;
+    max-width: 920px; margin: 8px auto 4px; padding-left: 4px;
+  }
+  .role-sub {
+    font-size: 13px; color: #666;
+    max-width: 920px; margin: 0 auto 16px; padding-left: 4px;
+  }
+
+  .summary-table {
+    max-width: 920px; margin: 40px auto;
+    width: 100%;
+    background: #fff; border-radius: 14px; overflow: hidden;
+    border: 1px solid #e5e5e5;
+    border-collapse: collapse;
+  }
+  .summary-table th, .summary-table td {
+    padding: 10px 14px; text-align: left; font-size: 13px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .summary-table th {
+    background: #fafafa; font-family: 'Outfit'; font-weight: 700;
+    text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em;
+  }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table .miss { color: #c62828; font-weight: 600; }
+  .summary-table .good { color: #2e7d32; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>Role Hub — Current vs Target</h1>
+<p class="sub">What you see today (left) vs what the spec says you should see (right)</p>
+
+<div class="intro">
+  <h2>TL;DR — what's broken</h2>
+  <p>The Role Picker + sub-nav reorder + role hero all shipped, but the hub hero is still only a generic gradient banner. <strong>No expenses data lands on the hub for any role</strong>, and Just Here users get redirected straight to <code>/expenses</code>, so they never even see the hub — which is the opposite of what the mockup showed (big "You owe" card on the hub itself).</p>
+  <ul>
+    <li><strong>🔥 All In</strong> — hub shows generic "X events coming up" hero. No expense summary, no packing progress, no chat preview. Bookings list is the same for every role.</li>
+    <li><strong>🙌 Helping Out</strong> — hero says "Pick up a task" but lists nothing real (no unclaimed meals, no unassigned packing). No expense summary.</li>
+    <li><strong>🎟️ Just Here</strong> — <em>redirected away from the hub</em> before seeing anything. Lands on the full expenses tab instead of the big "You owe Dan $X · Pay" card that was in the mockup.</li>
+    <li><strong>✌️ Vibes Only</strong> — next-event card works. No "You owe" card next to it. Everything else is same-as-host.</li>
+  </ul>
+  <p>The fix is (a) stop redirecting Just Here away from the hub, (b) fetch expenses/packing/chat summaries in <code>app/trip/[id]/page.tsx</code>, (c) expand each role hero to render a real summary card from that data.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- ALL IN -->
+<!-- ══════════════════════════════════════════════════════ -->
+<h2 class="role-heading">🔥 All In</h2>
+<p class="role-sub">Default tab: Itinerary (hub stays visible). Should see a dense command-center view.</p>
+
+<div class="diff-callout">
+  <strong>What's missing:</strong> packing progress pill, expense balance summary, chat preview card, the "Quick scan" upcoming-events mini-list. Current hero only counts events.
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="col-label current">Current</div>
+    <div class="phone role-all-in">
+      <div class="phone-header">
+        <span class="back">←</span>
+        <span class="nm">Nashville Bach</span>
+        <span class="role-chip">🔥</span>
+      </div>
+      <div class="content">
+        <div class="trip-head">
+          <div class="tnm">🎸 Nashville Bach Weekend</div>
+          <div class="tmt">📍 Nashville · Jun 12–14 · 8 people</div>
+        </div>
+        <div class="hero">
+          <div class="lbl">You're running the show</div>
+          <div class="ttl">4 events coming up</div>
+          <div class="mta">Review the schedule, nudge the group if you need RSVPs.</div>
+          <div class="btn-wrap"><span class="btn">Open Itinerary →</span></div>
+        </div>
+        <div class="mini-section">
+          <div class="hd"><span>🌤️ Weather</span></div>
+          <div class="bd">72°F · partly cloudy</div>
+        </div>
+        <div class="mini-section">
+          <div class="hd"><span>🧳 Travel &amp; Lodging</span></div>
+          <div class="booking-row"><span class="ic">✈️</span>UA 1234 · LAX → BNA</div>
+          <div class="booking-row"><span class="ic">🏨</span>The Russell · Jun 12–14</div>
+        </div>
+      </div>
+      <nav class="subnav">
+        <div class="tab active"><span class="ic">📅</span>Itin</div>
+        <div class="tab"><span class="ic">💰</span>Exp</div>
+        <div class="tab"><span class="ic">💬</span><span class="unread">5</span>Chat</div>
+        <div class="tab"><span class="ic">🧳</span>Pack</div>
+        <div class="tab"><span class="ic">📝</span>Notes</div>
+        <div class="tab"><span class="ic">🍽️</span>Meals</div>
+        <div class="tab"><span class="ic">👥</span>Grp</div>
+      </nav>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-label target">Target</div>
+    <div class="phone role-all-in">
+      <div class="phone-header">
+        <span class="back">←</span>
+        <span class="nm">Nashville Bach</span>
+        <span class="role-chip">🔥</span>
+      </div>
+      <div class="content">
+        <div class="trip-head">
+          <div class="tnm">🎸 Nashville Bach Weekend</div>
+          <div class="tmt">📍 Nashville · Jun 12–14 · 8 people</div>
+        </div>
+        <div class="hero">
+          <div class="lbl">You're running the show</div>
+          <div class="ttl">4 events · 3 RSVPs pending</div>
+          <div class="mta">Packing 62% · $210 unsettled · 5 new messages</div>
+          <div class="btn-wrap">
+            <span class="btn">Nudge pending →</span>
+            <span class="btn">Settle up →</span>
+          </div>
+        </div>
+        <div class="mini-section">
+          <div class="hd"><span>📅 Quick scan</span><span style="font-size:10px;color:#777">next 3</span></div>
+          <div class="bd">Fri 7p · Dinner at Husk — 6 in, 2 pending</div>
+          <div class="bd">Sat 11a · Pontoon — 8 in</div>
+          <div class="bd">Sat 8p · Broadway — 7 in, 1 out</div>
+        </div>
+        <div class="mini-section">
+          <div class="hd"><span>💬 Latest</span></div>
+          <div class="bd"><strong>Sarah:</strong> "can someone grab ice?" · 12m</div>
+        </div>
+        <div class="mini-section">
+          <div class="hd"><span>🧳 Travel &amp; Lodging</span></div>
+          <div class="booking-row"><span class="ic">✈️</span>UA 1234 · LAX → BNA</div>
+          <div class="booking-row"><span class="ic">🏨</span>The Russell · Jun 12–14</div>
+        </div>
+      </div>
+      <nav class="subnav">
+        <div class="tab active"><span class="ic">📅</span>Itin</div>
+        <div class="tab"><span class="ic">💰</span>Exp</div>
+        <div class="tab"><span class="ic">💬</span><span class="unread">5</span>Chat</div>
+        <div class="tab"><span class="ic">🧳</span>Pack</div>
+        <div class="tab"><span class="ic">📝</span>Notes</div>
+        <div class="tab"><span class="ic">🍽️</span>Meals</div>
+        <div class="tab"><span class="ic">👥</span>Grp</div>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- HELPING OUT -->
+<!-- ══════════════════════════════════════════════════════ -->
+<h2 class="role-heading">🙌 Helping Out</h2>
+<p class="role-sub">Default tab: Itinerary. Should surface actual unclaimed work — not just a generic "pick something up" button.</p>
+
+<div class="diff-callout">
+  <strong>What's missing:</strong> list of unclaimed meals and unassigned packing items, chat @-mention preview, "You owe" strip. Current hero's "Claim a Meal →" button links to the tab but doesn't show what's unclaimed.
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="col-label current">Current</div>
+    <div class="phone role-helping">
+      <div class="phone-header">
+        <span class="back">←</span>
+        <span class="nm">Nashville Bach</span>
+        <span class="role-chip">🙌</span>
+      </div>
+      <div class="content">
+        <div class="trip-head">
+          <div class="tnm">🎸 Nashville Bach Weekend</div>
+          <div class="tmt">📍 Nashville · Jun 12–14 · 8 people</div>
+        </div>
+        <div class="hero">
+          <div class="lbl">Want to help?</div>
+          <div class="ttl">Pick up a task the host hasn't claimed</div>
+          <div class="mta">Check meals, packing assignments, and open notes.</div>
+          <div class="btn-wrap">
+            <span class="btn">Browse Notes →</span>
+            <span class="btn">Claim a Meal →</span>
+          </div>
+        </div>
+        <div class="mini-section">
+          <div class="hd"><span>🧳 Travel &amp; Lodging</span></div>
+          <div class="booking-row"><span class="ic">🏨</span>The Russell · Jun 12–14</div>
+        </div>
+      </div>
+      <nav class="subnav">
+        <div class="tab active"><span class="ic">📅</span>Itin</div>
+        <div class="tab"><span class="ic">🧳</span>Pack</div>
+        <div class="tab"><span class="ic">💬</span><span class="unread">2</span>Chat</div>
+        <div class="tab"><span class="ic">💰</span>Exp</div>
+        <div class="tab"><span class="ic">📝</span>Notes</div>
+        <div class="tab"><span class="ic">🍽️</span>Meals</div>
+        <div class="tab"><span class="ic">👥</span>Grp</div>
+      </nav>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-label target">Target</div>
+    <div class="phone role-helping">
+      <div class="phone-header">
+        <span class="back">←</span>
+        <span class="nm">Nashville Bach</span>
+        <span class="role-chip">🙌</span>
+      </div>
+      <div class="content">
+        <div class="trip-head">
+          <div class="tnm">🎸 Nashville Bach Weekend</div>
+          <div class="tmt">📍 Nashville · Jun 12–14 · 8 people</div>
+        </div>
+        <div class="hero">
+          <div class="lbl">Want to help?</div>
+          <div class="ttl">2 open tasks Dan hasn't claimed</div>
+          <div class="mta">🍰 Pick up the cake · 🍳 Confirm Sunday brunch</div>
+          <div class="btn-wrap">
+            <span class="btn">Claim cake →</span>
+            <span class="btn">Claim brunch →</span>
+          </div>
+        </div>
+        <div class="mini-section">
+          <div class="hd"><span>💬 @mentions</span></div>
+          <div class="bd"><strong>Dan:</strong> "@you can you grab ice?" · 12m</div>
+        </div>
+        <div class="mini-section">
+          <div class="hd"><span>🧳 Your packing</span><span style="font-size:10px;color:#777">3 events</span></div>
+          <div class="bd">12 items · outfit suggested for Friday dinner</div>
+        </div>
+        <div class="mini-section dim">
+          <div class="hd"><span>💰 You owe</span><span style="font-size:10px;color:#777">$45</span></div>
+          <div class="bd">Shared Uber · Tap Expenses to settle</div>
+        </div>
+      </div>
+      <nav class="subnav">
+        <div class="tab active"><span class="ic">📅</span>Itin</div>
+        <div class="tab"><span class="ic">🧳</span>Pack</div>
+        <div class="tab"><span class="ic">💬</span><span class="unread">2</span>Chat</div>
+        <div class="tab"><span class="ic">💰</span>Exp</div>
+        <div class="tab"><span class="ic">📝</span>Notes</div>
+        <div class="tab"><span class="ic">🍽️</span>Meals</div>
+        <div class="tab"><span class="ic">👥</span>Grp</div>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- JUST HERE -->
+<!-- ══════════════════════════════════════════════════════ -->
+<h2 class="role-heading">🎟️ Just Here</h2>
+<p class="role-sub">This is the big miss. User expected a prominent "You owe" card on the hub. Today they never see the hub.</p>
+
+<div class="diff-callout">
+  <strong>What's broken:</strong> <code>app/trip/[id]/page.tsx</code> line 68–73 redirects Just Here to <code>/trip/[id]/expenses</code>. That skips the hub entirely. Target is: stay on the hub, show a big "You owe Dan $X · Pay with Venmo" card as the hero, followed by "Where to be today" and a dim packing opt-in card.
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="col-label current">Current</div>
+    <div class="phone role-just">
+      <div class="phone-header">
+        <span class="back">←</span>
+        <span class="nm">Nashville Bach</span>
+        <span class="role-chip">🎟️</span>
+      </div>
+      <div class="redirect-banner">
+        <div class="big">↪ Redirected to /expenses</div>
+        <div class="sm">User never sees the hub. They land on the full expenses tab because <code>defaultTabForRole('just_here') === 'expenses'</code> triggers a server redirect in page.tsx.</div>
+      </div>
+      <nav class="subnav">
+        <div class="tab"><span class="ic">💰</span>Exp</div>
+        <div class="tab"><span class="ic">💬</span><span class="unread">3</span>Chat</div>
+        <div class="tab"><span class="ic">📅</span>Itin</div>
+        <div class="tab"><span class="ic">👥</span>Grp</div>
+        <div class="tab"><span class="ic">🧳</span>Pack</div>
+        <div class="tab"><span class="ic">📝</span>Notes</div>
+        <div class="tab"><span class="ic">🍽️</span>Meals</div>
+      </nav>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-label target">Target</div>
+    <div class="phone role-just">
+      <div class="phone-header">
+        <span class="back">←</span>
+        <span class="nm">Nashville Bach</span>
+        <span class="role-chip">🎟️</span>
+      </div>
+      <div class="content">
+        <div class="trip-head">
+          <div class="tnm">🎸 Nashville Bach Weekend</div>
+          <div class="tmt">📍 Nashville · Jun 12–14 · 8 people</div>
+        </div>
+        <div class="amount-card">
+          <div class="lbl">You owe Dan</div>
+          <div class="amt">$165.00</div>
+          <div class="note">Hotel · Friday dinner · Pontoon</div>
+          <div class="pay">Pay with Venmo</div>
+        </div>
+        <div class="mini-section">
+          <div class="hd"><span>💬 Dan mentioned you</span><span style="font-size:10px;color:#777">1h</span></div>
+          <div class="bd">"@you airport pickup is 3pm not 4"</div>
+        </div>
+        <div class="mini-section">
+          <div class="hd"><span>📅 Where to be</span><span style="font-size:10px;color:#777">today</span></div>
+          <div class="bd">7:00pm · Dinner at Husk · 37 Rutledge Ave</div>
+        </div>
+        <div class="mini-section dim">
+          <div class="hd"><span>🧳 Packing list</span><span style="font-size:10px;color:#777">opt-in</span></div>
+          <div class="bd">Want a personalized list? <strong style="color:#5e35b1">Set it up →</strong></div>
+        </div>
+      </div>
+      <nav class="subnav">
+        <div class="tab active"><span class="ic">💰</span>Exp</div>
+        <div class="tab"><span class="ic">💬</span><span class="unread">3</span>Chat</div>
+        <div class="tab"><span class="ic">📅</span>Itin</div>
+        <div class="tab"><span class="ic">👥</span>Grp</div>
+        <div class="tab"><span class="ic">🧳</span>Pack</div>
+        <div class="tab"><span class="ic">📝</span>Notes</div>
+        <div class="tab"><span class="ic">🍽️</span>Meals</div>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- VIBES ONLY -->
+<!-- ══════════════════════════════════════════════════════ -->
+<h2 class="role-heading">✌️ Vibes Only</h2>
+<p class="role-sub">Closest to working today. Next-event card lands. Just missing the "You owe" strip.</p>
+
+<div class="diff-callout">
+  <strong>What's missing:</strong> the "You owe" amount card next to the next-event hero. Today's Vibes Only hero renders but no expense summary exists anywhere on the page.
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="col-label current">Current</div>
+    <div class="phone role-vibes">
+      <div class="phone-header">
+        <span class="back">←</span>
+        <span class="nm">Nashville Bach</span>
+        <span class="role-chip">✌️</span>
+      </div>
+      <div class="content">
+        <div class="trip-head">
+          <div class="tnm">🎸 Nashville Bach Weekend</div>
+          <div class="tmt">📍 Nashville · Jun 12–14 · 8 people</div>
+        </div>
+        <div class="hero">
+          <div class="lbl">Fri · Jun 13 · 7:00 PM</div>
+          <div class="ttl">Dinner at Husk</div>
+          <div class="mta">📍 37 Rutledge Ave</div>
+          <div class="btn-wrap">
+            <span class="btn">Open in Maps →</span>
+            <span class="btn">Full itinerary →</span>
+          </div>
+        </div>
+        <div class="mini-section">
+          <div class="hd"><span>🧳 Travel &amp; Lodging</span></div>
+          <div class="booking-row"><span class="ic">🏨</span>The Russell · Jun 12–14</div>
+        </div>
+      </div>
+      <nav class="subnav">
+        <div class="tab active"><span class="ic">📅</span>Itin</div>
+        <div class="tab"><span class="ic">💰</span>Exp</div>
+        <div class="tab"><span class="ic">💬</span><span class="muted-dot"></span>Chat</div>
+        <div class="tab"><span class="ic">👥</span>Grp</div>
+        <div class="tab"><span class="ic">🧳</span>Pack</div>
+        <div class="tab"><span class="ic">📝</span>Notes</div>
+        <div class="tab"><span class="ic">🍽️</span>Meals</div>
+      </nav>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-label target">Target</div>
+    <div class="phone role-vibes">
+      <div class="phone-header">
+        <span class="back">←</span>
+        <span class="nm">Nashville Bach</span>
+        <span class="role-chip">✌️</span>
+      </div>
+      <div class="content">
+        <div class="trip-head">
+          <div class="tnm">🎸 Nashville Bach Weekend</div>
+          <div class="tmt">📍 Nashville · Jun 12–14 · 8 people</div>
+        </div>
+        <div class="hero">
+          <div class="lbl">Today · 7:00 PM</div>
+          <div class="ttl">Dinner at Husk</div>
+          <div class="mta">📍 37 Rutledge Ave · Smart casual</div>
+          <div class="btn-wrap">
+            <span class="btn">Open in Maps →</span>
+          </div>
+        </div>
+        <div class="amount-card">
+          <div class="lbl">You owe</div>
+          <div class="amt">$165</div>
+          <div class="pay">Pay with Venmo</div>
+        </div>
+        <div class="mini-section dim">
+          <div class="hd"><span>🧳 Travel &amp; Lodging</span></div>
+          <div class="bd" style="font-size: 10px;">Collapsed for Vibes — tap to expand</div>
+        </div>
+      </div>
+      <nav class="subnav">
+        <div class="tab active"><span class="ic">📅</span>Itin</div>
+        <div class="tab"><span class="ic">💰</span>Exp</div>
+        <div class="tab"><span class="ic">💬</span><span class="muted-dot"></span>Chat</div>
+        <div class="tab"><span class="ic">👥</span>Grp</div>
+        <div class="tab"><span class="ic">🧳</span>Pack</div>
+        <div class="tab"><span class="ic">📝</span>Notes</div>
+        <div class="tab"><span class="ic">🍽️</span>Meals</div>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- Summary table -->
+<table class="summary-table">
+  <thead>
+    <tr>
+      <th>Role</th>
+      <th>Current hub state</th>
+      <th>Target hub state</th>
+      <th>Gap</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>🔥 All In</td>
+      <td>Generic "X events coming up" hero</td>
+      <td>Dashboard: events + RSVPs + packing % + unsettled $ + latest chat</td>
+      <td class="miss">Expenses / packing / chat not fetched</td>
+    </tr>
+    <tr>
+      <td>🙌 Helping Out</td>
+      <td>Generic "Pick up a task" hero with nothing listed</td>
+      <td>Named unclaimed meals/packing, @-mentions preview, owe strip</td>
+      <td class="miss">Unclaimed items never queried</td>
+    </tr>
+    <tr>
+      <td>🎟️ Just Here</td>
+      <td>Redirected away — hub never rendered</td>
+      <td>Stays on hub: big "You owe" card + next-event card + dim upgrade card</td>
+      <td class="miss">Hub bypassed entirely by redirect</td>
+    </tr>
+    <tr>
+      <td>✌️ Vibes Only</td>
+      <td>Next-event hero works; no expense strip</td>
+      <td>Next-event hero + compact "You owe" amount card</td>
+      <td class="miss">No amount-card component exists</td>
+    </tr>
+  </tbody>
+</table>
+
+</body>
+</html>

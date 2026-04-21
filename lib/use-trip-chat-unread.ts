@@ -3,10 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { createBrowserSupabaseClient } from "./supabase/client";
 import {
   type ChatNotificationLevel,
-  countUnreadByLevel,
-  normalizeChatLevel,
+  fetchUnreadChatState,
 } from "./chat-unread";
-import type { TripMessage } from "@/types/database.types";
 
 export interface TripChatUnreadState {
   count: number;
@@ -33,91 +31,15 @@ export function useTripChatUnread(tripId: string): TripChatUnreadState | null {
 
   // Recompute is defined as a stable callback so we can call it from the
   // realtime subscription, on mount, and on window focus without churning
-  // the effect graph.
+  // the effect graph. Delegates the actual query sequence to the shared
+  // `fetchUnreadChatState` helper (also used by the trip hub server page),
+  // so the client and server counts always agree.
   const recompute = useCallback(async () => {
     const supabase = createBrowserSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
-    const { data: memberRow } = await supabase
-      .from("trip_members")
-      .select("name, chat_notification_level")
-      .eq("trip_id", tripId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (!memberRow) {
-      // Trip owner without a member row — treat as level 'all' and use the
-      // profile full_name as the mention target. Cheap fallback query.
-      const { data: profileRow } = await supabase
-        .from("user_profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const { data: readRow } = await supabase
-        .from("trip_message_reads")
-        .select("last_read_at")
-        .eq("trip_id", tripId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const lastRead = readRow?.last_read_at ?? null;
-
-      let q = supabase
-        .from("trip_messages")
-        .select("*")
-        .eq("trip_id", tripId)
-        .is("deleted_at", null)
-        .neq("sender_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(200);
-      if (lastRead) q = q.gt("created_at", lastRead);
-      const { data: msgs } = await q;
-
-      const count = countUnreadByLevel({
-        unreadMessages: (msgs ?? []) as TripMessage[],
-        level: "all",
-        viewerName: profileRow?.full_name ?? null,
-      });
-      setState({ count, level: "all" });
-      return;
-    }
-
-    const level = normalizeChatLevel(memberRow.chat_notification_level);
-
-    // Short-circuit for muted: skip the messages query entirely. The state
-    // is a dot-only indicator and never shows a count, so we don't need to
-    // know whether any messages exist.
-    if (level === "muted") {
-      setState({ count: 0, level: "muted" });
-      return;
-    }
-
-    const { data: readRow } = await supabase
-      .from("trip_message_reads")
-      .select("last_read_at")
-      .eq("trip_id", tripId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    const lastRead = readRow?.last_read_at ?? null;
-
-    let q = supabase
-      .from("trip_messages")
-      .select("*")
-      .eq("trip_id", tripId)
-      .is("deleted_at", null)
-      .neq("sender_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(200);
-    if (lastRead) q = q.gt("created_at", lastRead);
-    const { data: msgs } = await q;
-
-    const count = countUnreadByLevel({
-      unreadMessages: (msgs ?? []) as TripMessage[],
-      level,
-      viewerName: memberRow.name,
-    });
-    setState({ count, level });
+    const next = await fetchUnreadChatState(supabase, tripId, user.id);
+    setState(next);
   }, [tripId]);
 
   useEffect(() => {

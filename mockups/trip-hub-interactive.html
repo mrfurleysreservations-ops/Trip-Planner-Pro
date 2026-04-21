@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trip Hub — Interactive Mockup (faithful to real code)</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* Home theme for a Maui trip the app would actually render as "flying" type.
+     Using flying theme values for the trip-level accent. */
+  :root {
+    --bg: #f2f8fa;
+    --headerBg: #fff;
+    --text: #1a1a1a;
+    --muted: #777;
+    --accent: #2188a8;
+    --accent2: #156280;
+    --card: rgba(33,136,168,0.05);
+    --cardBorder: #e0e0e0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #c8ccd4; font-family: 'DM Sans', sans-serif; color: var(--text); }
+  body { display: flex; flex-direction: column; align-items: center; padding: 28px 20px 60px; gap: 16px; min-height: 100vh; }
+
+  .hint { font-size: 12px; color: #444; text-align: center; max-width: 440px; line-height: 1.5; }
+  .hint strong { color: var(--accent2); }
+
+  /* Phone */
+  .phone {
+    width: 400px; height: 840px;
+    background: var(--bg); border-radius: 32px;
+    overflow: hidden; position: relative;
+    box-shadow: 0 22px 55px rgba(0,0,0,0.25);
+  }
+  .phone-scroll {
+    width: 100%; height: 100%;
+    overflow-y: auto; overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ─── STICKY TOP ─── */
+  .sticky-top {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--cardBorder);
+  }
+
+  .page-header {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 14px 16px 12px;
+  }
+  .back {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    background: rgba(33,136,168,0.1); border: 1.5px solid rgba(33,136,168,0.25);
+    color: var(--accent); font-size: 22px; font-weight: 700;
+    cursor: pointer; padding: 0; transition: all 0.15s;
+  }
+  .back:hover { background: rgba(33,136,168,0.18); border-color: var(--accent); }
+  .back:active { transform: scale(0.92); }
+  .head-title { flex: 1; min-width: 0; padding-top: 2px; }
+  .trip-name {
+    font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 20px;
+    letter-spacing: -0.02em; color: var(--text);
+    margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .trip-sub {
+    font-size: 12px; color: var(--muted);
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+  .trip-sub .dot { opacity: 0.5; }
+  .edit-btn {
+    padding: 7px 12px; border-radius: 10px;
+    border: 1.5px solid var(--accent); background: none; color: var(--accent);
+    font-weight: 700; font-size: 12px; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  }
+
+  /* Body */
+  .body { padding: 14px 16px 128px; /* clear FAB + sub-nav */ }
+
+  /* Weather card (horizontal scroll, 5 days) */
+  .weather-card {
+    background: #fff; border: 1px solid var(--cardBorder); border-radius: 14px;
+    padding: 14px 4px 14px 14px; margin-bottom: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    position: relative;
+  }
+  .weather-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-right: 10px; margin-bottom: 10px;
+  }
+  .weather-head h3 {
+    font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 14px; color: var(--text);
+  }
+  .weather-loc {
+    font-size: 11px; color: var(--muted);
+  }
+  .weather-days {
+    display: flex; gap: 10px;
+    overflow-x: auto; scrollbar-width: none; padding-right: 10px;
+  }
+  .weather-days::-webkit-scrollbar { display: none; }
+  .weather-day {
+    flex-shrink: 0; min-width: 68px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 8px 6px;
+    border-radius: 10px;
+    background: var(--card);
+  }
+  .weather-day .date {
+    font-size: 10px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .weather-day .icon { font-size: 26px; }
+  .weather-day .temps { font-size: 12px; font-weight: 700; color: var(--text); }
+  .weather-day .temps span { color: var(--muted); font-weight: 500; }
+  .weather-day .rain { font-size: 10px; color: var(--accent); font-weight: 600; }
+
+  /* Travel & Lodging section */
+  .section {
+    margin-bottom: 16px;
+  }
+  .section-h {
+    font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 15px;
+    margin-bottom: 10px; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* Booking type group */
+  .type-group {
+    background: #fff; border: 1px solid var(--cardBorder); border-radius: 14px;
+    padding: 0; margin-bottom: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .type-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; cursor: pointer;
+    background: transparent;
+    transition: background 0.15s;
+  }
+  .type-head:hover { background: rgba(0,0,0,0.02); }
+  .type-head .icon { font-size: 20px; }
+  .type-head .label {
+    flex: 1; font-weight: 700; font-size: 14px; color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+  }
+  .type-head .count {
+    font-size: 11px; color: var(--muted);
+    padding: 2px 8px; background: var(--card);
+    border-radius: 10px; font-weight: 600;
+  }
+  .type-head .chev {
+    font-size: 14px; color: var(--muted);
+    transition: transform 0.2s;
+  }
+  .type-group.collapsed .chev { transform: rotate(-90deg); }
+  .type-group.collapsed .type-body { display: none; }
+
+  /* Booking card */
+  .booking {
+    padding: 12px 14px; border-top: 1px solid var(--cardBorder);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .booking:hover { background: rgba(0,0,0,0.02); }
+  .booking .row1 {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 2px;
+  }
+  .booking .headline {
+    font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; color: var(--text);
+  }
+  .booking .date {
+    font-size: 11px; color: var(--muted); font-weight: 600;
+  }
+  .booking .subtitle {
+    font-size: 12px; color: var(--muted); margin-bottom: 4px;
+  }
+  .booking .meta {
+    display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted);
+  }
+  .booking .conf {
+    background: var(--card); padding: 2px 7px; border-radius: 6px;
+    font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700;
+    color: var(--accent);
+  }
+
+  /* Empty type */
+  .empty-type {
+    padding: 14px 16px; text-align: center;
+    color: var(--muted); font-size: 12px; font-style: italic;
+  }
+
+  /* Setup gate banner */
+  .setup-gate {
+    background: linear-gradient(135deg, rgba(33,136,168,0.08), #fff);
+    border: 1.5px solid rgba(33,136,168,0.2);
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 14px;
+    display: flex; gap: 12px; align-items: center;
+  }
+  .setup-gate .icon { font-size: 26px; }
+  .setup-gate .text { flex: 1; }
+  .setup-gate h4 { font-family: 'Outfit'; font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  .setup-gate p { font-size: 12px; color: var(--muted); }
+
+  /* FAB */
+  .fab {
+    position: absolute;
+    bottom: 72px; right: 18px; /* clears TripSubNav (56) + 16 gap */
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    color: #fff; border: none;
+    font-size: 28px; font-weight: 300;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(33,136,168,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50;
+    transition: transform 0.1s;
+  }
+  .fab:active { transform: scale(0.95); }
+
+  /* TripSubNav (7 tabs — matches real code incl. Chat) */
+  .sub-nav {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 56px;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--cardBorder);
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 0 4px;
+    z-index: 100;
+  }
+  .sub-nav button {
+    flex: 1; background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; height: 100%;
+    border-top: 3px solid transparent;
+    padding: 0; min-width: 0;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .sub-nav button.active { border-top-color: var(--accent); }
+  .sub-nav button .ic { font-size: 17px; line-height: 1; }
+  .sub-nav button .lb { font-size: 9px; font-weight: 500; color: #999; white-space: nowrap; }
+  .sub-nav button.active .lb { font-weight: 700; color: var(--accent); }
+
+  .scroll-anno {
+    position: absolute; top: 45%; transform: rotate(-90deg);
+    left: -42px; font-size: 11px; color: #333;
+    letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .anno-list {
+    max-width: 440px; background: #fff; border-radius: 12px; padding: 14px 18px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06); font-size: 12px; color: #333; line-height: 1.6;
+  }
+  .anno-list h4 { margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 13px; color: var(--accent2); }
+  .anno-list .check { color: #2e7d32; font-weight: 700; }
+  .anno-list code { background: #f2f4f7; padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="hint">
+  <strong>Trip Hub — faithful rebuild:</strong><br>
+  Real header (back + trip name + location/dates/members + Edit Details host-only) · real Weather card (5-day scroll) · real 🧳 Travel & Lodging section with booking type groups. Scroll to confirm sticky top. Tap <strong>+</strong> FAB bottom-right to add a booking. Tap any type header to collapse/expand. Tap any booking to expand details.
+</div>
+
+<div style="position: relative;">
+  <div class="scroll-anno">↑ sticky · body scrolls ↓</div>
+  <div class="phone">
+    <div class="phone-scroll">
+      <!-- ─── STICKY TOP ─── -->
+      <div class="sticky-top">
+        <div class="page-header">
+          <button class="back" title="Back to dashboard" onclick="alert('Back → /dashboard')">←</button>
+          <div class="head-title">
+            <div class="trip-name">✈️ Maui Family Vacation</div>
+            <div class="trip-sub">
+              <span>📍 Wailea, Maui</span>
+              <span class="dot">·</span>
+              <span>Jun 8 — Jun 12</span>
+              <span class="dot">·</span>
+              <span>👥 5</span>
+            </div>
+          </div>
+          <button class="edit-btn" onclick="alert('→ /trip/[id]?edit=true')">✏️ Edit</button>
+        </div>
+      </div>
+
+      <!-- ─── BODY ─── -->
+      <div class="body">
+
+        <!-- Weather card -->
+        <div class="weather-card">
+          <div class="weather-head">
+            <h3>☀️ Weather forecast</h3>
+            <span class="weather-loc">Wailea, HI</span>
+          </div>
+          <div class="weather-days">
+            <div class="weather-day"><span class="date">Mon 8</span><span class="icon">☀️</span><span class="temps">82° <span>69°</span></span><span class="rain">0%</span></div>
+            <div class="weather-day"><span class="date">Tue 9</span><span class="icon">🌤️</span><span class="temps">81° <span>70°</span></span><span class="rain">10%</span></div>
+            <div class="weather-day"><span class="date">Wed 10</span><span class="icon">🌦️</span><span class="temps">79° <span>68°</span></span><span class="rain">35%</span></div>
+            <div class="weather-day"><span class="date">Thu 11</span><span class="icon">⛅</span><span class="temps">80° <span>69°</span></span><span class="rain">15%</span></div>
+            <div class="weather-day"><span class="date">Fri 12</span><span class="icon">☀️</span><span class="temps">83° <span>70°</span></span><span class="rain">5%</span></div>
+          </div>
+        </div>
+
+        <!-- Travel & Lodging section -->
+        <div class="section">
+          <div class="section-h">🧳 Travel &amp; Lodging</div>
+
+          <!-- Flights -->
+          <div class="type-group" id="groupFlight">
+            <div class="type-head" onclick="toggleGroup('groupFlight')">
+              <span class="icon">✈️</span>
+              <span class="label">Flights</span>
+              <span class="count">2</span>
+              <span class="chev">▼</span>
+            </div>
+            <div class="type-body">
+              <div class="booking" onclick="alert('Expand flight booking')">
+                <div class="row1">
+                  <span class="headline">Hawaiian HA 27</span>
+                  <span class="date">Mon · 10:30 AM</span>
+                </div>
+                <div class="subtitle">LAX → OGG · Seat 18C · Direct</div>
+                <div class="meta"><span class="conf">HA-ABC123</span><span>· $850</span></div>
+              </div>
+              <div class="booking" onclick="alert('Expand flight booking')">
+                <div class="row1">
+                  <span class="headline">Hawaiian HA 28</span>
+                  <span class="date">Fri · 5:15 PM</span>
+                </div>
+                <div class="subtitle">OGG → LAX · Seat 18C · Direct</div>
+                <div class="meta"><span class="conf">HA-ABC124</span><span>· $810</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hotels -->
+          <div class="type-group" id="groupHotel">
+            <div class="type-head" onclick="toggleGroup('groupHotel')">
+              <span class="icon">🏨</span>
+              <span class="label">Hotels &amp; lodging</span>
+              <span class="count">1</span>
+              <span class="chev">▼</span>
+            </div>
+            <div class="type-body">
+              <div class="booking" onclick="alert('Expand hotel booking')">
+                <div class="row1">
+                  <span class="headline">Wailea Beach Villas</span>
+                  <span class="date">Jun 8 — Jun 12</span>
+                </div>
+                <div class="subtitle">3BR condo · Check-in 3:00 PM</div>
+                <div class="meta"><span class="conf">WBV-4412</span><span>· $2,840</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Car rental -->
+          <div class="type-group" id="groupCar">
+            <div class="type-head" onclick="toggleGroup('groupCar')">
+              <span class="icon">🚗</span>
+              <span class="label">Car rentals</span>
+              <span class="count">1</span>
+              <span class="chev">▼</span>
+            </div>
+            <div class="type-body">
+              <div class="booking" onclick="alert('Expand car rental')">
+                <div class="row1">
+                  <span class="headline">Alamo — OGG Airport</span>
+                  <span class="date">Jun 8 — Jun 12</span>
+                </div>
+                <div class="subtitle">Jeep Wrangler 4dr · Kahului</div>
+                <div class="meta"><span class="conf">ALM-8899X</span><span>· $520</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Restaurants -->
+          <div class="type-group collapsed" id="groupResto">
+            <div class="type-head" onclick="toggleGroup('groupResto')">
+              <span class="icon">🍽️</span>
+              <span class="label">Restaurants</span>
+              <span class="count">3</span>
+              <span class="chev">▼</span>
+            </div>
+            <div class="type-body">
+              <div class="booking" onclick="alert('Expand restaurant')">
+                <div class="row1">
+                  <span class="headline">Mama's Fish House</span>
+                  <span class="date">Jun 9 · 6:30 PM</span>
+                </div>
+                <div class="subtitle">Paia · Party of 5 · Resort casual</div>
+                <div class="meta"><span class="conf">RES-MFH-9021</span></div>
+              </div>
+              <div class="booking" onclick="alert('Expand restaurant')">
+                <div class="row1">
+                  <span class="headline">Monkeypod Kitchen</span>
+                  <span class="date">Jun 10 · 7:00 PM</span>
+                </div>
+                <div class="subtitle">Wailea · Party of 5 · Casual</div>
+                <div class="meta"><span class="conf">MPK-3312</span></div>
+              </div>
+              <div class="booking" onclick="alert('Expand restaurant')">
+                <div class="row1">
+                  <span class="headline">Old Lahaina Luau</span>
+                  <span class="date">Jun 11 · 5:15 PM</span>
+                </div>
+                <div class="subtitle">Lahaina · Party of 5 · Smart casual</div>
+                <div class="meta"><span class="conf">OLL-7788</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAB — replaces old sticky-bottom-center "+ Add Booking" -->
+    <button class="fab" aria-label="Add booking" onclick="alert('→ setShowAddBookingModal(true)')">+</button>
+
+    <!-- TripSubNav (7 tabs, fixed bottom) -->
+    <div class="sub-nav">
+      <button><span class="ic">📅</span><span class="lb">Itinerary</span></button>
+      <button><span class="ic">💰</span><span class="lb">Expenses</span></button>
+      <button><span class="ic">💬</span><span class="lb">Chat</span></button>
+      <button><span class="ic">🧳</span><span class="lb">Packing</span></button>
+      <button><span class="ic">📝</span><span class="lb">Notes</span></button>
+      <button><span class="ic">🍽️</span><span class="lb">Meals</span></button>
+      <button><span class="ic">👥</span><span class="lb">Group</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="anno-list">
+  <h4>✅ Faithful to real code</h4>
+  <div>
+    <span class="check">✓</span> Header: back → /dashboard · trip name with type icon (✈️ for flying) · subtitle (📍 location · date range · 👥 member count) · Edit Details button (host-only)<br>
+    <span class="check">✓</span> Weather card with 5 daily forecasts in horizontal scroll (temps, icon, rain %)<br>
+    <span class="check">✓</span> Single "🧳 Travel & Lodging" section (not multiple sections — real code has just one)<br>
+    <span class="check">✓</span> Bookings grouped by type (Flights / Hotels / Car rentals / Restaurants) with type-level count badges<br>
+    <span class="check">✓</span> Each type group is collapsible (tap header)<br>
+    <span class="check">✓</span> Booking cards show headline · date/time · subtitle · confirmation # + cost<br>
+    <span class="check">✓</span> Tap booking → expand (stubbed as alert here; real app opens detail)<br>
+    <span class="check">✓</span> TripSubNav with all 7 tabs (Itinerary, Expenses, Chat, Packing, Notes, Meals, Group) fixed at bottom
+  </div>
+
+  <h4 style="margin-top:12px;">🔀 What changes from today</h4>
+  <div>
+    <span class="check">1.</span> <strong>Header becomes sticky</strong> — wrapped in a single <code>position: sticky; top: 0; zIndex: 20</code> container (matches all trip-tab refactors)<br>
+    <span class="check">2.</span> <strong>Back button upgraded</strong> — 40x40 circular accent-tinted (matches every tab). Handler unchanged: <code>router.push('/dashboard')</code><br>
+    <span class="check">3.</span> <strong>"+ Add Booking" moves</strong> from fixed bottom-center gradient CTA (currently at <code>bottom: 56px</code>) → bottom-right <strong>FAB</strong> at <code>bottom: 72px; right: 18px</code>. Same <code>setShowAddBookingModal(true)</code> handler.<br>
+    <span class="check">4.</span> Empty-state inline "+ Add Booking" button inside empty-state card can stay as-is (inline context-specific)
+  </div>
+
+  <h4 style="margin-top:12px;">❌ NOT changed</h4>
+  <div>
+    Weather card layout, booking type grouping, collapse/expand state, booking card detail rendering, modal add/edit flows, setup gate early-return (<code>needsSetup</code>), TripSubNav styling, host-only Edit button gate, Delete/edit booking logic.
+  </div>
+
+  <h4 style="margin-top:12px;">🎯 Why this matters</h4>
+  <div>
+    The trip hub is the landing page when you tap a trip from the dashboard. Keeping its header sticky means the trip name + dates + Edit button stay anchored while you scroll through weather + bookings. The FAB pattern mirrors every trip tab (Itinerary, Notes, Expenses) you've already shipped — so "add a booking" feels identical to "add an event" or "add a note."
+  </div>
+</div>
+
+<script>
+  function toggleGroup(id) {
+    document.getElementById(id).classList.toggle("collapsed");
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Supplies Tab — Bottom-Sheet Editors</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #eae3da;
+    color: #1a1a1a;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+  h1.page-h1 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .page-sub {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+
+  .phones {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .phone-col { display: flex; flex-direction: column; align-items: center; width: 420px; }
+  .phone-label {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4a7c59;
+    margin-bottom: 10px;
+  }
+
+  .phone {
+    width: 420px;
+    background: #f5f0eb;
+    border-radius: 28px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    overflow: hidden;
+    position: relative;
+    height: 860px;
+    border: 1px solid #d8cfc2;
+  }
+
+  /* ─── Dimmed background (behind sheet) ─── */
+  .bg-dim {
+    position: absolute; inset: 0;
+    background: #f5f0eb;
+  }
+  .bg-dim::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.45);
+  }
+
+  /* Faux ghost content behind the sheet */
+  .ghost-header {
+    background: #fff;
+    padding: 12px 16px 0;
+    border-bottom: 1px solid #e8e8e8;
+  }
+  .ghost-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    padding: 6px 0 10px;
+  }
+  .ghost-seg {
+    display: flex;
+    border-bottom: 1px solid #e8e8e8;
+  }
+  .ghost-seg-btn {
+    flex: 1;
+    padding: 12px 0;
+    font-size: 13px;
+    text-align: center;
+    color: #777;
+  }
+  .ghost-seg-btn.active {
+    color: #4a7c59;
+    font-weight: 700;
+    border-bottom: 3px solid #4a7c59;
+  }
+  .ghost-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e8e8e8;
+    height: 80px;
+    margin: 12px 16px;
+  }
+
+  /* ─── Bottom sheet ─── */
+  .sheet {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    max-width: 480px;
+    margin: 0 auto;
+    max-height: 92%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.15);
+    z-index: 20;
+  }
+  .handle {
+    width: 44px;
+    height: 4px;
+    background: #d4cec3;
+    border-radius: 2px;
+    margin: 10px auto 6px;
+  }
+  .sheet-header {
+    padding: 6px 20px 14px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .sheet-hmain { flex: 1; }
+  .sheet-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 19px;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .sheet-sub {
+    font-size: 12.5px;
+    color: #777;
+    margin-top: 3px;
+  }
+  .sheet-close {
+    width: 30px; height: 30px;
+    border-radius: 15px;
+    background: #f2edea;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    color: #777;
+    flex-shrink: 0;
+  }
+  .sheet-body {
+    padding: 14px 20px 16px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  /* ─── Section labels inside sheet ─── */
+  .sec-label {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #888;
+    text-transform: uppercase;
+    margin: 14px 2px 8px;
+  }
+  .sec-label:first-child { margin-top: 0; }
+  .sec-label .hint {
+    font-weight: 500;
+    color: #aaa;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-left: 8px;
+  }
+
+  /* ─── Attendees row ─── */
+  .attendee-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .att-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px 5px 5px;
+    background: #f6f1ec;
+    border-radius: 16px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #444;
+  }
+  .att-more {
+    padding: 5px 10px;
+    background: #f6f1ec;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #777;
+  }
+  .att-hint {
+    font-size: 11.5px;
+    color: #999;
+    margin-top: 8px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .claim-ava {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .ava-joe { background: #4a7c59; }
+  .ava-sar { background: #c75a2a; }
+  .ava-mik { background: #5a7cb5; }
+  .ava-ell { background: #b55a8c; }
+  .ava-dad { background: #7a5aa8; }
+
+  /* ─── Ingredient list ─── */
+  .ing-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    margin-bottom: 6px;
+    background: #fff;
+  }
+  .ing-drag {
+    color: #ccc;
+    cursor: grab;
+    font-size: 14px;
+  }
+  .ing-main { flex: 1; min-width: 0; }
+  .ing-name {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .ing-meta {
+    font-size: 11.5px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .ing-sec {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    background: #4a7c5914;
+    color: #4a7c59;
+    border-radius: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .ing-edit {
+    font-size: 15px;
+    color: #bbb;
+  }
+
+  /* ─── Expanded / editing ingredient row ─── */
+  .ing-edit-box {
+    background: #f7f3ee;
+    border: 1.5px solid #4a7c5933;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 8px;
+  }
+  .field-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .field {
+    flex: 1;
+  }
+  .field-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 4px;
+  }
+  .field-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e0dacd;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    background: #fff;
+    color: #1a1a1a;
+  }
+  .field-input:focus { outline: 2px solid #4a7c5966; }
+  .field-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e0dacd;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    background: #fff;
+    color: #1a1a1a;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23999' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  .field-row.narrow .field-input { padding: 10px 10px; }
+  .edit-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .link-btn-delete {
+    color: #c75a2a;
+    font-weight: 600;
+    font-size: 12.5px;
+    background: none;
+    border: none;
+  }
+  .edit-save-group {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-ghost {
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #d8d0c2;
+    font-weight: 600;
+    font-size: 13px;
+    color: #555;
+  }
+  .btn-primary {
+    padding: 8px 16px;
+    border-radius: 10px;
+    background: #4a7c59;
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  /* ─── Add-ingredient button ─── */
+  .add-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px;
+    border: 1.5px dashed #c5bdae;
+    border-radius: 12px;
+    background: transparent;
+    color: #4a7c59;
+    font-weight: 700;
+    font-size: 13.5px;
+    margin-top: 4px;
+  }
+
+  /* ─── Claim toggle ─── */
+  .claim-box {
+    border: 1px solid #e5dfd0;
+    background: #fbf8f3;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .claim-box.claimed-by-me {
+    border-color: #4a7c5955;
+    background: #edf5ef;
+  }
+  .claim-check {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    border: 2px solid #c5bdae;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff;
+  }
+  .claim-check.on {
+    background: #4a7c59;
+    border-color: #4a7c59;
+    color: #fff;
+    font-weight: 800;
+  }
+  .claim-text {
+    flex: 1;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #333;
+  }
+  .claim-sub {
+    font-size: 11.5px;
+    color: #888;
+    font-weight: 400;
+    margin-top: 2px;
+  }
+  .claim-change {
+    font-size: 11.5px;
+    color: #4a7c59;
+    font-weight: 700;
+  }
+
+  /* ─── Sticky footer in sheet ─── */
+  .sheet-footer {
+    padding: 12px 20px 18px;
+    border-top: 1px solid #eee;
+    background: #fff;
+    border-radius: 0 0 20px 20px;
+  }
+  .btn-full-primary {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    background: #4a7c59;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+  }
+
+  /* ─── Status select in supply sheet ─── */
+  .status-options {
+    display: flex;
+    gap: 6px;
+  }
+  .status-opt {
+    flex: 1;
+    padding: 10px 8px;
+    border-radius: 10px;
+    border: 1px solid #e0dacd;
+    background: #fff;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .status-opt.active-needed    { background: #fde7e1; color: #c75a2a; border-color: #c75a2a55; font-weight: 700; }
+  .status-opt.active-claimed   { background: #fff3e0; color: #b8651d; border-color: #e8943a55; font-weight: 700; }
+  .status-opt.active-purchased { background: #eaf2ec; color: #4a7c59; border-color: #4a7c5955; font-weight: 700; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.needed    { background: #c75a2a; }
+  .dot.claimed   { background: #e8943a; }
+  .dot.purchased { background: #4a7c59; }
+
+  /* ─── Annotations ─── */
+  .annotations {
+    width: 420px;
+    margin-top: 16px;
+    padding: 16px 18px;
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e8e8e8;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .annotations h3 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 8px;
+    color: #4a7c59;
+  }
+  .annotations ul { padding-left: 18px; }
+  .annotations li { margin-bottom: 4px; color: #444; }
+  .annotations li strong { color: #1a1a1a; }
+
+</style>
+</head>
+<body>
+
+<h1 class="page-h1">Bottom-Sheet Editors</h1>
+<p class="page-sub">How add/edit flows look when you tap a meal card, a supply card, or the "+ Add ingredient" button.</p>
+
+<div class="phones">
+
+  <!-- ════════════════ FRAME 1: MEAL EDITOR (list state) ════════════════ -->
+  <div class="phone-col">
+    <div class="phone-label">1. Meal Editor — List View</div>
+    <div class="phone">
+      <div class="bg-dim">
+        <div class="ghost-header">
+          <div class="ghost-title">Supplies</div>
+          <div class="ghost-seg">
+            <div class="ghost-seg-btn active">Meals</div>
+            <div class="ghost-seg-btn">Grocery</div>
+            <div class="ghost-seg-btn">Supplies</div>
+          </div>
+        </div>
+        <div class="ghost-card"></div>
+        <div class="ghost-card"></div>
+      </div>
+
+      <div class="sheet" style="height: 720px;">
+        <div class="handle"></div>
+        <div class="sheet-header">
+          <div class="sheet-hmain">
+            <div class="sheet-title">Campsite Breakfast</div>
+            <div class="sheet-sub">Sat, Apr 25 · 8:00 AM</div>
+          </div>
+          <div class="sheet-close">✕</div>
+        </div>
+
+        <div class="sheet-body">
+
+          <div class="sec-label">Attending (6)</div>
+          <div class="attendee-row">
+            <div class="att-pill"><span class="claim-ava ava-joe">JM</span>Joe</div>
+            <div class="att-pill"><span class="claim-ava ava-sar">SP</span>Sarah</div>
+            <div class="att-pill"><span class="claim-ava ava-mik">MK</span>Mike</div>
+            <div class="att-pill"><span class="claim-ava ava-ell">EV</span>Ellie</div>
+            <div class="att-more">+2 more</div>
+          </div>
+          <div class="att-hint">ⓘ Manage attendees on the Itinerary tab</div>
+
+          <div class="sec-label">Ingredients <span class="hint">per-person qty × 6 attending</span></div>
+
+          <div class="ing-row">
+            <div class="ing-drag">⋮⋮</div>
+            <div class="ing-main">
+              <div class="ing-name">Bacon</div>
+              <div class="ing-meta">0.33 lb/person · <span class="ing-sec">Meat</span></div>
+            </div>
+            <div class="ing-edit">›</div>
+          </div>
+
+          <div class="ing-row">
+            <div class="ing-drag">⋮⋮</div>
+            <div class="ing-main">
+              <div class="ing-name">Eggs</div>
+              <div class="ing-meta">2 ea/person · <span class="ing-sec">Dairy</span></div>
+            </div>
+            <div class="ing-edit">›</div>
+          </div>
+
+          <div class="ing-row">
+            <div class="ing-drag">⋮⋮</div>
+            <div class="ing-main">
+              <div class="ing-name">Bell peppers</div>
+              <div class="ing-meta">0.67 ea/person · <span class="ing-sec">Produce</span></div>
+            </div>
+            <div class="ing-edit">›</div>
+          </div>
+
+          <div class="ing-row">
+            <div class="ing-drag">⋮⋮</div>
+            <div class="ing-main">
+              <div class="ing-name">Onions</div>
+              <div class="ing-meta">0.33 ea/person · <span class="ing-sec">Produce</span></div>
+            </div>
+            <div class="ing-edit">›</div>
+          </div>
+
+          <div class="ing-row">
+            <div class="ing-drag">⋮⋮</div>
+            <div class="ing-main">
+              <div class="ing-name">Tortillas</div>
+              <div class="ing-meta">1 ea/person · <span class="ing-sec">Bakery</span></div>
+            </div>
+            <div class="ing-edit">›</div>
+          </div>
+
+          <div class="add-row">＋ Add ingredient</div>
+
+          <div class="sec-label">Who's buying?</div>
+          <div class="claim-box claimed-by-me">
+            <div class="claim-check on">✓</div>
+            <div class="claim-text">
+              You're buying this meal
+              <div class="claim-sub">Joe's grocery list will include these 5 items</div>
+            </div>
+            <div class="claim-change">Change</div>
+          </div>
+        </div>
+
+        <div class="sheet-footer">
+          <button class="btn-full-primary">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="annotations">
+      <h3>List-view details</h3>
+      <ul>
+        <li><strong>Attendees are read-only here</strong> — editing lives on Itinerary. We just show who's in so you know what to multiply by.</li>
+        <li><strong>"per-person × 6 attending" hint</strong> in the Ingredients header reminds you the qty is per person.</li>
+        <li><strong>Drag handle</strong> for reordering ingredients (stored in `sort_order`).</li>
+        <li><strong>Tap a row</strong> → it expands inline into the edit box (see next frame) — no modal-in-modal.</li>
+        <li><strong>Claim box at bottom</strong> highlights green when it's yours. Host sees a "Change" link to reassign.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════════════ FRAME 2: INGREDIENT EDIT/ADD ════════════════ -->
+  <div class="phone-col">
+    <div class="phone-label">2. Editing an Ingredient</div>
+    <div class="phone">
+      <div class="bg-dim">
+        <div class="ghost-header">
+          <div class="ghost-title">Supplies</div>
+          <div class="ghost-seg">
+            <div class="ghost-seg-btn active">Meals</div>
+            <div class="ghost-seg-btn">Grocery</div>
+            <div class="ghost-seg-btn">Supplies</div>
+          </div>
+        </div>
+        <div class="ghost-card"></div>
+      </div>
+
+      <div class="sheet" style="height: 720px;">
+        <div class="handle"></div>
+        <div class="sheet-header">
+          <div class="sheet-hmain">
+            <div class="sheet-title">Campsite Breakfast</div>
+            <div class="sheet-sub">Sat, Apr 25 · 8:00 AM</div>
+          </div>
+          <div class="sheet-close">✕</div>
+        </div>
+
+        <div class="sheet-body">
+
+          <div class="sec-label">Ingredients <span class="hint">per-person qty × 6 attending</span></div>
+
+          <div class="ing-row">
+            <div class="ing-drag">⋮⋮</div>
+            <div class="ing-main">
+              <div class="ing-name">Bacon</div>
+              <div class="ing-meta">0.33 lb/person · <span class="ing-sec">Meat</span></div>
+            </div>
+            <div class="ing-edit">›</div>
+          </div>
+
+          <!-- expanded edit -->
+          <div class="ing-edit-box">
+            <div class="field-row">
+              <div class="field" style="flex: 2;">
+                <div class="field-label">Item</div>
+                <input class="field-input" value="Eggs" />
+              </div>
+              <div class="field">
+                <div class="field-label">Qty/person</div>
+                <input class="field-input" value="2" />
+              </div>
+              <div class="field">
+                <div class="field-label">Unit</div>
+                <select class="field-select">
+                  <option>ea</option>
+                  <option>lb</option>
+                  <option>oz</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <div class="field-label">Grocery section</div>
+                <select class="field-select">
+                  <option>Dairy &amp; Eggs</option>
+                  <option>Produce</option>
+                  <option>Meat &amp; Seafood</option>
+                  <option>Pantry</option>
+                  <option>Bakery</option>
+                  <option>Frozen</option>
+                  <option>Beverages</option>
+                  <option>Snacks</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <div class="field-label">Note (optional)</div>
+                <input class="field-input" placeholder="e.g. large, organic" />
+              </div>
+            </div>
+            <div class="edit-actions">
+              <button class="link-btn-delete">🗑 Remove</button>
+              <div class="edit-save-group">
+                <button class="btn-ghost">Cancel</button>
+                <button class="btn-primary">Save item</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="ing-row">
+            <div class="ing-drag">⋮⋮</div>
+            <div class="ing-main">
+              <div class="ing-name">Bell peppers</div>
+              <div class="ing-meta">0.67 ea/person · <span class="ing-sec">Produce</span></div>
+            </div>
+            <div class="ing-edit">›</div>
+          </div>
+
+          <div class="ing-row">
+            <div class="ing-drag">⋮⋮</div>
+            <div class="ing-main">
+              <div class="ing-name">Onions</div>
+              <div class="ing-meta">0.33 ea/person · <span class="ing-sec">Produce</span></div>
+            </div>
+            <div class="ing-edit">›</div>
+          </div>
+
+          <div class="add-row">＋ Add ingredient</div>
+        </div>
+
+        <div class="sheet-footer">
+          <button class="btn-full-primary">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="annotations">
+      <h3>Edit/Add details</h3>
+      <ul>
+        <li><strong>Inline expansion</strong> — tapping a row or "+ Add" opens this form in place. No second modal stacked on top.</li>
+        <li><strong>Four fields</strong>: name, qty-per-person, unit, grocery section. Plus optional note.</li>
+        <li><strong>Unit dropdown</strong>: ea, lb, oz, g, kg, cup, tbsp, tsp, bottle, bag, pkg. (Free-text allowed — camping has weird units.)</li>
+        <li><strong>Section dropdown</strong> is the fixed 9-value list — that's what drives Grocery view ordering.</li>
+        <li><strong>Remove</strong> deletes the meal_item row; Grocery view recomputes next load.</li>
+        <li><strong>Add ingredient</strong> uses the exact same form state, just empty.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════════════ FRAME 3: SUPPLY EDITOR ════════════════ -->
+  <div class="phone-col">
+    <div class="phone-label">3. Supply Editor</div>
+    <div class="phone">
+      <div class="bg-dim">
+        <div class="ghost-header">
+          <div class="ghost-title">Supplies</div>
+          <div class="ghost-seg">
+            <div class="ghost-seg-btn">Meals</div>
+            <div class="ghost-seg-btn">Grocery</div>
+            <div class="ghost-seg-btn active">Supplies</div>
+          </div>
+        </div>
+        <div class="ghost-card"></div>
+      </div>
+
+      <div class="sheet" style="height: 640px;">
+        <div class="handle"></div>
+        <div class="sheet-header">
+          <div class="sheet-hmain">
+            <div class="sheet-title">Edit supply</div>
+            <div class="sheet-sub">Camp chairs · Gear</div>
+          </div>
+          <div class="sheet-close">✕</div>
+        </div>
+
+        <div class="sheet-body">
+
+          <div class="sec-label">Item</div>
+          <div class="field-row">
+            <div class="field" style="flex: 2;">
+              <input class="field-input" value="Camp chairs" />
+            </div>
+            <div class="field">
+              <div class="field-label">Qty</div>
+              <input class="field-input" value="8" />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-label">Category</div>
+              <select class="field-select">
+                <option>Gear</option>
+                <option>Cooking</option>
+                <option>Toiletries</option>
+                <option>Safety</option>
+                <option>Fuel</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="sec-label">Status</div>
+          <div class="status-options">
+            <div class="status-opt active-needed"><span class="dot needed"></span>Needed</div>
+            <div class="status-opt"><span class="dot claimed"></span>Claimed</div>
+            <div class="status-opt"><span class="dot purchased"></span>Purchased</div>
+          </div>
+
+          <div class="sec-label">Who's bringing it?</div>
+          <div class="claim-box">
+            <div class="claim-check"></div>
+            <div class="claim-text">
+              I'll bring it
+              <div class="claim-sub">Or pick someone else below</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px;">
+            <select class="field-select">
+              <option>— Nobody yet —</option>
+              <option>Joe (you)</option>
+              <option>Sarah</option>
+              <option>Mike</option>
+              <option>Ellie</option>
+            </select>
+          </div>
+
+          <div class="sec-label">Notes (optional)</div>
+          <input class="field-input" placeholder="e.g. low-back style, pick up at REI" />
+
+        </div>
+
+        <div class="sheet-footer" style="display: flex; gap: 10px; align-items: center;">
+          <button class="link-btn-delete" style="flex: 0 0 auto;">🗑 Delete</button>
+          <button class="btn-full-primary" style="flex: 1;">Save supply</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="annotations">
+      <h3>Supply editor details</h3>
+      <ul>
+        <li><strong>Same bottom-sheet pattern</strong> as the meal editor — maxW 480, 20px top radius, slideUp, handle bar.</li>
+        <li><strong>Status as three buttons</strong> (not a dropdown) so the state transition feels tactile — Needed → Claimed → Purchased.</li>
+        <li><strong>Claim toggle + member picker</strong> — tap "I'll bring it" for self, or pick another member. Picker is how host assigns to family (RLS owner-clause handles it).</li>
+        <li><strong>Same sheet for "+ Supply"</strong> — opens empty with status=Needed and claimed_by=null.</li>
+        <li><strong>Notes → Supply finalization</strong> opens this sheet prefilled (name from note title, note body → Notes field, `source_note_id` set server-side).</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

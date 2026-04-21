@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Bulk Invite — matches app modal pattern</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #fff;
+    color: #1a1a1a;
+    /* Trip Planner Pro is mobile-centric — mimic the 480px frame */
+  }
+
+  /* globals.css clones */
+  .input-modern {
+    padding: 10px 14px;
+    border: 1.5px solid #ddd;
+    border-radius: 10px;
+    font-size: 14px;
+    background: #fff;
+    color: #1a1a1a;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .input-modern:focus {
+    border-color: #e8943a;
+    box-shadow: 0 0 0 3px rgba(232, 148, 58, 0.1);
+  }
+  .input-modern::placeholder { color: #aaa; }
+  .input-modern.invalid { border-color: #d9534f; box-shadow: 0 0 0 3px rgba(217, 83, 79, 0.08); }
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+    transition: transform 0.15s, opacity 0.15s;
+    letter-spacing: 0.02em;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn:hover { transform: translateY(-1px); opacity: 0.9; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ─── App's modal pattern (from trip-page.tsx Add Booking Modal) ─── */
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex; align-items: flex-end; justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.15s ease-out;
+    opacity: 0; pointer-events: none;
+  }
+  .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .modal-sheet {
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.2);
+    background: #f5ede0;  /* th.headerBg "home" theme — matches existing modals */
+    animation: slideUp 0.2s ease-out;
+  }
+
+  .modal-header {
+    position: sticky; top: 0; z-index: 1;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid rgba(232, 148, 58, 0.2);
+    background: #f5ede0;
+    border-radius: 20px 20px 0 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 12px;
+  }
+  .modal-header h3 {
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    color: #1a1a1a;
+  }
+  .modal-header .sub {
+    font-size: 11px; color: #8a7a5a; margin-top: 2px; font-weight: 500;
+  }
+  .modal-header button.close {
+    background: none; border: none;
+    font-size: 22px; cursor: pointer; color: #8a7a5a;
+    padding: 4px; flex-shrink: 0;
+  }
+
+  .modal-body {
+    overflow-y: auto;
+    padding: 14px 20px 14px;
+    flex: 1;
+  }
+
+  .bulk-row {
+    display: grid;
+    grid-template-columns: 22px 1fr 1fr 22px;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .bulk-row .num {
+    font-size: 11px; color: #bbb; font-weight: 600; text-align: right;
+  }
+  .bulk-row .clear-btn {
+    background: transparent; border: none;
+    color: #bbb; font-size: 16px; cursor: pointer;
+    padding: 0; line-height: 1; visibility: hidden;
+  }
+  .bulk-row.has-content .clear-btn { visibility: visible; }
+  .bulk-row .clear-btn:hover { color: #d9534f; }
+  .bulk-row .input-modern { padding: 8px 10px; font-size: 13px; border-radius: 8px; }
+
+  /* ─── Sticky CTA footer (pinned to bottom of sheet, above where subnav would sit) ─── */
+  .modal-footer {
+    position: sticky; bottom: 0;
+    background: #f5ede0;
+    padding: 12px 20px 14px;
+    border-top: 1px solid rgba(232, 148, 58, 0.2);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+  }
+  .footer-status { font-size: 12px; color: #5a5a5a; font-weight: 500; }
+  .footer-status strong { color: #1a1a1a; font-weight: 700; }
+  .footer-status .warn { color: #c75a2a; font-weight: 600; }
+  .footer-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .btn-ghost { background: transparent !important; color: #777 !important; border: 1.5px solid #e0e0e0 !important; }
+  .btn-primary { background: linear-gradient(135deg, #e8943a 0%, #c75a2a 100%); box-shadow: 0 2px 8px rgba(232, 148, 58, 0.3); }
+
+  .toast {
+    position: fixed; bottom: 80px; left: 50%;
+    transform: translateX(-50%) translateY(40px);
+    background: #155724; color: #fff;
+    padding: 11px 18px; border-radius: 10px;
+    font-size: 13px; font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2000;
+    opacity: 0; pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- ─── Fake group page behind the modal (so you can see the context) ─── -->
+
+<div style="max-width: 480px; margin: 0 auto; position: relative; min-height: 100vh;">
+
+  <!-- Sticky header (matches real group page) -->
+  <div style="position: sticky; top: 0; z-index: 20; background: #fff; border-bottom: 1px solid #e0e0e0;">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 8px; gap: 8px;">
+      <button style="width: 40px; height: 40px; border-radius: 50%; background: rgba(232, 148, 58, 0.1); border: 1.5px solid rgba(232, 148, 58, 0.25); color: #e8943a; font-size: 22px; font-weight: 700; cursor: pointer;">←</button>
+      <h2 style="flex: 1; margin: 0 0 0 10px; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 20px;">Group</h2>
+      <button class="btn btn-primary" style="padding: 8px 14px; font-size: 12px;">Save ✓</button>
+    </div>
+    <div style="display: flex; gap: 6px; overflow-x: auto; padding: 4px 16px 10px;">
+      <div style="flex-shrink: 0; background: rgba(232, 148, 58, 0.06); border: 1.5px solid rgba(232, 148, 58, 0.4); border-radius: 10px; padding: 6px 8px; min-width: 72px; text-align: center;">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: #e8943a; color: #fff; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #e8943a;">J</div>
+        <div style="font-size: 10px; font-weight: 700; margin-top: 3px;">Joe</div>
+        <div style="font-size: 8px; font-weight: 700; color: #e8943a;">HOST</div>
+      </div>
+      <div style="flex-shrink: 0; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 6px 8px; min-width: 72px; text-align: center;">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(232, 148, 58, 0.1); color: #1a1a1a; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #2e7d32;">S</div>
+        <div style="font-size: 10px; font-weight: 700; margin-top: 3px;">Sarah</div>
+        <div style="font-size: 8px; font-weight: 700; color: #2e7d32;">✓</div>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: center; padding: 4px 16px 6px;">
+      <div style="display: inline-flex; background: rgba(0,0,0,0.03); border: 1.5px solid #e0e0e0; border-radius: 20px;">
+        <button style="background: #e8943a; border: none; padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 700; color: #fff;">👥 Friends</button>
+        <button style="background: transparent; border: none; padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 500; color: #777;">🏠 Families</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div style="padding: 16px 16px 80px;">
+    <!-- Invite someone new — UNCHANGED -->
+    <div style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #e0e0e0;">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">✉️ Invite someone new</div>
+      <div style="font-size: 11px; color: #777; margin-bottom: 8px;">We'll email them a link to join this trip.</div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end;">
+        <input class="input-modern" placeholder="Name *" style="flex: 1 1 140px;" />
+        <input class="input-modern" placeholder="Email *" type="email" style="flex: 1 1 140px;" />
+        <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;">Send Invite</button>
+      </div>
+
+      <!-- Single new line below -->
+      <div style="margin-top: 10px; font-size: 12px; color: #777;">
+        Inviting a group?
+        <a href="#" onclick="openBulk(event)" style="color: #e8943a; font-weight: 600; text-decoration: none;">
+          Add up to 20 people at once →
+        </a>
+      </div>
+    </div>
+
+    <div style="font-size: 11px; font-weight: 600; color: #777; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Your Friends</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 10px; margin-bottom: 6px; border: 1px solid #e0e0e0; background: rgba(0,0,0,0.03);">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 36px; height: 36px; border-radius: 50%; background: #e8943a; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700;">M</div>
+        <div style="font-size: 14px; font-weight: 600;">Mike Torres</div>
+      </div>
+      <button class="btn btn-primary" style="padding: 6px 14px; font-size: 12px;">+ Add</button>
+    </div>
+  </div>
+
+  <!-- Fake SubNav (fixed, 56px, exactly like real one) -->
+  <nav style="position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto; z-index: 100; display: flex; justify-content: space-around; align-items: center; height: 56px; background: rgba(255,255,255,0.97); backdrop-filter: blur(20px); border-top: 1px solid #e5e5e5; font-size: 10px; color: #888; font-weight: 600;">
+    <div style="text-align: center;">📅<br/>Itinerary</div>
+    <div style="text-align: center;">💰<br/>Expenses</div>
+    <div style="text-align: center;">💬<br/>Chat</div>
+    <div style="text-align: center;">🧳<br/>Packing</div>
+    <div style="text-align: center;">📝<br/>Notes</div>
+    <div style="text-align: center;">🍽️<br/>Meals</div>
+    <div style="text-align: center; color: #e8943a;">👥<br/>Group</div>
+  </nav>
+</div>
+
+
+<!-- ─── BULK INVITE MODAL — matches Add Booking Modal pattern exactly ─── -->
+<div class="modal-backdrop" id="bulkModal" onclick="if(event.target===this) closeBulk()">
+  <div class="modal-sheet" role="dialog" aria-labelledby="bulkTitle">
+
+    <!-- Sticky header -->
+    <div class="modal-header">
+      <div>
+        <h3 id="bulkTitle">✉️ Invite multiple people</h3>
+        <div class="sub">Up to 20 at once. Empty rows are skipped.</div>
+      </div>
+      <button class="close" onclick="closeBulk()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Scrollable body -->
+    <div class="modal-body" id="bulkRows"></div>
+
+    <!-- Sticky CTA footer — pinned to bottom of sheet -->
+    <div class="modal-footer">
+      <div class="footer-status" id="footerStatus"><strong>0</strong> ready to send</div>
+      <div class="footer-actions">
+        <button class="btn btn-ghost" onclick="clearAllRows()">Clear</button>
+        <button class="btn btn-primary" id="sendAllBtn" onclick="sendAll()" disabled>Send all</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const MAX_ROWS = 20;
+  const rows = Array.from({ length: MAX_ROWS }, () => ({ name: "", email: "", emailInvalid: false, duplicate: false }));
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const existingEmails = new Set(["sarah@example.com"]);
+
+  function openBulk(e) { e && e.preventDefault(); document.getElementById('bulkModal').classList.add('open'); }
+  function closeBulk() { document.getElementById('bulkModal').classList.remove('open'); }
+
+  function renderRows() {
+    const wrap = document.getElementById('bulkRows');
+    wrap.innerHTML = '';
+    rows.forEach((r, i) => {
+      const hasContent = r.name.trim() || r.email.trim();
+      const div = document.createElement('div');
+      div.className = 'bulk-row' + (hasContent ? ' has-content' : '');
+      div.innerHTML = `
+        <div class="num">${i + 1}</div>
+        <input class="input-modern" placeholder="Name" value="${escAttr(r.name)}" oninput="updateRow(${i}, 'name', this.value)" />
+        <input class="input-modern ${r.emailInvalid || r.duplicate ? 'invalid' : ''}" placeholder="Email" type="email" value="${escAttr(r.email)}" oninput="updateRow(${i}, 'email', this.value)" onblur="validateRow(${i})" />
+        <button class="clear-btn" onclick="clearRow(${i})" aria-label="Clear row">×</button>
+      `;
+      wrap.appendChild(div);
+    });
+    updateFooter();
+  }
+
+  function escAttr(s) { return (s || '').replace(/"/g, '&quot;'); }
+
+  function updateRow(i, key, val) {
+    rows[i][key] = val;
+    if (key === 'email') { rows[i].emailInvalid = false; rows[i].duplicate = false; }
+    updateFooter();
+    const rowEl = document.querySelectorAll('.bulk-row')[i];
+    const hasContent = rows[i].name.trim() || rows[i].email.trim();
+    if (hasContent) rowEl.classList.add('has-content'); else rowEl.classList.remove('has-content');
+  }
+
+  function validateRow(i) {
+    const r = rows[i];
+    if (!r.email.trim()) { r.emailInvalid = false; r.duplicate = false; }
+    else {
+      r.emailInvalid = !emailRegex.test(r.email.trim());
+      const lower = r.email.trim().toLowerCase();
+      r.duplicate = !r.emailInvalid && (existingEmails.has(lower) ||
+        rows.some((o, j) => j !== i && o.email.trim().toLowerCase() === lower));
+    }
+    renderRows();
+  }
+
+  function clearRow(i) {
+    rows[i] = { name: "", email: "", emailInvalid: false, duplicate: false };
+    renderRows();
+  }
+
+  function clearAllRows() {
+    for (let i = 0; i < MAX_ROWS; i++) rows[i] = { name: "", email: "", emailInvalid: false, duplicate: false };
+    renderRows();
+  }
+
+  function validRows() {
+    return rows.filter(r => r.name.trim() && r.email.trim() && emailRegex.test(r.email.trim()) && !existingEmails.has(r.email.trim().toLowerCase()));
+  }
+
+  function updateFooter() {
+    const valid = validRows().length;
+    const missingName = rows.filter(r => r.email.trim() && !r.name.trim()).length;
+    const missingEmail = rows.filter(r => r.name.trim() && !r.email.trim()).length;
+    const invalid = rows.filter(r => r.email.trim() && !emailRegex.test(r.email.trim())).length;
+    const dup = rows.filter(r => r.email.trim() && existingEmails.has(r.email.trim().toLowerCase())).length;
+
+    let status = `<strong>${valid}</strong> ready to send`;
+    const warn = [];
+    if (missingName) warn.push(`${missingName} missing name`);
+    if (missingEmail) warn.push(`${missingEmail} missing email`);
+    if (invalid) warn.push(`${invalid} invalid`);
+    if (dup) warn.push(`${dup} already on trip`);
+    if (warn.length) status += ` <span class="warn">· ${warn.join(' · ')}</span>`;
+    document.getElementById('footerStatus').innerHTML = status;
+
+    const btn = document.getElementById('sendAllBtn');
+    btn.disabled = valid === 0;
+    btn.textContent = valid > 0 ? `Send ${valid} invite${valid === 1 ? '' : 's'}` : 'Send all';
+  }
+
+  function sendAll() {
+    const valid = validRows();
+    if (!valid.length) return;
+    valid.forEach(r => existingEmails.add(r.email.trim().toLowerCase()));
+    const toast = document.getElementById('toast');
+    toast.textContent = `✓ Sent ${valid.length} invite${valid.length === 1 ? '' : 's'}`;
+    toast.classList.add('show');
+    clearAllRows();
+    closeBulk();
+    setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  renderRows();
+</script>
+
+</body>
+</html>

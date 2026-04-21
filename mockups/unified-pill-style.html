@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Unified Pill Style — before / after</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8f8f8;
+    --headerBg: #fff;
+    --text: #1a1a1a;
+    --muted: #777;
+    --accent: #e8943a;
+    --accent2: #c75a2a;
+    --card: rgba(0,0,0,0.03);
+    --cardBorder: #e0e0e0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #d0d4dc; font-family: 'DM Sans', sans-serif; color: var(--text); }
+  body { padding: 32px 20px 60px; }
+
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 22px; margin: 0 0 8px; }
+  .lede { font-size: 13px; color: #555; margin-bottom: 20px; line-height: 1.5; }
+
+  /* ─── Reference card ─── */
+  .reference {
+    background: #fff; border-radius: 14px; padding: 18px 22px; margin-bottom: 24px;
+    border: 2px solid var(--accent);
+    box-shadow: 0 4px 14px rgba(232,148,58,0.15);
+  }
+  .reference h2 { font-family: 'Outfit'; font-size: 16px; margin: 0 0 10px; color: var(--accent2); }
+  .reference .label { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+
+  /* ─── Tab rows ─── */
+  .tab-row {
+    display: grid; grid-template-columns: 130px 1fr 1fr; gap: 16px;
+    background: #fff; padding: 18px 22px; border-radius: 12px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    align-items: center;
+  }
+  .tab-row .name {
+    font-family: 'Outfit'; font-weight: 800; font-size: 16px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab-row .sub {
+    font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 2px;
+  }
+  .compartment {
+    background: var(--headerBg); border: 1px solid var(--cardBorder); border-radius: 10px;
+    padding: 12px 14px; position: relative;
+    min-height: 72px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .compartment .tag {
+    position: absolute; top: -9px; left: 10px;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 4px;
+  }
+  .compartment.before .tag { background: #fce4ec; color: #c62828; }
+  .compartment.after  .tag { background: #d4edda; color: #155724; }
+
+  /* ─── The canonical pill style (matches Itinerary today) ─── */
+  .pill {
+    display: inline-flex;
+    background: var(--card);
+    border: 1.5px solid var(--cardBorder);
+    border-radius: 20px;
+    padding: 0;
+  }
+  .pill button {
+    background: transparent; border: none;
+    padding: 8px 18px; border-radius: 20px;
+    font-size: 13px; font-weight: 500;
+    color: var(--muted); cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pill button.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+  }
+  .pill button:not(.active):hover { color: var(--text); }
+
+  /* ─── BEFORE styles (faithful to each tab today) ─── */
+  /* Expenses — full-width flex with border-bottom indicator */
+  .expenses-before {
+    display: flex; gap: 0;
+    background: rgba(232,148,58,0.04);
+    border-radius: 12px; border: 1.5px solid var(--cardBorder);
+    overflow: hidden;
+    width: 100%; max-width: 280px;
+  }
+  .expenses-before button {
+    flex: 1; padding: 9px 14px;
+    background: transparent; border: none;
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    color: var(--muted); cursor: pointer;
+    border-bottom: 3px solid transparent;
+    font-weight: 500;
+  }
+  .expenses-before button.active {
+    background: rgba(232,148,58,0.1);
+    color: var(--accent); font-weight: 700;
+    border-bottom-color: var(--accent);
+  }
+
+  /* Notes — three-tab filter (underline) */
+  .notes-before {
+    display: flex; gap: 4px; padding: 4px;
+    background: rgba(0,0,0,0.04); border-radius: 10px;
+  }
+  .notes-before button {
+    background: transparent; border: none;
+    padding: 7px 14px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+  }
+  .notes-before button.active {
+    background: #fff; color: var(--accent);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  /* Group — underline tabs */
+  .group-before {
+    display: flex; gap: 4px; border-bottom: 1.5px solid var(--cardBorder);
+  }
+  .group-before button {
+    background: transparent; border: none;
+    padding: 9px 16px 11px;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1.5px;
+  }
+  .group-before button.active {
+    color: var(--accent); font-weight: 700;
+    border-bottom-color: var(--accent);
+  }
+
+  /* Packing — tab chips (likely style) */
+  .packing-before {
+    display: flex; gap: 4px; padding: 3px;
+    background: rgba(0,0,0,0.05); border-radius: 10px;
+  }
+  .packing-before button {
+    background: transparent; border: none;
+    padding: 6px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+  }
+  .packing-before button.active {
+    background: #fff; color: var(--accent);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .summary {
+    max-width: 1100px; margin: 30px auto 0; background: #fff; padding: 20px 24px;
+    border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    font-size: 13px; color: #333; line-height: 1.7;
+  }
+  .summary h3 { font-family: 'Outfit'; font-weight: 800; font-size: 16px; margin: 0 0 8px; color: var(--accent2); }
+  .summary code { background: #f2f4f7; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+  .summary ul { margin: 8px 0; padding-left: 18px; }
+  .summary li { margin-bottom: 4px; }
+
+  @media (max-width: 800px) {
+    .tab-row { grid-template-columns: 100px 1fr; }
+    .tab-row .compartment.before { grid-column: 1 / -1; }
+    .tab-row .compartment.after { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>Unified pill style — the plan</h1>
+  <div class="lede">
+    Every tab's primary view toggle will use <strong>the same pill style</strong> as Itinerary's Calendar/List. Functionality and option labels stay the same — only the visuals change. Secondary chip rows (category filters, status filters) are separate and not affected.
+  </div>
+
+  <!-- Reference -->
+  <div class="reference">
+    <div class="label">The reference (Itinerary — already correct)</div>
+    <h2>📅 Calendar / 📋 List</h2>
+    <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+      <div class="pill">
+        <button class="active">📅 Calendar</button>
+        <button>📋 List</button>
+      </div>
+      <div style="font-size: 12px; color: var(--muted); max-width: 360px; line-height: 1.5;">
+        Rounded pill container · 1.5px border · soft gray fill · active button = solid accent, white text, bold · inactive = transparent, muted gray, medium
+      </div>
+    </div>
+  </div>
+
+  <!-- Expenses -->
+  <div class="tab-row">
+    <div>
+      <div class="name">💸 Expenses</div>
+      <div class="sub">2 options</div>
+    </div>
+    <div class="compartment before">
+      <span class="tag">Before</span>
+      <div class="expenses-before">
+        <button class="active">💰 Expenses</button>
+        <button>📊 Summary</button>
+      </div>
+    </div>
+    <div class="compartment after">
+      <span class="tag">After</span>
+      <div class="pill">
+        <button class="active">💰 Expenses</button>
+        <button>📊 Summary</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Packing -->
+  <div class="tab-row">
+    <div>
+      <div class="name">🎒 Packing</div>
+      <div class="sub">3 options</div>
+    </div>
+    <div class="compartment before">
+      <span class="tag">Before</span>
+      <div class="packing-before">
+        <button>Grouping</button>
+        <button class="active">Walkthrough</button>
+        <button>Pack &amp; Go</button>
+      </div>
+    </div>
+    <div class="compartment after">
+      <span class="tag">After</span>
+      <div class="pill">
+        <button>Grouping</button>
+        <button class="active">Walkthrough</button>
+        <button>Pack &amp; Go</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes (NEW Group/Personal pill) -->
+  <div class="tab-row">
+    <div>
+      <div class="name">📝 Notes</div>
+      <div class="sub">2 options · NEW pill</div>
+    </div>
+    <div class="compartment before" style="opacity: 0.6;">
+      <span class="tag">Before</span>
+      <div style="font-size: 11px; color: var(--muted); font-style: italic;">
+        Group/Personal pill doesn't exist yet — will be added. All/Ideas/Finalized chip row stays below (unchanged).
+      </div>
+    </div>
+    <div class="compartment after">
+      <span class="tag">After</span>
+      <div class="pill">
+        <button class="active">Group</button>
+        <button>Personal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meals (stub) -->
+  <div class="tab-row">
+    <div>
+      <div class="name">🍽 Meals</div>
+      <div class="sub">Stub today · proposed</div>
+    </div>
+    <div class="compartment before" style="opacity: 0.6;">
+      <span class="tag">Before</span>
+      <div style="font-size: 11px; color: var(--muted); font-style: italic;">
+        No pill today — stub page.
+      </div>
+    </div>
+    <div class="compartment after">
+      <span class="tag">After (when built)</span>
+      <div class="pill">
+        <button class="active">📅 Calendar</button>
+        <button>📋 List</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group -->
+  <div class="tab-row">
+    <div>
+      <div class="name">👥 Group</div>
+      <div class="sub">2 options</div>
+    </div>
+    <div class="compartment before">
+      <span class="tag">Before</span>
+      <div class="group-before">
+        <button class="active">👥 Friends</button>
+        <button>🏠 Families</button>
+      </div>
+    </div>
+    <div class="compartment after">
+      <span class="tag">After</span>
+      <div class="pill">
+        <button class="active">👥 Friends</button>
+        <button>🏠 Families</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Itinerary (already correct) -->
+  <div class="tab-row" style="opacity: 0.85;">
+    <div>
+      <div class="name">🗓 Itinerary</div>
+      <div class="sub">2 options · already ✓</div>
+    </div>
+    <div class="compartment before">
+      <span class="tag">Today</span>
+      <div class="pill">
+        <button class="active">📅 Calendar</button>
+        <button>📋 List</button>
+      </div>
+    </div>
+    <div class="compartment after">
+      <span class="tag">After</span>
+      <div class="pill">
+        <button class="active">📅 Calendar</button>
+        <button>📋 List</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="summary">
+  <h3>The exact pill spec (canonical)</h3>
+  <div>
+    <strong>Container:</strong>
+    <ul>
+      <li><code>display: inline-flex</code></li>
+      <li><code>background: th.card</code> (≈ <code>rgba(0,0,0,0.03)</code>)</li>
+      <li><code>border: 1.5px solid th.cardBorder</code></li>
+      <li><code>borderRadius: 20</code></li>
+    </ul>
+    <strong>Button (inactive):</strong>
+    <ul>
+      <li><code>background: transparent</code></li>
+      <li><code>color: th.muted</code></li>
+      <li><code>fontWeight: 500</code></li>
+      <li><code>padding: 8px 18px</code></li>
+      <li><code>fontSize: 13</code></li>
+      <li><code>fontFamily: 'DM Sans', sans-serif</code></li>
+      <li><code>borderRadius: 20</code></li>
+    </ul>
+    <strong>Button (active):</strong>
+    <ul>
+      <li><code>background: th.accent</code></li>
+      <li><code>color: #fff</code></li>
+      <li><code>fontWeight: 700</code></li>
+      <li>everything else same as inactive</li>
+    </ul>
+  </div>
+  <h3 style="margin-top: 16px;">What stays the same</h3>
+  <div>
+    Every tab's pill <strong>options, labels, emoji, and onClick handlers</strong> stay exactly as they are today. Only the container + button inline-styles change. Functionality is untouched — you could swap just the styling and every pill would still filter/route correctly.
+  </div>
+  <h3 style="margin-top: 16px;">What's NOT in this change</h3>
+  <div>
+    Secondary <em>chip</em> rows (Notes' All/Ideas/Finalized, Expenses' category chips, Itinerary's day picker) are a different control and are NOT affected. They keep their own styles. Only the primary pill toggles get unified.
+  </div>
+</div>
+
+</body>
+</html>

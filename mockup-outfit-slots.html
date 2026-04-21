@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Outfit Builder — Slot Concepts</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 12px 60px; background: #f5f0e8; font-family: 'DM Sans', sans-serif; color: #2a2a2a; }
+
+  h1 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 24px; margin: 0 0 6px; text-align: center; }
+  .intro { max-width: 720px; margin: 0 auto 30px; text-align: center; color: #555; font-size: 13px; line-height: 1.6; }
+  .intro strong { color: #e8943a; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 40px; justify-content: center; align-items: flex-start; margin-bottom: 40px; }
+
+  .concept { width: 380px; max-width: 100%; }
+  .concept-label { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 13px; color: #fff; background: #e8943a; text-transform: uppercase; letter-spacing: 0.12em; padding: 8px 14px; border-radius: 8px; margin-bottom: 8px; text-align: center; }
+  .concept-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 17px; margin-bottom: 6px; text-align: center; }
+  .concept-desc { font-size: 12px; color: #666; text-align: center; margin-bottom: 14px; line-height: 1.5; }
+
+  .card { background: white; border-radius: 18px; border: 1px solid #e8e0d0; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+
+  /* TOD band (kept compact across all concepts) */
+  .band { padding: 9px 16px; color: #fff; display: flex; justify-content: space-between; align-items: center; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; background: linear-gradient(90deg, #f9c876, #c75a2a); }
+  .chip { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; background: rgba(255,255,255,0.25); padding: 3px 9px; border-radius: 12px; }
+
+  /* Collapsed event summary pill */
+  .events-pill { padding: 10px 16px; border-bottom: 1px solid #f0ebe4; display: flex; align-items: center; justify-content: space-between; background: #faf6ef; cursor: pointer; }
+  .events-pill .left { font-size: 12px; font-weight: 600; color: #444; }
+  .events-pill .left .icons { margin-right: 6px; }
+  .events-pill .caret { font-size: 11px; color: #999; }
+  .events-pill .dc-pill { font-size: 9px; padding: 2px 7px; border-radius: 8px; background: #0097a718; color: #0097a7; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-right: 6px; }
+
+  .events-expanded { padding: 10px 16px; border-bottom: 1px solid #f0ebe4; background: #fafafa; }
+  .event-line { display: flex; gap: 10px; padding: 6px 0; font-size: 11px; align-items: center; }
+  .event-line .dot { width: 6px; height: 6px; border-radius: 50%; background: #e8943a; flex-shrink: 0; }
+  .event-line .t { color: #888; width: 60px; flex-shrink: 0; }
+  .event-line .n { font-weight: 600; }
+
+  /* =========================================================
+     Concept A — Paperdoll (vertical slot column)
+     ========================================================= */
+  .paperdoll { padding: 14px 14px 18px; }
+  .slot-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px dashed #d8cfbd; margin-bottom: 8px; background: #fdfaf3; }
+  .slot-row.filled { border-style: solid; border-color: #e8e0d0; background: white; }
+  .slot-row.empty { color: #999; cursor: pointer; }
+  .slot-icon { font-size: 22px; width: 36px; text-align: center; }
+  .slot-main { flex: 1; min-width: 0; }
+  .slot-label { font-size: 10px; color: #999; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .slot-val { font-size: 14px; font-weight: 700; margin-top: 2px; }
+  .slot-empty-txt { font-size: 13px; font-weight: 500; }
+  .slot-add { background: none; border: 1px solid #e8943a; color: #e8943a; padding: 4px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .slot-del { background: none; border: none; color: #c57272; font-size: 14px; cursor: pointer; }
+
+  .reuse-inline { margin: 6px 0 4px; background: #fff8ec; border-radius: 10px; padding: 8px 10px; border: 1px dashed #f0d8a6; }
+  .reuse-inline-hdr { font-size: 9px; color: #c77013; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .reuse-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .reuse-chip { font-size: 11px; font-weight: 600; padding: 4px 9px; background: white; border: 1px solid #e8e0d0; border-radius: 14px; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+  .reuse-chip .cnt { font-size: 9px; background: #fff0d8; color: #c77013; padding: 0 5px; border-radius: 6px; font-weight: 700; }
+
+  /* =========================================================
+     Concept B — 2×3 slot grid (tiles)
+     ========================================================= */
+  .grid-wrap { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid-tile { background: #fdfaf3; border: 1px dashed #d8cfbd; border-radius: 14px; padding: 14px 12px; min-height: 88px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; }
+  .grid-tile.filled { background: white; border-style: solid; border-color: #e8e0d0; }
+  .grid-tile .slot-hdr { display: flex; align-items: center; gap: 6px; }
+  .grid-tile .slot-hdr .emoji { font-size: 18px; }
+  .grid-tile .slot-hdr .lbl { font-size: 10px; color: #999; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .grid-tile .val { font-size: 13px; font-weight: 700; margin-top: 6px; }
+  .grid-tile .empty { font-size: 12px; font-weight: 500; color: #aaa; margin-top: 6px; }
+  .grid-tile .acc-count { font-size: 10px; color: #e8943a; font-weight: 700; margin-top: 4px; }
+
+  /* =========================================================
+     Concept C — Bottom-sheet picker
+     ========================================================= */
+  .sheet-host { padding: 14px; }
+  .sheet-summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
+  .sheet-slot { background: #fdfaf3; border: 1px dashed #d8cfbd; border-radius: 12px; padding: 10px 6px; text-align: center; cursor: pointer; }
+  .sheet-slot.filled { background: white; border-style: solid; border-color: #e8e0d0; }
+  .sheet-slot.active { border-color: #e8943a; border-style: solid; background: #fff8ec; }
+  .sheet-slot .emj { font-size: 22px; }
+  .sheet-slot .lbl { font-size: 9px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+  .sheet-slot .val { font-size: 10px; font-weight: 700; margin-top: 2px; color: #2a2a2a; line-height: 1.1; }
+
+  /* The bottom sheet itself */
+  .sheet-panel { margin-top: 8px; background: #1a1a1a; color: white; border-radius: 18px 18px 0 0; padding: 14px 16px 18px; position: relative; }
+  .sheet-panel::before { content: ''; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: #555; border-radius: 2px; }
+  .sheet-panel-title { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 14px; margin: 12px 0 8px; }
+  .sheet-panel-search { width: 100%; padding: 8px 12px; background: #2a2a2a; border: 1px solid #333; color: white; border-radius: 10px; font-size: 12px; margin-bottom: 10px; font-family: inherit; }
+  .sheet-panel-hdr { font-size: 10px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin: 8px 0 6px; }
+  .sheet-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; background: #2a2a2a; margin-bottom: 5px; cursor: pointer; }
+  .sheet-row .nm { flex: 1; font-size: 12px; font-weight: 600; }
+  .sheet-row .cnt { font-size: 10px; background: #3d3121; color: #f4b871; padding: 2px 7px; border-radius: 8px; font-weight: 700; }
+  .sheet-row.added { background: #294e32; }
+  .sheet-row.added .nm { color: #a3d8ae; }
+
+  /* =========================================================
+     Concept D — Horizontal slot tabs
+     ========================================================= */
+  .htabs { padding: 12px; }
+  .htabs-row { display: flex; gap: 4px; padding-bottom: 10px; overflow-x: auto; }
+  .htab { flex-shrink: 0; background: #fdfaf3; border: 1px solid #e8e0d0; border-radius: 10px; padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .htab.active { background: #e8943a; color: white; border-color: #e8943a; }
+  .htab .cnt { font-size: 9px; background: rgba(255,255,255,0.3); padding: 1px 5px; border-radius: 6px; font-weight: 700; }
+  .htab:not(.active) .cnt { background: #f0e4ce; color: #9c6a1e; }
+  .htab-panel { border: 1px solid #e8e0d0; border-radius: 12px; padding: 12px; margin-top: 6px; }
+  .htab-current { font-size: 10px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .htab-current .pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background: #e8f5e9; color: #2e7d32; border-radius: 8px; font-size: 11px; font-weight: 700; text-transform: none; letter-spacing: 0; margin-left: 4px; }
+  .htab-pool { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .htab-pool-hdr { font-size: 10px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .htab-pool-chip { font-size: 11px; font-weight: 600; padding: 5px 10px; border: 1px solid #e8e0d0; border-radius: 14px; cursor: pointer; background: white; display: inline-flex; gap: 4px; align-items: center; }
+  .htab-pool-chip .cnt { font-size: 9px; background: #f0e4ce; color: #9c6a1e; padding: 0 5px; border-radius: 6px; }
+  .htab-pool-chip.added { background: #e8f5e9; border-color: #c8e6c9; color: #2e7d32; }
+  .htab-input { width: 100%; padding: 8px 12px; border: 1px dashed #e8943a; border-radius: 10px; font-size: 12px; margin-top: 10px; color: #e8943a; background: #fff8ec; }
+
+  /* =========================================================
+     Concept E — Smart input, auto-slot
+     ========================================================= */
+  .smart-wrap { padding: 14px; }
+  .smart-input-box { border: 2px solid #e8943a; border-radius: 14px; padding: 10px 12px; background: #fff8ec; margin-bottom: 14px; }
+  .smart-input-box input { width: 100%; border: none; outline: none; background: transparent; font-size: 14px; font-weight: 600; font-family: inherit; }
+  .smart-input-box .hint { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #777; margin-top: 6px; }
+  .smart-input-box .auto-badge { background: #e8943a; color: white; font-weight: 700; padding: 2px 8px; border-radius: 8px; letter-spacing: 0.05em; }
+  .smart-input-box .override { background: white; border: 1px solid #e8e0d0; color: #888; padding: 2px 8px; border-radius: 8px; cursor: pointer; }
+
+  .smart-list { margin-top: 0; }
+  .smart-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0ebe4; }
+  .smart-row .emj { font-size: 22px; width: 32px; text-align: center; }
+  .smart-row .slot { font-size: 10px; color: #999; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .smart-row .nm { font-size: 13px; font-weight: 700; }
+  .smart-row .col { flex: 1; min-width: 0; }
+  .smart-row .del { background: none; border: none; color: #c57272; font-size: 14px; cursor: pointer; }
+
+  .smart-reuse { margin-top: 14px; background: #faf6ef; border-radius: 12px; padding: 10px; }
+  .smart-reuse-hdr { font-size: 10px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .smart-reuse-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .smart-reuse-chip { font-size: 11px; font-weight: 600; padding: 5px 10px; border: 1px solid #e8e0d0; border-radius: 14px; cursor: pointer; background: white; display: inline-flex; gap: 4px; align-items: center; }
+  .smart-reuse-chip .cnt { font-size: 9px; background: #fff0d8; color: #c77013; padding: 0 5px; border-radius: 6px; font-weight: 700; }
+
+  /* Annotations / notes */
+  .note { background: #fff8e1; border-left: 4px solid #e8943a; padding: 12px 14px; border-radius: 6px; font-size: 12px; line-height: 1.55; margin-top: 12px; }
+  .note strong { color: #c77013; }
+
+  .section-divider { border-top: 2px solid #e0d8c8; margin: 40px 0 24px; }
+
+  /* Mapping table */
+  .map-table { max-width: 720px; margin: 0 auto; background: white; border-radius: 12px; padding: 18px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
+  .map-table h3 { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 16px; margin: 0 0 12px; }
+  .map-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .map-table th, .map-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #f0ebe4; vertical-align: top; }
+  .map-table th { font-size: 10px; color: #999; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .map-table td:first-child { font-weight: 700; white-space: nowrap; }
+
+  .q-list { max-width: 720px; margin: 20px auto 0; font-size: 13px; line-height: 1.7; color: #444; }
+  .q-list strong { color: #e8943a; }
+</style>
+</head>
+<body>
+
+<h1>Outfit builder — slot-based concepts</h1>
+<p class="intro">
+  Five takes on the same idea: <strong>items auto-sort into slots</strong> (Head / Top / Bottom / Shoes / Accessories), event details collapse, and the outfit space gets bigger. Same outfit across all five — Paso Robles Day 2 daytime. Look through them and tell me which parts you like.
+</p>
+
+<!-- ===================================================================== -->
+<!-- ROW 1 -->
+<!-- ===================================================================== -->
+<div class="row">
+
+  <!-- ============================================================ -->
+  <!-- Concept A — Paperdoll column -->
+  <!-- ============================================================ -->
+  <div class="concept">
+    <div class="concept-label">Concept A</div>
+    <div class="concept-title">Paperdoll column</div>
+    <div class="concept-desc">Slots stacked head-to-toe. Each empty slot is a soft "tap to add". Reuse chips appear <em>inside</em> the tapped slot, filtered to only that slot's items — no scrolling past irrelevant stuff.</div>
+
+    <div class="card">
+      <div class="band">
+        <span>🌅 → ☀️ Morning-Afternoon</span>
+        <span class="chip">☀️ 78°/52° clear</span>
+      </div>
+
+      <div class="events-pill">
+        <span class="left">
+          <span class="dc-pill">Smart Casual</span>
+          <span class="icons">☕🍷🍝</span>3 events · Sat 5/23
+        </span>
+        <span class="caret">▸ details</span>
+      </div>
+
+      <div class="paperdoll">
+
+        <!-- Head (empty, not expanded) -->
+        <div class="slot-row empty">
+          <span class="slot-icon">🧢</span>
+          <div class="slot-main">
+            <div class="slot-label">Head</div>
+            <div class="slot-empty-txt">Tap to add hat</div>
+          </div>
+          <button class="slot-add">+</button>
+        </div>
+
+        <!-- Top (filled) -->
+        <div class="slot-row filled">
+          <span class="slot-icon">👕</span>
+          <div class="slot-main">
+            <div class="slot-label">Top</div>
+            <div class="slot-val">Linen button-down</div>
+          </div>
+          <button class="slot-del">✕</button>
+        </div>
+
+        <!-- Layer (empty, expanded to show inline reuse) -->
+        <div class="slot-row empty" style="flex-direction: column; align-items: stretch; gap: 0">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="slot-icon">🧥</span>
+            <div class="slot-main">
+              <div class="slot-label">Layer</div>
+              <div class="slot-empty-txt">Pick a layer…</div>
+            </div>
+            <button class="slot-add" style="border-color: #999; color: #999">▾</button>
+          </div>
+          <div class="reuse-inline">
+            <div class="reuse-inline-hdr">Your layers so far</div>
+            <div class="reuse-chips">
+              <span class="reuse-chip">Light jacket <span class="cnt">×1</span></span>
+              <span class="reuse-chip">Cardigan <span class="cnt">×2</span></span>
+              <span class="reuse-chip" style="border-style: dashed; color: #e8943a">+ new</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom (filled) -->
+        <div class="slot-row filled">
+          <span class="slot-icon">👖</span>
+          <div class="slot-main">
+            <div class="slot-label">Bottom</div>
+            <div class="slot-val">Chino shorts</div>
+          </div>
+          <button class="slot-del">✕</button>
+        </div>
+
+        <!-- Shoes (empty) -->
+        <div class="slot-row empty">
+          <span class="slot-icon">👟</span>
+          <div class="slot-main">
+            <div class="slot-label">Shoes</div>
+            <div class="slot-empty-txt">Tap to add</div>
+          </div>
+          <button class="slot-add">+</button>
+        </div>
+
+        <!-- Accessories (filled, multi) -->
+        <div class="slot-row filled" style="flex-direction: column; align-items: stretch; gap: 6px">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="slot-icon">💼</span>
+            <div class="slot-main">
+              <div class="slot-label">Accessories</div>
+              <div class="slot-val" style="font-size: 12px; color: #666">Sunglasses · Watch</div>
+            </div>
+            <button class="slot-add">+</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="note"><strong>Strengths:</strong> Highest visual clarity — you <em>see</em> the outfit shape at a glance. Inline reuse per slot = no hunting. <br><strong>Risks:</strong> Six rows is tall on a short phone; might require scroll.</div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Concept B — 2×3 slot grid -->
+  <!-- ============================================================ -->
+  <div class="concept">
+    <div class="concept-label">Concept B</div>
+    <div class="concept-title">Slot tile grid</div>
+    <div class="concept-desc">Same slots but as a 2-column tile grid. Scannable at a glance, zero scroll. Tap a tile to edit — opens a drawer underneath.</div>
+
+    <div class="card">
+      <div class="band">
+        <span>🌅 → ☀️ Morning-Afternoon</span>
+        <span class="chip">☀️ 78°/52° clear</span>
+      </div>
+
+      <div class="events-pill">
+        <span class="left">
+          <span class="dc-pill">Smart Casual</span>
+          <span class="icons">☕🍷🍝</span>3 events · Sat 5/23
+        </span>
+        <span class="caret">▸ details</span>
+      </div>
+
+      <div class="grid-wrap">
+        <div class="grid-tile">
+          <div class="slot-hdr"><span class="emoji">🧢</span><span class="lbl">Head</span></div>
+          <div class="empty">+ add</div>
+        </div>
+        <div class="grid-tile filled">
+          <div class="slot-hdr"><span class="emoji">👕</span><span class="lbl">Top</span></div>
+          <div class="val">Linen button-down</div>
+        </div>
+        <div class="grid-tile">
+          <div class="slot-hdr"><span class="emoji">🧥</span><span class="lbl">Layer</span></div>
+          <div class="empty">+ add</div>
+        </div>
+        <div class="grid-tile filled">
+          <div class="slot-hdr"><span class="emoji">👖</span><span class="lbl">Bottom</span></div>
+          <div class="val">Chino shorts</div>
+        </div>
+        <div class="grid-tile">
+          <div class="slot-hdr"><span class="emoji">👟</span><span class="lbl">Shoes</span></div>
+          <div class="empty">+ add</div>
+        </div>
+        <div class="grid-tile filled">
+          <div class="slot-hdr"><span class="emoji">💼</span><span class="lbl">Access.</span></div>
+          <div class="val" style="font-size: 12px">Sunglasses</div>
+          <div class="acc-count">+1 more</div>
+        </div>
+      </div>
+
+      <!-- Drawer when a tile is tapped -->
+      <div style="margin: 0 14px 14px; background: #fff8ec; border: 1px dashed #e8943a; border-radius: 12px; padding: 12px">
+        <div style="font-size: 10px; font-weight: 700; color: #c77013; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">👟 Shoes — reuse or add</div>
+        <div class="reuse-chips">
+          <span class="reuse-chip">White sneakers <span class="cnt">×4</span></span>
+          <span class="reuse-chip">Dress loafers <span class="cnt">×2</span></span>
+          <span class="reuse-chip">Sandals <span class="cnt">×1</span></span>
+          <span class="reuse-chip" style="border-style: dashed; color: #e8943a; background: white">+ new shoes</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="note"><strong>Strengths:</strong> Zero-scroll summary — you can see the whole outfit on one screen. Great for quick status check across 10 outfits. <br><strong>Risks:</strong> Tiles truncate long item names; multi-item slots (accessories) feel awkward.</div>
+  </div>
+
+</div>
+
+<!-- ===================================================================== -->
+<!-- ROW 2 -->
+<!-- ===================================================================== -->
+<div class="row">
+
+  <!-- ============================================================ -->
+  <!-- Concept C — Bottom sheet -->
+  <!-- ============================================================ -->
+  <div class="concept">
+    <div class="concept-label">Concept C</div>
+    <div class="concept-title">Slot strip + bottom sheet</div>
+    <div class="concept-desc">Horizontal strip of 5 slot tiles (super compact). Tap one → a bottom sheet slides up with your pool filtered to just that slot + a search box. Most phone-native pattern.</div>
+
+    <div class="card">
+      <div class="band">
+        <span>🌅 → ☀️ Morning-Afternoon</span>
+        <span class="chip">☀️ 78°/52° clear</span>
+      </div>
+
+      <div class="events-pill">
+        <span class="left">
+          <span class="dc-pill">Smart Casual</span>
+          <span class="icons">☕🍷🍝</span>3 events · Sat 5/23
+        </span>
+        <span class="caret">▸ details</span>
+      </div>
+
+      <div class="sheet-host">
+        <div class="sheet-summary">
+          <div class="sheet-slot"><div class="emj">🧢</div><div class="lbl">Head</div><div class="val" style="color: #c0c0c0">—</div></div>
+          <div class="sheet-slot filled"><div class="emj">👕</div><div class="lbl">Top</div><div class="val">Linen<br>button-down</div></div>
+          <div class="sheet-slot"><div class="emj">🧥</div><div class="lbl">Layer</div><div class="val" style="color: #c0c0c0">—</div></div>
+          <div class="sheet-slot filled"><div class="emj">👖</div><div class="lbl">Bottom</div><div class="val">Chino<br>shorts</div></div>
+          <div class="sheet-slot active"><div class="emj">👟</div><div class="lbl">Shoes</div><div class="val" style="color: #e8943a">Pick…</div></div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 10px; color: #aaa; margin-bottom: 6px">
+          <span>💼 Accessories (2)</span>
+          <span>▸ scroll for more</span>
+        </div>
+
+        <!-- Bottom sheet -->
+        <div class="sheet-panel">
+          <div class="sheet-panel-title">👟 Pick shoes</div>
+          <input class="sheet-panel-search" placeholder="Search or type new…" />
+          <div class="sheet-panel-hdr">From your suitcase · tap to add</div>
+          <div class="sheet-row">
+            <span style="font-size: 16px">👟</span>
+            <span class="nm">White sneakers</span>
+            <span class="cnt">×4</span>
+          </div>
+          <div class="sheet-row">
+            <span style="font-size: 16px">👟</span>
+            <span class="nm">Dress loafers</span>
+            <span class="cnt">×2</span>
+          </div>
+          <div class="sheet-row">
+            <span style="font-size: 16px">👡</span>
+            <span class="nm">Sandals</span>
+            <span class="cnt">×1</span>
+          </div>
+          <div class="sheet-panel-hdr">Suggested for Smart Casual</div>
+          <div class="sheet-row" style="background: #33302a">
+            <span style="font-size: 16px">👞</span>
+            <span class="nm">+ Brown loafers</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note"><strong>Strengths:</strong> 5-across strip = 0 scroll. Bottom sheet is a familiar mobile pattern, leaves your outfit visible above it. Best for thumb reach.<br><strong>Risks:</strong> Tiles are small; long item names truncate; darker sheet is a mode shift.</div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Concept D — Horizontal slot tabs -->
+  <!-- ============================================================ -->
+  <div class="concept">
+    <div class="concept-label">Concept D</div>
+    <div class="concept-title">Slot tabs</div>
+    <div class="concept-desc">One tab per slot across the top (badge shows fill status). Tap a tab → the panel swaps to that slot's current item + pool + input. No accordion, no sheet — one focused panel at a time.</div>
+
+    <div class="card">
+      <div class="band">
+        <span>🌅 → ☀️ Morning-Afternoon</span>
+        <span class="chip">☀️ 78°/52° clear</span>
+      </div>
+
+      <div class="events-pill">
+        <span class="left">
+          <span class="dc-pill">Smart Casual</span>
+          <span class="icons">☕🍷🍝</span>3 events · Sat 5/23
+        </span>
+        <span class="caret">▸ details</span>
+      </div>
+
+      <div class="htabs">
+        <div class="htabs-row">
+          <div class="htab">🧢 Head</div>
+          <div class="htab">👕 Top ✓</div>
+          <div class="htab">🧥 Layer</div>
+          <div class="htab">👖 Bottom ✓</div>
+          <div class="htab active">👟 Shoes <span class="cnt">0</span></div>
+          <div class="htab">💼 Access. <span class="cnt">2</span></div>
+        </div>
+
+        <div class="htab-panel">
+          <div class="htab-current">Current — 👟 Shoes: <em style="font-weight: 600; color: #aaa;">not set</em></div>
+
+          <div class="htab-pool-hdr" style="margin-top: 12px">Reuse from other outfits</div>
+          <div class="htab-pool">
+            <span class="htab-pool-chip">👟 White sneakers <span class="cnt">×4</span></span>
+            <span class="htab-pool-chip">👞 Dress loafers <span class="cnt">×2</span></span>
+            <span class="htab-pool-chip">👡 Sandals <span class="cnt">×1</span></span>
+          </div>
+
+          <div class="htab-pool-hdr" style="margin-top: 12px">Suggested for Smart Casual</div>
+          <div class="htab-pool">
+            <span class="htab-pool-chip">Loafers</span>
+            <span class="htab-pool-chip">Boat shoes</span>
+            <span class="htab-pool-chip">Clean sneakers</span>
+          </div>
+
+          <div class="htab-input">+ Type to add new shoes…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note"><strong>Strengths:</strong> Focused — one slot at a time, no cognitive load. Tab badge (✓ / count) gives at-a-glance completion status. Great for structured packers.<br><strong>Risks:</strong> You have to tab through to see the whole outfit; no one view shows it all.</div>
+  </div>
+
+</div>
+
+<!-- ===================================================================== -->
+<!-- ROW 3 -->
+<!-- ===================================================================== -->
+<div class="row">
+
+  <!-- ============================================================ -->
+  <!-- Concept E — Smart input / auto-slot -->
+  <!-- ============================================================ -->
+  <div class="concept">
+    <div class="concept-label">Concept E</div>
+    <div class="concept-title">One smart input</div>
+    <div class="concept-desc">No slot picker at all. Single text box — type anything, we auto-sort it into a slot. The list below groups items by slot. Lowest friction; feels like a chat. Override the slot if the inference is wrong.</div>
+
+    <div class="card">
+      <div class="band">
+        <span>🌅 → ☀️ Morning-Afternoon</span>
+        <span class="chip">☀️ 78°/52° clear</span>
+      </div>
+
+      <div class="events-pill">
+        <span class="left">
+          <span class="dc-pill">Smart Casual</span>
+          <span class="icons">☕🍷🍝</span>3 events · Sat 5/23
+        </span>
+        <span class="caret">▸ details</span>
+      </div>
+
+      <div class="smart-wrap">
+        <div class="smart-input-box">
+          <input placeholder="What are you wearing?" value="linen button-down" />
+          <div class="hint">
+            <span class="auto-badge">AUTO · 👕 TOP</span>
+            <span>— based on "button-down"</span>
+            <span class="override" style="margin-left: auto">change</span>
+          </div>
+        </div>
+
+        <!-- Already added, grouped by slot -->
+        <div class="smart-list">
+          <div class="smart-row">
+            <span class="emj">👕</span>
+            <div class="col">
+              <div class="slot">Top</div>
+              <div class="nm">Linen button-down</div>
+            </div>
+            <button class="del">✕</button>
+          </div>
+          <div class="smart-row">
+            <span class="emj">👖</span>
+            <div class="col">
+              <div class="slot">Bottom</div>
+              <div class="nm">Chino shorts</div>
+            </div>
+            <button class="del">✕</button>
+          </div>
+          <div class="smart-row">
+            <span class="emj">💼</span>
+            <div class="col">
+              <div class="slot">Accessories · 2</div>
+              <div class="nm">Sunglasses · Watch</div>
+            </div>
+            <button class="del">✕</button>
+          </div>
+        </div>
+
+        <div class="smart-reuse">
+          <div class="smart-reuse-hdr">📦 tap to reuse · sorted by how often</div>
+          <div class="smart-reuse-chips">
+            <span class="smart-reuse-chip">👟 White sneakers <span class="cnt">×4</span></span>
+            <span class="smart-reuse-chip">🧢 Paso hat <span class="cnt">×2</span></span>
+            <span class="smart-reuse-chip">🧥 Light jacket <span class="cnt">×1</span></span>
+            <span class="smart-reuse-chip">👞 Loafers <span class="cnt">×2</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note"><strong>Strengths:</strong> Lowest friction. No slot selector, no dropdown. Just type. Works great once your pool is big — reuse chips become the default path.<br><strong>Risks:</strong> Mis-inference frustrates (you typed "sundress" and it went to "top" not "one-piece"). Easy to fix with a visible override chip, but worth calling out.</div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Concept F — Hybrid: tile grid + global input -->
+  <!-- ============================================================ -->
+  <div class="concept">
+    <div class="concept-label">Concept F · my pick</div>
+    <div class="concept-title">Hybrid (B + E)</div>
+    <div class="concept-desc">Slot tiles give the at-a-glance outfit feel of B. Global smart input at the bottom with auto-slot feel of E. Best of both: visual summary on top, fastest input at thumb height.</div>
+
+    <div class="card">
+      <div class="band">
+        <span>🌅 → ☀️ Morning-Afternoon</span>
+        <span class="chip">☀️ 78°/52° clear</span>
+      </div>
+
+      <div class="events-pill">
+        <span class="left">
+          <span class="dc-pill">Smart Casual</span>
+          <span class="icons">☕🍷🍝</span>3 events · Sat 5/23
+        </span>
+        <span class="caret">▸ details</span>
+      </div>
+
+      <div class="grid-wrap" style="padding-bottom: 4px">
+        <div class="grid-tile">
+          <div class="slot-hdr"><span class="emoji">🧢</span><span class="lbl">Head</span></div>
+          <div class="empty">— empty</div>
+        </div>
+        <div class="grid-tile filled">
+          <div class="slot-hdr"><span class="emoji">👕</span><span class="lbl">Top</span></div>
+          <div class="val" style="font-size: 12px">Linen button-down</div>
+        </div>
+        <div class="grid-tile">
+          <div class="slot-hdr"><span class="emoji">🧥</span><span class="lbl">Layer</span></div>
+          <div class="empty">— empty</div>
+        </div>
+        <div class="grid-tile filled">
+          <div class="slot-hdr"><span class="emoji">👖</span><span class="lbl">Bottom</span></div>
+          <div class="val" style="font-size: 12px">Chino shorts</div>
+        </div>
+        <div class="grid-tile">
+          <div class="slot-hdr"><span class="emoji">👟</span><span class="lbl">Shoes</span></div>
+          <div class="empty">— empty</div>
+        </div>
+        <div class="grid-tile filled">
+          <div class="slot-hdr"><span class="emoji">💼</span><span class="lbl">Access.</span></div>
+          <div class="val" style="font-size: 12px">Sunglasses +1</div>
+        </div>
+      </div>
+
+      <!-- Reuse chip row (slot-agnostic, most-used first) -->
+      <div style="padding: 10px 16px; background: #fffbf3; border-top: 1px solid #f0ebe4; border-bottom: 1px solid #f0ebe4;">
+        <div style="font-size: 10px; font-weight: 700; color: #c77013; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">📦 Reuse — tap to drop into the right slot</div>
+        <div style="display: flex; gap: 5px; overflow-x: auto; padding-bottom: 4px;">
+          <span class="htab-pool-chip">👟 White sneakers <span class="cnt">×4</span></span>
+          <span class="htab-pool-chip">🕶️ Sunglasses <span class="cnt">×5</span></span>
+          <span class="htab-pool-chip">🧢 Paso hat <span class="cnt">×2</span></span>
+          <span class="htab-pool-chip">👞 Loafers <span class="cnt">×2</span></span>
+          <span class="htab-pool-chip">🧥 Jacket <span class="cnt">×1</span></span>
+        </div>
+      </div>
+
+      <!-- Smart input at bottom -->
+      <div style="padding: 12px 14px">
+        <div class="smart-input-box" style="margin-bottom: 0">
+          <input placeholder="+ Type anything…" />
+          <div class="hint">
+            <span style="font-size: 10px">We'll auto-sort it into the right slot</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note"><strong>Why this one:</strong> The grid summary answers <em>"am I done with this outfit?"</em> in one glance. The reuse strip answers <em>"what's already in my suitcase?"</em> without opening anything. The smart input at the bottom is the single canonical add action. Phone-thumb friendly.</div>
+  </div>
+
+</div>
+
+<!-- ===================================================================== -->
+<div class="section-divider"></div>
+
+<div class="map-table">
+  <h3>Auto-slot mapping (what counts as what)</h3>
+  <table>
+    <thead>
+      <tr><th>Slot</th><th>Keywords that route here</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>🧢 Head</td>
+        <td>hat, cap, beanie, visor, headband, bucket hat, baseball cap</td>
+        <td>Small; one at a time.</td>
+      </tr>
+      <tr>
+        <td>👕 Top</td>
+        <td>shirt, tee, top, blouse, polo, cami, tank, sweater, sweatshirt, hoodie, <strong>sundress, dress, jumpsuit, romper</strong></td>
+        <td>Per your note — dresses land in Top. One option: a <em>One-Piece</em> mode where a dress fills Top AND auto-hides Bottom.</td>
+      </tr>
+      <tr>
+        <td>🧥 Layer</td>
+        <td>jacket, blazer, cardigan, coat, pullover, shell, flannel, kimono</td>
+        <td>Optional slot — can be empty on hot days.</td>
+      </tr>
+      <tr>
+        <td>👖 Bottom</td>
+        <td>pants, jeans, shorts, skirt, chinos, trousers, leggings, joggers</td>
+        <td>Auto-hidden when a One-Piece fills Top (if we go that route).</td>
+      </tr>
+      <tr>
+        <td>👟 Shoes</td>
+        <td>sneakers, shoes, boots, sandals, loafers, flats, heels, pumps, flip flops, espadrilles</td>
+        <td>Usually 1, occasionally 2 (swap for evening).</td>
+      </tr>
+      <tr>
+        <td>💼 Accessories</td>
+        <td>watch, belt, sunglasses, jewelry, earrings, necklace, bracelet, scarf, tie, pocket square, bag, tote, purse, clutch, backpack</td>
+        <td>Multi — the only slot that holds N items at once.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="q-list">
+  <p style="margin-top: 28px; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 16px; color: #e8943a; text-align: center;">Decisions I'd need from you before building</p>
+
+  <p><strong>1. Which concept (or mix)?</strong> My lean is <strong>Concept F (hybrid)</strong> — slot grid on top for at-a-glance status, reuse strip in the middle, smart input at the bottom. But tell me what feels right.</p>
+
+  <p><strong>2. Dresses = Top, or a separate "One-piece" slot?</strong> You said sundress = top. Simplest. But if a dress fills the whole outfit (no bottom needed), should the Bottom tile go away? Three options:<br>
+  &nbsp;&nbsp;(a) Sundress just goes in Top, Bottom stays empty (fine if you're ok with it).<br>
+  &nbsp;&nbsp;(b) Typing "dress" unlocks a special "One-piece" mode that hides Bottom.<br>
+  &nbsp;&nbsp;(c) Rename the Top slot to "Top / One-piece" and the user mentally handles it.</p>
+
+  <p><strong>3. How much event detail stays visible by default?</strong> Current mock shows the collapsed pill with: dress code · 3 event icons · date. Alternative: show <em>just</em> time range ("8:30 AM → 1:15 PM"). Alternative: show <em>nothing</em> except "▸ Events (3)". Which feels right for packing-on-a-phone?</p>
+
+  <p><strong>4. Do you want the "Borrow whole outfit from another day" flow?</strong> (From the last mockup.) Still useful? Or does the new slot-based reuse kill the need?</p>
+
+  <p><strong>5. Dress-code suggestions — keep, kill, or merge?</strong> Right now "Suggested for Smart Casual" is a separate chip row. In slot UI, those suggestions could show <em>inside</em> the slot's drawer/panel. Cleaner. OK to fold them in?</p>
+</div>
+
+</body>
+</html>

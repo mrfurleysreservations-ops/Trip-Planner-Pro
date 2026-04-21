@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gear Tab (in trip) — mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #5a9a2f;        /* outdoors theme */
+    --accent2: #e68a00;
+    --text: #1a1a1a;
+    --muted: #6a7a5a;
+    --card: rgba(90,154,47,0.06);
+    --cardBorder: rgba(90,154,47,0.2);
+    --bg: #f6f8f4;
+
+    --loc-frunk:    #4a7bc8;
+    --loc-cabin:    #9b59b6;
+    --loc-trunk:    #e65100;
+    --loc-roofbox:  #0097a7;
+    --loc-tow:      #c8503a;
+  }
+  * { box-sizing: border-box; }
+  html,body { margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Phone frame to communicate this is the in-trip view ── */
+  .phone {
+    max-width: 440px;
+    margin: 24px auto;
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 28px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .mock-banner {
+    max-width: 440px;
+    margin: 8px auto 0;
+    padding: 10px 14px;
+    background: #fff8e1;
+    border: 1px dashed #e6b800;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #6a5a1a;
+  }
+
+  /* ── Sticky top region ── */
+  .sticky-top {
+    position: sticky;
+    top: 0;
+    background: rgba(246,248,244,0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--cardBorder);
+    z-index: 10;
+  }
+  .trip-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 6px;
+  }
+  .back {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--card);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--muted);
+    border: none;
+    cursor: pointer;
+  }
+  .trip-title { flex: 1; }
+  .trip-title .name {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .trip-title .dates {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .top-action {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--card);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    border: none;
+    font-size: 14px;
+  }
+
+  /* Style banner */
+  .style-banner {
+    margin: 8px 16px 0;
+    padding: 8px 12px;
+    background: rgba(90,154,47,0.06);
+    border: 1px solid var(--cardBorder);
+    border-radius: 10px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Pill switcher */
+  .pill-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 10px 16px 12px;
+  }
+  .pill {
+    display: inline-flex;
+    background: #fff;
+    border: 1.5px solid var(--cardBorder);
+    border-radius: 20px;
+    padding: 2px;
+  }
+  .pill button {
+    background: transparent;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 18px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .pill button.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  /* Sub-nav */
+  .sub-nav {
+    display: flex;
+    overflow-x: auto;
+    padding: 0 8px 8px;
+    gap: 4px;
+    scrollbar-width: none;
+  }
+  .sub-nav::-webkit-scrollbar { display: none; }
+  .sub-nav a {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 14px;
+    white-space: nowrap;
+  }
+  .sub-nav a.active {
+    background: var(--card);
+    color: var(--accent);
+  }
+
+  /* ── Body ── */
+  .body-scroll { padding: 16px; }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 16px 0 10px;
+  }
+  .section-head h3 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+    color: var(--muted);
+  }
+  .section-head a {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  /* ── Car viz card ── */
+  .car-card {
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 16px;
+    padding: 14px 14px 18px;
+    box-shadow: 0 1px 2px rgba(26,26,26,0.04);
+  }
+  .car-card .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .car-card .name {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .car-card .swap {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .car-svg-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0 6px;
+  }
+  .car-svg { width: 180px; height: 300px; }
+
+  .zone-rect {
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .zone-rect:hover { filter: brightness(1.05); }
+  .zone-rect.selected { stroke-width: 2.5; stroke-dasharray: 0; }
+
+  /* Legend */
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .legend-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    border-radius: 10px;
+    border: 1px solid var(--cardBorder);
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .legend-item.selected {
+    border-width: 2px;
+    transform: translateY(-1px);
+  }
+  .legend-item.selected[data-loc="trunk"] { border-color: var(--loc-trunk); background: rgba(230,81,0,0.06); }
+  .legend-item[data-loc="frunk"] .dot { background: var(--loc-frunk); }
+  .legend-item[data-loc="cabin"] .dot { background: var(--loc-cabin); }
+  .legend-item[data-loc="trunk"] .dot { background: var(--loc-trunk); }
+  .legend-item[data-loc="roofbox"] .dot { background: var(--loc-roofbox); }
+  .legend-item[data-loc="tow"] .dot { background: var(--loc-tow); }
+  .legend-item .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .legend-item .lbl {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    text-align: center;
+  }
+  .legend-item .ct {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  /* Bins list */
+  .bins-section .add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .loc-group {
+    margin-bottom: 14px;
+  }
+  .loc-group-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 2px 8px;
+  }
+  .loc-group-head .pin {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .loc-group-head .n {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .loc-group-head .c {
+    font-size: 10px;
+    color: var(--muted);
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    padding: 1px 6px;
+    border-radius: 999px;
+  }
+
+  .bin-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 12px;
+    margin-bottom: 6px;
+  }
+  .bin-row .check {
+    width: 22px; height: 22px;
+    border-radius: 7px;
+    border: 2px solid var(--cardBorder);
+    background: #fff;
+    flex-shrink: 0;
+    position: relative;
+    cursor: pointer;
+  }
+  .bin-row.loaded .check {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .bin-row.loaded .check::after {
+    content: "✓";
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    position: absolute;
+    top: -2px; left: 4px;
+  }
+  .bin-row .icon {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: var(--card);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .bin-row .info { flex: 1; min-width: 0; }
+  .bin-row .name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+  .bin-row .meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .bin-row .arrow { color: var(--muted); font-size: 13px; }
+  .bin-row.loaded .name { color: var(--muted); }
+
+  /* Pack photos strip */
+  .photos-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 2px 2px 8px;
+    scrollbar-width: none;
+  }
+  .photos-strip::-webkit-scrollbar { display: none; }
+  .photo {
+    flex: 0 0 auto;
+    width: 110px;
+    height: 140px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #d4c8a0 0%, #a08060 100%);
+    position: relative;
+    border: 1px solid var(--cardBorder);
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .photo.add {
+    background: var(--card);
+    border: 1.5px dashed var(--cardBorder);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .photo.add .plus { font-size: 22px; }
+  .photo .tag {
+    position: absolute;
+    top: 6px; left: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .photo .caption {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 6px 8px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    color: #fff;
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .photo.ref {
+    background: linear-gradient(135deg, #7b9ea8 0%, #4a6b73 100%);
+  }
+  .photo.ref::before {
+    content: "LAST TIME";
+    position: absolute;
+    top: 6px; right: 6px;
+    font-size: 8px;
+    font-weight: 800;
+    background: rgba(255,255,255,0.95);
+    color: #4a6b73;
+    padding: 2px 6px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+  }
+
+  /* Toggle for photos */
+  .photos-toggle {
+    display: inline-flex;
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 14px;
+    padding: 2px;
+    font-size: 10px;
+  }
+  .photos-toggle button {
+    background: transparent;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .photos-toggle button.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* Zone drill-in summary (when a zone is selected) */
+  .zone-focus {
+    background: rgba(230,81,0,0.06);
+    border: 1.5px solid rgba(230,81,0,0.3);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin: 10px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .zone-focus .pin {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--loc-trunk);
+    flex-shrink: 0;
+  }
+  .zone-focus .txt { flex: 1; font-size: 12px; }
+  .zone-focus .txt b { font-weight: 700; }
+  .zone-focus .clear {
+    font-size: 11px;
+    color: var(--loc-trunk);
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="mock-banner">
+  <strong>🎨 Mockup</strong> — Gear tab inside a trip's Packing pill. Phone frame for scale; click targets are illustrative.
+</div>
+
+<div class="phone">
+
+  <!-- STICKY TOP -->
+  <div class="sticky-top">
+    <div class="trip-head">
+      <button class="back">‹</button>
+      <div class="trip-title">
+        <div class="name">Yosemite Weekend</div>
+        <div class="dates">May 22 – 25 · Host: you · 5 in group</div>
+      </div>
+      <button class="top-action">⚙</button>
+    </div>
+
+    <div class="style-banner">Organized mode — plan it, pack it, verify it.</div>
+
+    <!-- PILL: Gear is now the 4th option -->
+    <div class="pill-wrap">
+      <div class="pill">
+        <button>Group</button>
+        <button>Outfits</button>
+        <button>Pack &amp; Go ✓</button>
+        <button class="active">Gear</button>
+      </div>
+    </div>
+
+    <!-- sub-nav -->
+    <div class="sub-nav">
+      <a>Itinerary</a>
+      <a>Expenses</a>
+      <a class="active">Packing</a>
+      <a>Notes</a>
+      <a>Meals</a>
+      <a>Group</a>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body-scroll">
+
+    <!-- Car visualization card -->
+    <div class="car-card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div class="label">Your car</div>
+          <div class="name">🚙 The Rivian · R1S</div>
+        </div>
+        <div class="swap">Change ›</div>
+      </div>
+
+      <div class="car-svg-wrap">
+        <svg class="car-svg" viewBox="0 0 220 360" xmlns="http://www.w3.org/2000/svg">
+          <!-- Shadow under car -->
+          <ellipse cx="110" cy="348" rx="96" ry="6" fill="rgba(0,0,0,0.08)"/>
+
+          <!-- ROOFBOX — floating above the car -->
+          <g>
+            <rect class="zone-rect" x="60" y="8" width="100" height="20" rx="8"
+                  fill="rgba(0,151,167,0.18)" stroke="#0097a7" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <text x="96" y="22" text-anchor="middle" font-size="9" font-weight="700" fill="#0097a7"
+                  font-family="'DM Sans', sans-serif">ROOFBOX</text>
+            <circle cx="150" cy="18" r="9" fill="#0097a7"/>
+            <text x="150" y="22" text-anchor="middle" font-size="10" font-weight="700" fill="#fff"
+                  font-family="'DM Sans', sans-serif">3</text>
+          </g>
+
+          <!-- TOW HITCH -->
+          <g>
+            <rect class="zone-rect" x="88" y="318" width="44" height="22" rx="5"
+                  fill="rgba(200,80,58,0.1)" stroke="rgba(200,80,58,0.5)" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <text x="110" y="332" text-anchor="middle" font-size="8" font-weight="700" fill="#c8503a"
+                  font-family="'DM Sans', sans-serif">TOW</text>
+            <circle cx="132" cy="329" r="7" fill="#c8503a"/>
+            <text x="132" y="332" text-anchor="middle" font-size="9" font-weight="700" fill="#fff"
+                  font-family="'DM Sans', sans-serif">1</text>
+          </g>
+
+          <!-- Wheels -->
+          <rect x="10" y="70" width="14" height="38" rx="5" fill="#2a2a2a"/>
+          <rect x="196" y="70" width="14" height="38" rx="5" fill="#2a2a2a"/>
+          <rect x="10" y="250" width="14" height="38" rx="5" fill="#2a2a2a"/>
+          <rect x="196" y="250" width="14" height="38" rx="5" fill="#2a2a2a"/>
+
+          <!-- Car body outer shell -->
+          <rect x="24" y="38" width="172" height="278" rx="32" fill="#fafafa" stroke="#c8d0c0" stroke-width="2"/>
+
+          <!-- FRUNK -->
+          <g>
+            <path class="zone-rect"
+                  d="M 36 50 Q 36 44 42 44 L 178 44 Q 184 44 184 50 L 184 96 L 36 96 Z"
+                  fill="rgba(74,123,200,0.1)" stroke="rgba(74,123,200,0.5)" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <text x="110" y="72" text-anchor="middle" font-size="10" font-weight="700" fill="#4a7bc8"
+                  font-family="'DM Sans', sans-serif">FRUNK</text>
+            <circle cx="110" cy="84" r="9" fill="#4a7bc8"/>
+            <text x="110" y="88" text-anchor="middle" font-size="10" font-weight="700" fill="#fff"
+                  font-family="'DM Sans', sans-serif">1</text>
+          </g>
+
+          <!-- Headlights -->
+          <circle cx="54" cy="52" r="3.5" fill="#ffeb99" stroke="#d4b400" stroke-width="1"/>
+          <circle cx="166" cy="52" r="3.5" fill="#ffeb99" stroke="#d4b400" stroke-width="1"/>
+
+          <!-- Windshield -->
+          <path d="M 40 100 L 180 100 L 170 122 L 50 122 Z"
+                fill="rgba(150,170,180,0.3)" stroke="#b8c4c8" stroke-width="1"/>
+
+          <!-- CABIN -->
+          <g>
+            <rect class="zone-rect" x="36" y="126" width="148" height="96" rx="4"
+                  fill="rgba(155,89,182,0.1)" stroke="rgba(155,89,182,0.5)" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <text x="110" y="168" text-anchor="middle" font-size="10" font-weight="700" fill="#9b59b6"
+                  font-family="'DM Sans', sans-serif">CABIN</text>
+            <circle cx="110" cy="182" r="9" fill="#9b59b6"/>
+            <text x="110" y="186" text-anchor="middle" font-size="10" font-weight="700" fill="#fff"
+                  font-family="'DM Sans', sans-serif">1</text>
+            <!-- Seat outlines hint -->
+            <rect x="50" y="136" width="36" height="28" rx="4" fill="none" stroke="#d4c8dc" stroke-width="1" opacity="0.6"/>
+            <rect x="134" y="136" width="36" height="28" rx="4" fill="none" stroke="#d4c8dc" stroke-width="1" opacity="0.6"/>
+          </g>
+
+          <!-- Rear window -->
+          <path d="M 50 226 L 170 226 L 180 248 L 40 248 Z"
+                fill="rgba(150,170,180,0.3)" stroke="#b8c4c8" stroke-width="1"/>
+
+          <!-- TRUNK (selected) -->
+          <g>
+            <path class="zone-rect selected"
+                  d="M 36 252 L 184 252 L 184 308 Q 184 314 178 314 L 42 314 Q 36 314 36 308 Z"
+                  fill="rgba(230,81,0,0.18)" stroke="#e65100" stroke-width="2.5"/>
+            <text x="110" y="278" text-anchor="middle" font-size="10" font-weight="700" fill="#e65100"
+                  font-family="'DM Sans', sans-serif">TRUNK</text>
+            <circle cx="110" cy="292" r="10" fill="#e65100"/>
+            <text x="110" y="296" text-anchor="middle" font-size="11" font-weight="700" fill="#fff"
+                  font-family="'DM Sans', sans-serif">4</text>
+          </g>
+
+          <!-- Taillights -->
+          <rect x="40" y="308" width="10" height="4" rx="1.5" fill="#c8503a"/>
+          <rect x="170" y="308" width="10" height="4" rx="1.5" fill="#c8503a"/>
+        </svg>
+      </div>
+
+      <!-- Legend / location summary -->
+      <div class="legend">
+        <div class="legend-item" data-loc="frunk">
+          <span class="dot"></span>
+          <span class="ct">1</span>
+          <span class="lbl">Frunk</span>
+        </div>
+        <div class="legend-item" data-loc="cabin">
+          <span class="dot"></span>
+          <span class="ct">1</span>
+          <span class="lbl">Cabin</span>
+        </div>
+        <div class="legend-item selected" data-loc="trunk">
+          <span class="dot"></span>
+          <span class="ct">4</span>
+          <span class="lbl">Trunk</span>
+        </div>
+        <div class="legend-item" data-loc="roofbox">
+          <span class="dot"></span>
+          <span class="ct">3</span>
+          <span class="lbl">Roofbox</span>
+        </div>
+        <div class="legend-item" data-loc="tow">
+          <span class="dot"></span>
+          <span class="ct">1</span>
+          <span class="lbl">Tow</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone-focus banner because Trunk is selected -->
+    <div class="zone-focus">
+      <span class="pin"></span>
+      <span class="txt"><b>Showing Trunk</b> · 4 bins · 49 items</span>
+      <button class="clear">Show all ✕</button>
+    </div>
+
+    <!-- Bins for this trip (filtered to Trunk in this view) -->
+    <div class="section-head bins-section">
+      <h3>Bins on this trip</h3>
+      <button class="add-btn">＋ Add from library</button>
+    </div>
+
+    <!-- Trunk bins -->
+    <div class="bin-row loaded">
+      <span class="check"></span>
+      <span class="icon">🏕️</span>
+      <div class="info">
+        <div class="name">Camp Kitchen</div>
+        <div class="meta">23 items · loaded against the back seat</div>
+      </div>
+      <span class="arrow">›</span>
+    </div>
+    <div class="bin-row loaded">
+      <span class="check"></span>
+      <span class="icon">🔥</span>
+      <div class="info">
+        <div class="name">Fire &amp; Fuel</div>
+        <div class="meta">8 items · loaded</div>
+      </div>
+      <span class="arrow">›</span>
+    </div>
+    <div class="bin-row">
+      <span class="check"></span>
+      <span class="icon">💧</span>
+      <div class="info">
+        <div class="name">Water &amp; Hydration</div>
+        <div class="meta">7 items · not loaded</div>
+      </div>
+      <span class="arrow">›</span>
+    </div>
+    <div class="bin-row">
+      <span class="check"></span>
+      <span class="icon">🔦</span>
+      <div class="info">
+        <div class="name">Lighting</div>
+        <div class="meta">11 items · not loaded</div>
+      </div>
+      <span class="arrow">›</span>
+    </div>
+
+    <!-- Pack photos -->
+    <div class="section-head">
+      <h3>Pack Photos — Trunk</h3>
+      <div class="photos-toggle">
+        <button class="active">This trip</button>
+        <button>Last time</button>
+      </div>
+    </div>
+
+    <div class="photos-strip">
+      <div class="photo add">
+        <span class="plus">＋</span>
+        <span>Take photo</span>
+      </div>
+      <div class="photo">
+        <span class="tag">Trunk · L</span>
+        <span class="caption">Kitchen + Fire loaded · May 22</span>
+      </div>
+      <div class="photo">
+        <span class="tag">Trunk · R</span>
+        <span class="caption">Cooler slot open for food · May 22</span>
+      </div>
+      <div class="photo ref">
+        <span class="tag">Trunk</span>
+        <span class="caption">Big Sur · Mar 14</span>
+      </div>
+      <div class="photo ref">
+        <span class="tag">Trunk</span>
+        <span class="caption">Pinnacles · Feb 7</span>
+      </div>
+    </div>
+
+    <div style="margin-top: 18px; padding: 12px 14px; background: var(--card); border: 1px dashed var(--cardBorder); border-radius: 12px; font-size: 11px; color: var(--muted);">
+      💡 Tap any zone on the car above to filter the bins + photos below to just that location.
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Outfit card — add day/date mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 16px 64px;
+    font-family: 'DM Sans', sans-serif;
+    background: #f7f2e9;
+    color: #2a2a2a;
+  }
+  h1 { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 22px; margin: 0 0 4px; }
+  h2 { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 14px; color: #6b5a43; text-transform: uppercase; letter-spacing: 0.06em; margin: 28px 0 10px; }
+  .sub { color: #8a7a5e; font-size: 13px; margin: 0 0 8px; }
+  .wrap { max-width: 420px; margin: 0 auto; }
+
+  /* Outfit card baseline */
+  .card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e8e0d0;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    margin-bottom: 18px;
+  }
+
+  /* TOD band variants */
+  .band {
+    padding: 10px 14px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .band .label {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .band .sublabel {
+    display: block;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    opacity: 0.85;
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+  }
+  .band .chip {
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(255,255,255,0.25);
+    padding: 3px 9px;
+    border-radius: 12px;
+  }
+  .band.eve { background: linear-gradient(90deg, #7c4a9e, #452a66); }
+  .band.morn { background: linear-gradient(90deg, #f9c876, #e8943a); }
+  .band.day  { background: linear-gradient(90deg, #f9c876, #c75a2a); }
+
+  /* Meta row */
+  .meta {
+    padding: 10px 16px;
+    border-bottom: 1px solid #f0ebe4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .meta .dc {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .meta .dc.casual { background: #4caf5018; color: #2e7d32; }
+  .meta .dc.smart  { background: #0097a718; color: #00838f; }
+  .meta .dc.formal { background: #7b1fa218; color: #6a1b9a; }
+  .meta .counts {
+    font-size: 11px;
+    color: #777;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .meta .chev { font-size: 10px; color: #999; }
+
+  /* Slot grid */
+  .grid {
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .tile {
+    border: 1px dashed #d8cfbd;
+    border-radius: 12px;
+    background: #fffbf3;
+    padding: 14px 10px;
+    min-height: 68px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .tile .emoji { font-size: 22px; margin-bottom: 2px; }
+  .tile .lbl { font-size: 10px; font-weight: 700; color: #977a5a; text-transform: uppercase; letter-spacing: 0.06em; }
+  .tile .empty { font-size: 10px; color: #b8a68a; margin-top: 2px; }
+  .tile.filled { background: #fffaf3; border: 1px solid #e8943a; }
+  .tile.filled .empty { color: #2a2a2a; font-weight: 600; }
+
+  /* Labels / callouts */
+  .version-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: #2a2a2a;
+    color: white;
+    margin-bottom: 8px;
+  }
+  .version-tag.proposed { background: #2e7d32; }
+  .callout {
+    font-size: 11px;
+    color: #6b5a43;
+    margin: 0 0 14px;
+    line-height: 1.45;
+  }
+  .callout b { color: #2e7d32; }
+
+  /* Chip-on-band variant (Option B) */
+  .band .datechip {
+    background: rgba(255,255,255,0.22);
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  /* Day pill above band (Option C) */
+  .daypill-row {
+    padding: 6px 14px;
+    background: #fdf9f1;
+    border-bottom: 1px solid #f0ebe4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .daypill-row .day {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #2a2a2a;
+  }
+  .daypill-row .dots {
+    font-size: 10px;
+    color: #b8a68a;
+    letter-spacing: 0.2em;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Outfit card — which day am I packing for?</h1>
+  <p class="sub">You said you've got 27 outfits and can't tell them apart. Here are three ways to fix it. Pick whichever feels cleanest and I'll ship it.</p>
+
+  <!-- ─── CURRENT (for reference) ─── -->
+  <h2>Today</h2>
+  <span class="version-tag">Current</span>
+  <p class="callout">No day/date anywhere on the card until you tap to expand.</p>
+
+  <div class="card">
+    <div class="band eve">
+      <div>
+        <div class="label">🌆 → 🌙 &nbsp; Evening-Night</div>
+      </div>
+      <span class="chip">☁️ 58°</span>
+    </div>
+    <div class="meta">
+      <span class="dc smart">Smart Casual</span>
+      <span class="counts">2 events · 4 items <span class="chev">▶</span></span>
+    </div>
+    <div class="grid">
+      <div class="tile filled"><div class="emoji">👕</div><div class="lbl">Top</div><div class="empty">Silk blouse</div></div>
+      <div class="tile"><div class="emoji">🧥</div><div class="lbl">Layer</div><div class="empty">+ optional</div></div>
+      <div class="tile filled"><div class="emoji">👖</div><div class="lbl">Bottom</div><div class="empty">Dark jeans</div></div>
+      <div class="tile"><div class="emoji">👟</div><div class="lbl">Shoes</div><div class="empty">+ add shoes</div></div>
+      <div class="tile filled"><div class="emoji">💼</div><div class="lbl">Accessories</div><div class="empty">+2 items</div></div>
+    </div>
+  </div>
+
+  <!-- ─── OPTION A ─── -->
+  <h2>Option A — subtitle inside the band</h2>
+  <span class="version-tag proposed">Proposed · A</span>
+  <p class="callout">Adds a small <b>FRI · APR 17</b> line right under "Evening-Night". Same band, no extra row — this is closest to what you described.</p>
+
+  <div class="card">
+    <div class="band eve">
+      <div>
+        <div class="label">🌆 → 🌙 &nbsp; Evening-Night</div>
+        <span class="sublabel">FRI · APR 17</span>
+      </div>
+      <span class="chip">☁️ 58°</span>
+    </div>
+    <div class="meta">
+      <span class="dc smart">Smart Casual</span>
+      <span class="counts">2 events · 4 items <span class="chev">▶</span></span>
+    </div>
+    <div class="grid">
+      <div class="tile filled"><div class="emoji">👕</div><div class="lbl">Top</div><div class="empty">Silk blouse</div></div>
+      <div class="tile"><div class="emoji">🧥</div><div class="lbl">Layer</div><div class="empty">+ optional</div></div>
+      <div class="tile filled"><div class="emoji">👖</div><div class="lbl">Bottom</div><div class="empty">Dark jeans</div></div>
+      <div class="tile"><div class="emoji">👟</div><div class="lbl">Shoes</div><div class="empty">+ add shoes</div></div>
+      <div class="tile filled"><div class="emoji">💼</div><div class="lbl">Accessories</div><div class="empty">+2 items</div></div>
+    </div>
+  </div>
+
+  <!-- A — more examples so you can see it across days -->
+  <div class="card">
+    <div class="band morn">
+      <div>
+        <div class="label">🌅 &nbsp; Morning</div>
+        <span class="sublabel">SAT · APR 18</span>
+      </div>
+      <span class="chip">☀️ 72°</span>
+    </div>
+    <div class="meta">
+      <span class="dc casual">Active</span>
+      <span class="counts">1 event · 3 items <span class="chev">▶</span></span>
+    </div>
+    <div class="grid">
+      <div class="tile filled"><div class="emoji">👕</div><div class="lbl">Top</div><div class="empty">Athletic tank</div></div>
+      <div class="tile"><div class="emoji">🧥</div><div class="lbl">Layer</div><div class="empty">+ optional</div></div>
+      <div class="tile filled"><div class="emoji">👖</div><div class="lbl">Bottom</div><div class="empty">Leggings</div></div>
+      <div class="tile filled"><div class="emoji">👟</div><div class="lbl">Shoes</div><div class="empty">Running shoes</div></div>
+      <div class="tile"><div class="emoji">💼</div><div class="lbl">Accessories</div><div class="empty">+ hat, jewelry…</div></div>
+    </div>
+  </div>
+
+  <!-- ─── OPTION B ─── -->
+  <h2>Option B — date chip next to weather</h2>
+  <span class="version-tag proposed">Proposed · B</span>
+  <p class="callout">Keeps the band one line tall. Puts <b>FRI · APR 17</b> in a chip on the right, next to the weather. Compact but the band gets crowded on small phones.</p>
+
+  <div class="card">
+    <div class="band eve">
+      <div class="label">🌆 → 🌙 &nbsp; Evening-Night</div>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <span class="datechip">FRI · APR 17</span>
+        <span class="chip">☁️ 58°</span>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="dc smart">Smart Casual</span>
+      <span class="counts">2 events · 4 items <span class="chev">▶</span></span>
+    </div>
+    <div class="grid">
+      <div class="tile filled"><div class="emoji">👕</div><div class="lbl">Top</div><div class="empty">Silk blouse</div></div>
+      <div class="tile"><div class="emoji">🧥</div><div class="lbl">Layer</div><div class="empty">+ optional</div></div>
+      <div class="tile filled"><div class="emoji">👖</div><div class="lbl">Bottom</div><div class="empty">Dark jeans</div></div>
+      <div class="tile"><div class="emoji">👟</div><div class="lbl">Shoes</div><div class="empty">+ add shoes</div></div>
+      <div class="tile filled"><div class="emoji">💼</div><div class="lbl">Accessories</div><div class="empty">+2 items</div></div>
+    </div>
+  </div>
+
+  <!-- ─── OPTION C ─── -->
+  <h2>Option C — day header above the band</h2>
+  <span class="version-tag proposed">Proposed · C</span>
+  <p class="callout">A thin "day divider" strip above the band. Clearest when you're scrolling through 27 cards — your eye catches the day every time. Adds 24px of card height though.</p>
+
+  <div class="card">
+    <div class="daypill-row">
+      <span class="day">Friday · April 17</span>
+      <span class="dots">Day 2 of 4</span>
+    </div>
+    <div class="band eve">
+      <div class="label">🌆 → 🌙 &nbsp; Evening-Night</div>
+      <span class="chip">☁️ 58°</span>
+    </div>
+    <div class="meta">
+      <span class="dc smart">Smart Casual</span>
+      <span class="counts">2 events · 4 items <span class="chev">▶</span></span>
+    </div>
+    <div class="grid">
+      <div class="tile filled"><div class="emoji">👕</div><div class="lbl">Top</div><div class="empty">Silk blouse</div></div>
+      <div class="tile"><div class="emoji">🧥</div><div class="lbl">Layer</div><div class="empty">+ optional</div></div>
+      <div class="tile filled"><div class="emoji">👖</div><div class="lbl">Bottom</div><div class="empty">Dark jeans</div></div>
+      <div class="tile"><div class="emoji">👟</div><div class="lbl">Shoes</div><div class="empty">+ add shoes</div></div>
+      <div class="tile filled"><div class="emoji">💼</div><div class="lbl">Accessories</div><div class="empty">+2 items</div></div>
+    </div>
+  </div>
+
+  <!-- ─── RECAP ─── -->
+  <h2>My recommendation</h2>
+  <p class="callout">
+    <b>Option A.</b> It matches exactly what you asked for — day goes right under "Evening-Night" —
+    and it's basically free space in the band today. B gets cramped on small screens, C adds a new row.
+    If you ever have 5+ outfits on the same day and want a big day separator, we can add C <i>in addition</i>
+    later (as a day header that sits between groups of cards, not on every card).
+  </p>
+
+</div>
+</body>
+</html>

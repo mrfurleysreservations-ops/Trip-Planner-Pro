@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gear Library — mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #5a9a2f;
+    --accent2: #e68a00;
+    --text: #1a1a1a;
+    --muted: #6a7a5a;
+    --card: rgba(90,154,47,0.06);
+    --cardBorder: rgba(90,154,47,0.2);
+    --bg: #f6f8f4;
+    --shadow: 0 1px 2px rgba(26,26,26,0.04), 0 4px 12px rgba(26,26,26,0.04);
+
+    /* location accents */
+    --loc-frunk:    #4a7bc8;
+    --loc-cabin:    #9b59b6;
+    --loc-trunk:    #e65100;
+    --loc-roofbox:  #0097a7;
+    --loc-tow:      #c8503a;
+  }
+  * { box-sizing: border-box; }
+  html,body { margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ───── Shell ───── */
+  .shell {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 80px;
+  }
+
+  /* Mockup banner — not part of the real app */
+  .mock-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #fff8e1;
+    border: 1px dashed #e6b800;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #6a5a1a;
+    margin-bottom: 20px;
+  }
+  .mock-banner strong { color: #4a3a00; }
+
+  /* ───── Header ───── */
+  .page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 6px;
+  }
+  .page-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .page-title .emoji { margin-right: 8px; }
+  .page-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 4px 0 0;
+  }
+  .btn-primary {
+    padding: 10px 18px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(90,154,47,0.25);
+    white-space: nowrap;
+  }
+  .btn-primary:hover { background: #4d8527; }
+
+  /* Stats row */
+  .stats-row {
+    display: flex;
+    gap: 10px;
+    margin: 22px 0 18px;
+    flex-wrap: wrap;
+  }
+  .stat-pill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 14px;
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .stat-pill b { color: var(--text); font-weight: 700; font-size: 14px; }
+
+  /* Filter pills */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .filter-pills {
+    display: inline-flex;
+    background: #fff;
+    border: 1.5px solid var(--cardBorder);
+    border-radius: 20px;
+    padding: 3px;
+  }
+  .filter-pill {
+    padding: 7px 16px;
+    border-radius: 18px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .filter-pill.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+  }
+  .search {
+    flex: 1;
+    min-width: 180px;
+    max-width: 280px;
+    padding: 9px 14px;
+    border: 1.5px solid var(--cardBorder);
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: var(--text);
+  }
+  .search::placeholder { color: var(--muted); }
+
+  /* Group headers */
+  .group-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 26px 0 10px;
+  }
+  .group-head .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .group-head .name {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .group-head .count {
+    font-size: 11px;
+    color: var(--muted);
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+
+  /* Bin cards grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .grid.expanded-full {
+    /* When an expanded card is in the grid, give it full width */
+  }
+
+  .bin {
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+    box-shadow: var(--shadow);
+    position: relative;
+    transition: transform 0.12s, box-shadow 0.12s;
+    cursor: pointer;
+  }
+  .bin:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(26,26,26,0.05), 0 8px 20px rgba(26,26,26,0.06);
+  }
+  .bin-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .bin-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .bin-title {
+    flex: 1;
+    min-width: 0;
+  }
+  .bin-name {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+  }
+  .bin-meta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .bin-meta .sep { margin: 0 6px; opacity: 0.5; }
+
+  .bin-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--cardBorder);
+  }
+  .loc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 999px;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .loc-badge .pin {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: rgba(255,255,255,0.85);
+  }
+  .chev {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* Expanded bin */
+  .bin.expanded {
+    grid-column: 1 / -1;
+    padding: 18px 18px 14px;
+    cursor: default;
+    border: 1.5px solid var(--accent);
+    background: linear-gradient(180deg, #fff 0%, #fbfdf9 100%);
+  }
+  .bin.expanded .bin-head { margin-bottom: 14px; }
+  .bin.expanded .bin-icon {
+    width: 52px; height: 52px;
+    font-size: 26px;
+  }
+  .bin.expanded .bin-name { font-size: 17px; }
+  .expanded-body {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 20px;
+    margin-top: 8px;
+  }
+  .items-block h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0 0 10px;
+    font-weight: 700;
+  }
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  .item-row:hover { background: rgba(90,154,47,0.04); }
+  .item-row .check {
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    border: 1.5px solid var(--cardBorder);
+    background: #fff;
+    flex-shrink: 0;
+  }
+  .item-row.done .check {
+    background: var(--accent);
+    border-color: var(--accent);
+    position: relative;
+  }
+  .item-row.done .check::after {
+    content: "✓";
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    position: absolute;
+    top: -2px; left: 2px;
+  }
+  .item-row .name { flex: 1; }
+  .item-row .qty {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--card);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .item-row.done .name {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+  .add-item {
+    margin-top: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+  }
+  .add-item:hover { background: rgba(90,154,47,0.06); }
+
+  .meta-block h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0 0 10px;
+    font-weight: 700;
+  }
+  .meta-card {
+    background: var(--card);
+    border: 1px solid var(--cardBorder);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .meta-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .meta-value { font-weight: 600; }
+
+  .trip-history {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .trip-chip {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 6px 10px;
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 8px;
+  }
+  .trip-chip .when { color: var(--muted); font-size: 11px; }
+
+  .expanded-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--cardBorder);
+  }
+  .btn-ghost {
+    padding: 8px 14px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--cardBorder);
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .btn-ghost.danger { color: #c8503a; }
+  .btn-ghost:hover { background: var(--card); }
+
+  /* Footer connection card */
+  .footer-card {
+    margin-top: 36px;
+    padding: 18px 22px;
+    background: #fff;
+    border: 1px dashed var(--cardBorder);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .footer-card .ico {
+    width: 42px; height: 42px;
+    background: var(--card);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .footer-card h5 {
+    margin: 0 0 2px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .footer-card p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .page-head { flex-direction: column; align-items: stretch; }
+    .btn-primary { width: 100%; }
+    .expanded-body { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="mock-banner">
+    <span>🎨</span>
+    <div><strong>Mockup</strong> — visual proposal for <code>/gear</code>. Not wired up; buttons don't do anything.</div>
+  </div>
+
+  <!-- Header -->
+  <div class="page-head">
+    <div>
+      <h1 class="page-title"><span class="emoji">🎒</span>Gear Library</h1>
+      <p class="page-sub">Reusable bins for your family trips — build once, pack fast.</p>
+    </div>
+    <button class="btn-primary">＋ New bin</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <span class="stat-pill"><b>10</b> bins</span>
+    <span class="stat-pill"><b>114</b> items total</span>
+    <span class="stat-pill"><b>5</b> car locations used</span>
+    <span class="stat-pill">Last trip: <b>Yosemite · Apr 3</b></span>
+  </div>
+
+  <!-- Filter + search -->
+  <div class="filter-bar">
+    <div class="filter-pills">
+      <button class="filter-pill active">All</button>
+      <button class="filter-pill">By location</button>
+      <button class="filter-pill">By use</button>
+      <button class="filter-pill">Recently used</button>
+    </div>
+    <input class="search" placeholder="Search bins and items…" />
+  </div>
+
+  <!-- Group: Trunk -->
+  <div class="group-head">
+    <span class="dot" style="background: var(--loc-trunk);"></span>
+    <span class="name">Trunk</span>
+    <span class="count">4 bins · 49 items</span>
+  </div>
+
+  <div class="grid">
+
+    <!-- Expanded bin (always-open in mockup to show the detail) -->
+    <div class="bin expanded">
+      <div class="bin-head">
+        <div class="bin-icon" style="background: rgba(230,81,0,0.12);">🏕️</div>
+        <div class="bin-title">
+          <h3 class="bin-name">Camp Kitchen</h3>
+          <div class="bin-meta">23 items<span class="sep">·</span>Last used 2 weeks ago<span class="sep">·</span>Used on 11 trips</div>
+        </div>
+        <span class="loc-badge" style="background: var(--loc-trunk);"><span class="pin"></span>Trunk</span>
+      </div>
+
+      <div class="expanded-body">
+        <div class="items-block">
+          <h4>Items</h4>
+          <div class="item-row done"><span class="check"></span><span class="name">2-burner propane stove</span><span class="qty">×1</span></div>
+          <div class="item-row done"><span class="check"></span><span class="name">Cast iron skillet</span><span class="qty">×1</span></div>
+          <div class="item-row done"><span class="check"></span><span class="name">Coffee percolator</span><span class="qty">×1</span></div>
+          <div class="item-row"><span class="check"></span><span class="name">Spice kit</span><span class="qty">×1</span></div>
+          <div class="item-row"><span class="check"></span><span class="name">Cutting board</span><span class="qty">×1</span></div>
+          <div class="item-row"><span class="check"></span><span class="name">Chef's knife (wrapped)</span><span class="qty">×1</span></div>
+          <div class="item-row"><span class="check"></span><span class="name">Mess kits</span><span class="qty">×4</span></div>
+          <div class="item-row"><span class="check"></span><span class="name">Biodegradable soap</span><span class="qty">×1</span></div>
+          <div class="item-row"><span class="check"></span><span class="name">Collapsible wash basin</span><span class="qty">×1</span></div>
+          <div class="item-row"><span class="check"></span><span class="name">Dish towels</span><span class="qty">×3</span></div>
+          <div class="add-item">＋ Add item</div>
+        </div>
+        <div class="meta-block">
+          <h4>Details</h4>
+          <div class="meta-card">
+            <div class="meta-label">Default car location</div>
+            <div class="meta-value">🚗 Trunk — left side</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Notes</div>
+            <div class="meta-value" style="font-weight:500;font-size:12px;color:var(--muted);">Heaviest bin. Load first against the back seat so the cooler fits next to it.</div>
+          </div>
+          <h4 style="margin-top:14px;">Recent trips</h4>
+          <div class="trip-history">
+            <div class="trip-chip"><span>Yosemite weekend</span><span class="when">Apr 3</span></div>
+            <div class="trip-chip"><span>Big Sur spring break</span><span class="when">Mar 14</span></div>
+            <div class="trip-chip"><span>Pinnacles overnight</span><span class="when">Feb 7</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="expanded-actions">
+        <button class="btn-ghost">Edit bin</button>
+        <button class="btn-ghost">Duplicate</button>
+        <button class="btn-ghost">Change location</button>
+        <button class="btn-ghost danger">Archive</button>
+      </div>
+    </div>
+
+    <!-- Regular collapsed cards -->
+    <div class="bin">
+      <div class="bin-head">
+        <div class="bin-icon" style="background: rgba(230,81,0,0.12);">🔥</div>
+        <div class="bin-title">
+          <h3 class="bin-name">Fire &amp; Fuel</h3>
+          <div class="bin-meta">8 items<span class="sep">·</span>11 trips</div>
+        </div>
+      </div>
+      <div class="bin-foot">
+        <span class="loc-badge" style="background: var(--loc-trunk);"><span class="pin"></span>Trunk</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+
+    <div class="bin">
+      <div class="bin-head">
+        <div class="bin-icon" style="background: rgba(230,81,0,0.12);">💧</div>
+        <div class="bin-title">
+          <h3 class="bin-name">Water &amp; Hydration</h3>
+          <div class="bin-meta">7 items<span class="sep">·</span>11 trips</div>
+        </div>
+      </div>
+      <div class="bin-foot">
+        <span class="loc-badge" style="background: var(--loc-trunk);"><span class="pin"></span>Trunk</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+
+    <div class="bin">
+      <div class="bin-head">
+        <div class="bin-icon" style="background: rgba(230,81,0,0.12);">🔦</div>
+        <div class="bin-title">
+          <h3 class="bin-name">Lighting</h3>
+          <div class="bin-meta">11 items<span class="sep">·</span>9 trips</div>
+        </div>
+      </div>
+      <div class="bin-foot">
+        <span class="loc-badge" style="background: var(--loc-trunk);"><span class="pin"></span>Trunk</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group: Roofbox -->
+  <div class="group-head">
+    <span class="dot" style="background: var(--loc-roofbox);"></span>
+    <span class="name">Roofbox</span>
+    <span class="count">3 bins · 26 items</span>
+  </div>
+
+  <div class="grid">
+    <div class="bin">
+      <div class="bin-head">
+        <div class="bin-icon" style="background: rgba(0,151,167,0.12);">🛌</div>
+        <div class="bin-title">
+          <h3 class="bin-name">Sleep Kit</h3>
+          <div class="bin-meta">12 items<span class="sep">·</span>11 trips</div>
+        </div>
+      </div>
+      <div class="bin-foot">
+        <span class="loc-badge" style="background: var(--loc-roofbox);"><span class="pin"></span>Roofbox</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+
+    <div class="bin">
+      <div class="bin-head">
+        <div class="bin-icon" style="background: rgba(0,151,167,0.12);">🎣</div>
+        <div class="bin-title">
+          <h3 class="bin-name">Fishing Gear</h3>
+          <div class="bin-meta">9 items<span class="sep">·</span>4 trips</div>
+        </div>
+      </div>
+      <div class="bin-foot">
+        <span class="loc-badge" style="background: var(--loc-roofbox);"><span class="pin"></span>Roofbox</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+
+    <div class="bin">
+      <div class="bin-head">
+        <div class="bin-icon" style="background: rgba(0,151,167,0.12);">🧺</div>
+        <div class="bin-title">
+          <h3 class="bin-name">Camp Chairs &amp; Tables</h3>
+          <div class="bin-meta">5 items<span class="sep">·</span>11 trips</div>
+        </div>
+      </div>
+      <div class="bin-foot">
+        <span class="loc-badge" style="background: var(--loc-roofbox);"><span class="pin"></span>Roofbox</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group: Frunk -->
+  <div class="group-head">
+    <span class="dot" style="background: var(--loc-frunk);"></span>
+    <span class="name">Frunk</span>
+    <span class="count">1 bin · 15 items</span>
+  </div>
+
+  <div class="grid">
+    <div class="bin">
+      <div class="bin-head">
+        <div class="bin-icon" style="background: rgba(74,123,200,0.12);">🧰</div>
+        <div class="bin-title">
+          <h3 class="bin-name">Tool &amp; Repair</h3>
+          <div class="bin-meta">15 items<span class="sep">·</span>11 trips</div>
+        </div>
+      </div>
+      <div class="bin-foot">
+        <span class="loc-badge" style="background: var(--loc-frunk);"><span class="pin"></span>Frunk</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group: Cabin -->
+  <div class="group-head">
+    <span class="dot" style="background: var(--loc-cabin);"></span>
+    <span class="name">Cabin</span>
+    <span class="count">1 bin · 18 items</span>
+  </div>
+
+  <div class="grid">
+    <div class="bin">
+      <div class="bin-head">
+        <div class="bin-icon" style="background: rgba(155,89,182,0.12);">🩹</div>
+        <div class="bin-title">
+          <h3 class="bin-name">First Aid</h3>
+          <div class="bin-meta">18 items<span class="sep">·</span>11 trips</div>
+        </div>
+      </div>
+      <div class="bin-foot">
+        <span class="loc-badge" style="background: var(--loc-cabin);"><span class="pin"></span>Cabin</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group: Tow hitch -->
+  <div class="group-head">
+    <span class="dot" style="background: var(--loc-tow);"></span>
+    <span class="name">Tow hitch</span>
+    <span class="count">1 bin · 6 items</span>
+  </div>
+
+  <div class="grid">
+    <div class="bin">
+      <div class="bin-head">
+        <div class="bin-icon" style="background: rgba(200,80,58,0.12);">🚴</div>
+        <div class="bin-title">
+          <h3 class="bin-name">Bike Gear</h3>
+          <div class="bin-meta">6 items<span class="sep">·</span>3 trips</div>
+        </div>
+      </div>
+      <div class="bin-foot">
+        <span class="loc-badge" style="background: var(--loc-tow);"><span class="pin"></span>Tow hitch</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer connection -->
+  <div class="footer-card">
+    <div class="ico">🧭</div>
+    <div>
+      <h5>Bins become trip gear the moment you plan one</h5>
+      <p>When you open a trip's Packing tab, just tap <b>＋ Add from library</b> on the Gear view and pick which bins are coming. The car visualization and pack photos live inside the trip.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

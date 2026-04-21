@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Friends Tab — Mockup v2</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8f8f8;
+    --text: #1a1a1a;
+    --muted: #777;
+    --accent: #e8943a;
+    --accent2: #c75a2a;
+    --card: rgba(0,0,0,0.03);
+    --cardBorder: #e0e0e0;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #d0d4dc;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+  }
+  body { padding: 36px 20px 80px; }
+
+  .page-header {
+    max-width: 900px; margin: 0 auto 24px; text-align: center;
+  }
+  .page-header h1 {
+    font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 26px;
+    margin: 0 0 6px; color: #222;
+  }
+  .page-header p { font-size: 13px; color: #555; margin: 0; line-height: 1.5; }
+
+  .phone-row { display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; }
+  .phone {
+    width: 390px;
+    background: var(--bg);
+    border-radius: 38px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25), 0 6px 20px rgba(0,0,0,0.15);
+    border: 10px solid #1a1a1a;
+    position: relative;
+    height: 820px;
+    display: flex; flex-direction: column;
+  }
+  .phone-label {
+    text-align: center; font-family: 'Outfit'; font-weight: 700; font-size: 13px;
+    color: #666; margin-top: 12px; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+
+  /* Title bar */
+  .titlebar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: #fff; border-bottom: 1px solid #e5e5e5;
+    flex-shrink: 0;
+  }
+  .titlebar .brand {
+    font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 16px;
+    letter-spacing: -0.3px;
+  }
+  .titlebar .right { display: flex; align-items: center; gap: 10px; }
+  .titlebar .avatar {
+    width: 26px; height: 26px; border-radius: 50%; background: #f0f0f0;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .titlebar .signout {
+    font-size: 11px; background: #f5f5f5; border: 1px solid #e0e0e0;
+    border-radius: 8px; padding: 4px 10px; color: #777;
+  }
+
+  /* Tab bar */
+  .tabbar {
+    display: flex; justify-content: space-around; align-items: center;
+    height: 52px; background: rgba(255,255,255,0.97);
+    border-bottom: 1px solid #e5e5e5; padding: 0 6px; flex-shrink: 0;
+  }
+  .tab {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 2px; height: 100%;
+    border-bottom: 3px solid transparent; cursor: pointer; position: relative;
+  }
+  .tab .icon { font-size: 20px; line-height: 1; position: relative; }
+  .tab .label { font-size: 10px; font-weight: 500; color: var(--muted); }
+  .tab.active { border-bottom-color: var(--accent); }
+  .tab.active .label { color: var(--accent); font-weight: 700; }
+  .tab .badge {
+    position: absolute; top: -3px; right: -6px;
+    background: #e53935; color: #fff; font-size: 8px; font-weight: 800;
+    min-width: 14px; height: 14px; border-radius: 7px; padding: 0 3px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Sticky top: title + pills only (tight) */
+  .sticky-top {
+    background: rgba(248,248,248,0.96);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    flex-shrink: 0;
+  }
+  .row-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px 8px;
+  }
+  .row-header h1 {
+    margin: 0; font-family: 'Outfit'; font-weight: 800; font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+  .share-btn {
+    background: #fff; border: 1.5px solid #e0e0e0; border-radius: 10px;
+    padding: 6px 12px; font-size: 12px; font-weight: 600; color: #555; cursor: pointer;
+  }
+
+  .pill-row { display: flex; justify-content: center; padding: 4px 16px 10px; }
+  .pill-container {
+    display: inline-flex; background: var(--card);
+    border: 1.5px solid var(--cardBorder); border-radius: 20px;
+  }
+  .pill-btn {
+    background: transparent; border: none; padding: 8px 22px; border-radius: 20px;
+    font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer;
+    font-family: 'DM Sans';
+  }
+  .pill-btn.active { background: var(--accent); color: #fff; font-weight: 700; }
+
+  /* Body */
+  .body {
+    flex: 1; overflow-y: auto; padding: 10px 16px 24px; position: relative;
+  }
+  .body::-webkit-scrollbar { width: 0; }
+
+  /* ─── Pending invites DROPDOWN ─── */
+  .pending-dropdown {
+    background: #fff;
+    border: 1.5px solid rgba(232,148,58,0.35);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(232,148,58,0.08);
+  }
+  .pending-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; cursor: pointer;
+    background: rgba(232,148,58,0.06);
+  }
+  .pending-header .left { display: flex; align-items: center; gap: 10px; }
+  .pending-header .icon-chip {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800;
+  }
+  .pending-header .title {
+    font-size: 13px; font-weight: 700; color: var(--accent2);
+  }
+  .pending-header .sub { font-size: 11px; color: #888; margin-top: 1px; }
+  .pending-header .chev {
+    font-size: 18px; color: var(--accent); transition: transform 0.2s;
+  }
+  .pending-dropdown.open .pending-header .chev { transform: rotate(180deg); }
+  .pending-list {
+    max-height: 0; overflow: hidden; transition: max-height 0.25s ease;
+  }
+  .pending-dropdown.open .pending-list { max-height: 600px; }
+  .pending-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-top: 1px solid #f0f0f0;
+  }
+  .pending-row .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: #f5f5f5; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .pending-row .info { flex: 1; min-width: 0; }
+  .pending-row .name { font-weight: 700; font-size: 13px; }
+  .pending-row .sub { font-size: 10px; color: #888; margin-top: 2px; }
+  .pending-row .actions { display: flex; gap: 5px; }
+  .btn-accept {
+    background: var(--accent); color: #fff; border: none; border-radius: 9px;
+    padding: 6px 12px; font-size: 11px; font-weight: 700; cursor: pointer;
+    font-family: 'DM Sans';
+  }
+  .btn-decline, .btn-cancel {
+    background: #f5f5f5; color: #777; border: none; border-radius: 9px;
+    padding: 6px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+    font-family: 'DM Sans';
+  }
+
+  /* Section heading (inline section inside body) */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 16px 0 10px;
+  }
+  .section-header h3 {
+    font-size: 11px; font-weight: 700; color: #999;
+    text-transform: uppercase; letter-spacing: 0.08em; margin: 0;
+  }
+  .section-subtitle { font-size: 11px; color: #888; margin: 0 0 10px; }
+
+  /* Suggested slider */
+  .slider {
+    display: flex; gap: 10px; overflow-x: auto;
+    padding-bottom: 6px; padding-top: 2px;
+    margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px;
+  }
+  .slider::-webkit-scrollbar { height: 4px; }
+  .slider::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+
+  .sug-card {
+    flex-shrink: 0; width: 155px; background: #fff;
+    border: 1.5px solid #e8e8e8; border-radius: 16px;
+    padding: 14px 10px; text-align: center;
+    display: flex; flex-direction: column; align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .sug-card.fam { width: 180px; }
+  .sug-card .avatar {
+    width: 50px; height: 50px; border-radius: 50%; background: #f5f5f5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; margin-bottom: 8px;
+  }
+  .sug-card.fam .avatar {
+    border-radius: 12px; background: rgba(232,148,58,0.12);
+  }
+  .sug-card .name { font-weight: 700; font-size: 13px; line-height: 1.2; }
+  .sug-card .city { font-size: 10px; color: #888; margin-top: 2px; }
+  .sug-card .mutual-chip {
+    font-size: 10px; color: var(--accent); font-weight: 600;
+    padding: 3px 8px; background: rgba(232,148,58,0.1); border-radius: 9px;
+    margin-top: 8px;
+  }
+  .sug-card .via { font-size: 9px; color: #aaa; margin-top: 4px; }
+  .sug-card .add-btn {
+    margin-top: 10px; width: 100%;
+    background: var(--accent); color: #fff; border: none; border-radius: 9px;
+    padding: 7px 0; font-size: 11px; font-weight: 700; cursor: pointer;
+    font-family: 'DM Sans';
+  }
+
+  /* Search input */
+  .search-input {
+    width: 100%; padding: 10px 14px 10px 36px; border-radius: 12px;
+    border: 1.5px solid #e0e0e0; background: #fff; font-size: 13px;
+    color: var(--text); outline: none; font-family: 'DM Sans';
+  }
+  .search-input::placeholder { color: #aaa; }
+  .search-wrap { position: relative; }
+  .search-wrap::before {
+    content: "🔍"; position: absolute; left: 12px; top: 50%;
+    transform: translateY(-50%); font-size: 13px; opacity: 0.6;
+  }
+
+  /* Friend / family row */
+  .row-card {
+    background: #fff; border: 1.5px solid #e8e8e8; border-radius: 14px;
+    padding: 10px 12px; display: flex; align-items: center; gap: 11px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03); margin-bottom: 9px;
+  }
+  .row-card .avatar {
+    width: 44px; height: 44px; border-radius: 50%; background: #f5f5f5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; flex-shrink: 0;
+  }
+  .row-card .avatar.fam {
+    border-radius: 12px; background: rgba(232,148,58,0.12);
+  }
+  .row-card .info { flex: 1; min-width: 0; }
+  .row-card .name { font-weight: 700; font-size: 14px; }
+  .row-card .sub { font-size: 11px; color: #888; margin-top: 2px; }
+  .row-card .trip-badge {
+    font-size: 10px; font-weight: 600; color: var(--accent);
+    background: rgba(232,148,58,0.12); padding: 3px 9px; border-radius: 10px;
+    white-space: nowrap;
+  }
+  .row-card .chev { color: #ccc; font-size: 18px; margin-left: 2px; }
+  .row-card .add-inline {
+    background: var(--accent); color: #fff; border: none; border-radius: 9px;
+    padding: 6px 10px; font-size: 11px; font-weight: 700; cursor: pointer;
+    font-family: 'DM Sans'; white-space: nowrap;
+  }
+
+  /* Family member stack */
+  .member-stack { display: flex; align-items: center; margin-top: 5px; }
+  .member-stack .m {
+    width: 22px; height: 22px; border-radius: 50%; background: #f0f0f0;
+    border: 2px solid #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; margin-left: -7px;
+  }
+  .member-stack .m:first-child { margin-left: 0; }
+  .member-stack .m.plus {
+    background: #e8e8e8; font-size: 9px; font-weight: 700; color: #666;
+  }
+
+  /* FAB */
+  .fab {
+    position: absolute; bottom: 16px; right: 14px;
+    width: 50px; height: 50px; border-radius: 50%;
+    background: var(--accent); color: #fff; border: none;
+    font-size: 26px; font-weight: 300; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    z-index: 50;
+  }
+
+  /* Legend */
+  .legend {
+    max-width: 760px; margin: 40px auto 0;
+    background: #fff; border-radius: 14px; padding: 20px 24px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+  }
+  .legend h2 {
+    font-family: 'Outfit'; font-weight: 700; font-size: 15px; margin: 0 0 12px;
+    color: var(--accent2);
+  }
+  .legend ol { margin: 0; padding: 0 0 0 20px; font-size: 13px; line-height: 1.7; color: #444; }
+  .legend strong { color: #1a1a1a; }
+</style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>Friends Tab — Mockup v2</h1>
+    <p>Tighter layout: Pending invites collapsed into a dropdown. Click the dropdown in either phone to expand it.</p>
+  </div>
+
+  <div class="phone-row">
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- PHONE 1 — FRIENDS VIEW                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div>
+      <div class="phone">
+        <div class="titlebar">
+          <span class="brand">🧭 Trip Planner Pro</span>
+          <div class="right">
+            <div class="avatar">👤</div>
+            <button class="signout">Sign Out</button>
+          </div>
+        </div>
+
+        <div class="tabbar">
+          <div class="tab"><span class="icon">🧭</span><span class="label">Trips</span></div>
+          <div class="tab"><span class="icon">💬</span><span class="label">Chats</span></div>
+          <div class="tab"><span class="icon">⚙️</span><span class="label">Gear</span></div>
+          <div class="tab active">
+            <span class="icon">👥<span class="badge">3</span></span>
+            <span class="label">Friends</span>
+          </div>
+          <div class="tab"><span class="icon">👤</span><span class="label">Profile</span></div>
+          <div class="tab"><span class="icon">🔔</span><span class="label">Alerts</span></div>
+        </div>
+
+        <div class="sticky-top">
+          <div class="row-header">
+            <h1>Friends</h1>
+            <button class="share-btn">Share link</button>
+          </div>
+          <div class="pill-row">
+            <div class="pill-container">
+              <button class="pill-btn active">Friends</button>
+              <button class="pill-btn">Families</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="body">
+
+          <!-- 1. Pending invites — DROPDOWN -->
+          <div class="pending-dropdown" onclick="this.classList.toggle('open')">
+            <div class="pending-header">
+              <div class="left">
+                <div class="icon-chip">3</div>
+                <div>
+                  <div class="title">Pending invites</div>
+                  <div class="sub">2 waiting on you · 1 sent</div>
+                </div>
+              </div>
+              <span class="chev">⌄</span>
+            </div>
+            <div class="pending-list">
+              <div class="pending-row">
+                <div class="avatar">🧑🏻</div>
+                <div class="info">
+                  <div class="name">Alex Nguyen</div>
+                  <div class="sub">invited you · 4 mutual friends</div>
+                </div>
+                <div class="actions">
+                  <button class="btn-accept">Accept</button>
+                  <button class="btn-decline">✕</button>
+                </div>
+              </div>
+              <div class="pending-row">
+                <div class="avatar">👩🏼</div>
+                <div class="info">
+                  <div class="name">Rachel Bloom</div>
+                  <div class="sub">invited you · 2 mutual friends</div>
+                </div>
+                <div class="actions">
+                  <button class="btn-accept">Accept</button>
+                  <button class="btn-decline">✕</button>
+                </div>
+              </div>
+              <div class="pending-row">
+                <div class="avatar">🧑🏼</div>
+                <div class="info">
+                  <div class="name">Ben Carter</div>
+                  <div class="sub">invite sent 2 days ago</div>
+                </div>
+                <button class="btn-cancel">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Suggested slider -->
+          <div class="section-header">
+            <h3>Suggested for you</h3>
+          </div>
+          <p class="section-subtitle">People your friends know on Trip Planner Pro</p>
+          <div class="slider">
+            <div class="sug-card">
+              <div class="avatar">🧑🏽</div>
+              <div class="name">Diego Ramirez</div>
+              <div class="city">Los Angeles, CA</div>
+              <div class="mutual-chip">5 mutual</div>
+              <div class="via">via Sarah, Priya</div>
+              <button class="add-btn">+ Add Friend</button>
+            </div>
+            <div class="sug-card">
+              <div class="avatar">👩🏼</div>
+              <div class="name">Hannah Becker</div>
+              <div class="city">Chicago, IL</div>
+              <div class="mutual-chip">4 mutual</div>
+              <div class="via">via Marcus, Emily</div>
+              <button class="add-btn">+ Add Friend</button>
+            </div>
+            <div class="sug-card">
+              <div class="avatar">🧑🏿</div>
+              <div class="name">Kwame Osei</div>
+              <div class="city">Brooklyn, NY</div>
+              <div class="mutual-chip">3 mutual</div>
+              <div class="via">via James</div>
+              <button class="add-btn">+ Add Friend</button>
+            </div>
+            <div class="sug-card">
+              <div class="avatar">👩🏻</div>
+              <div class="name">Yuki Tanaka</div>
+              <div class="city">Seattle, WA</div>
+              <div class="mutual-chip">6 mutual</div>
+              <div class="via">via Priya, Emily</div>
+              <button class="add-btn">+ Add Friend</button>
+            </div>
+          </div>
+
+          <!-- 3. Search friends -->
+          <div class="section-header">
+            <h3>Search</h3>
+          </div>
+          <div class="search-wrap">
+            <input class="search-input" type="text" placeholder="Search friends by name…" />
+          </div>
+
+          <!-- 4. Your friends -->
+          <div class="section-header">
+            <h3>Your friends · 5</h3>
+          </div>
+          <div class="row-card">
+            <div class="avatar">👩🏻</div>
+            <div class="info">
+              <div class="name">Sarah Chen</div>
+              <div class="sub">Austin, TX · 8 mutual</div>
+            </div>
+            <span class="trip-badge">3 trips</span>
+            <span class="chev">›</span>
+          </div>
+          <div class="row-card">
+            <div class="avatar">🧑🏾</div>
+            <div class="info">
+              <div class="name">Marcus Johnson</div>
+              <div class="sub">Nashville, TN · 12 mutual</div>
+            </div>
+            <span class="trip-badge">5 trips</span>
+            <span class="chev">›</span>
+          </div>
+          <div class="row-card">
+            <div class="avatar">👩🏽</div>
+            <div class="info">
+              <div class="name">Priya Patel</div>
+              <div class="sub">San Francisco, CA · 6 mutual</div>
+            </div>
+            <span class="trip-badge">2 trips</span>
+            <span class="chev">›</span>
+          </div>
+          <div class="row-card">
+            <div class="avatar">🧑🏼</div>
+            <div class="info">
+              <div class="name">James O'Brien</div>
+              <div class="sub">Denver, CO · 4 mutual</div>
+            </div>
+            <span class="trip-badge">1 trip</span>
+            <span class="chev">›</span>
+          </div>
+          <div class="row-card">
+            <div class="avatar">👩🏻</div>
+            <div class="info">
+              <div class="name">Emily Park</div>
+              <div class="sub">Portland, OR · 7 mutual</div>
+            </div>
+            <span class="trip-badge">2 trips</span>
+            <span class="chev">›</span>
+          </div>
+
+          <!-- 5. Other people on the app -->
+          <div class="section-header">
+            <h3>Other people on the app</h3>
+          </div>
+          <p class="section-subtitle">Browse everyone else using Trip Planner Pro</p>
+          <div class="row-card">
+            <div class="avatar">🧑🏻</div>
+            <div class="info">
+              <div class="name">Tomás López</div>
+              <div class="sub">Phoenix, AZ · 0 mutual</div>
+            </div>
+            <button class="add-inline">+ Add</button>
+          </div>
+          <div class="row-card">
+            <div class="avatar">👩🏾</div>
+            <div class="info">
+              <div class="name">Nia Williams</div>
+              <div class="sub">Atlanta, GA · 0 mutual</div>
+            </div>
+            <button class="add-inline">+ Add</button>
+          </div>
+          <div class="row-card">
+            <div class="avatar">🧑🏼</div>
+            <div class="info">
+              <div class="name">Oliver Schmidt</div>
+              <div class="sub">Minneapolis, MN · 1 mutual</div>
+            </div>
+            <button class="add-inline">+ Add</button>
+          </div>
+          <div class="row-card">
+            <div class="avatar">👩🏽</div>
+            <div class="info">
+              <div class="name">Amara Okafor</div>
+              <div class="sub">Washington, DC · 0 mutual</div>
+            </div>
+            <button class="add-inline">+ Add</button>
+          </div>
+
+        </div>
+
+        <button class="fab">+</button>
+      </div>
+      <div class="phone-label">Friends pill</div>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- PHONE 2 — FAMILIES VIEW                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div>
+      <div class="phone">
+        <div class="titlebar">
+          <span class="brand">🧭 Trip Planner Pro</span>
+          <div class="right">
+            <div class="avatar">👤</div>
+            <button class="signout">Sign Out</button>
+          </div>
+        </div>
+
+        <div class="tabbar">
+          <div class="tab"><span class="icon">🧭</span><span class="label">Trips</span></div>
+          <div class="tab"><span class="icon">💬</span><span class="label">Chats</span></div>
+          <div class="tab"><span class="icon">⚙️</span><span class="label">Gear</span></div>
+          <div class="tab active">
+            <span class="icon">👥<span class="badge">3</span></span>
+            <span class="label">Friends</span>
+          </div>
+          <div class="tab"><span class="icon">👤</span><span class="label">Profile</span></div>
+          <div class="tab"><span class="icon">🔔</span><span class="label">Alerts</span></div>
+        </div>
+
+        <div class="sticky-top">
+          <div class="row-header">
+            <h1>Friends</h1>
+            <button class="share-btn">Share link</button>
+          </div>
+          <div class="pill-row">
+            <div class="pill-container">
+              <button class="pill-btn">Friends</button>
+              <button class="pill-btn active">Families</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="body">
+
+          <!-- 1. Pending family invites — DROPDOWN -->
+          <div class="pending-dropdown" onclick="this.classList.toggle('open')">
+            <div class="pending-header">
+              <div class="left">
+                <div class="icon-chip">2</div>
+                <div>
+                  <div class="title">Pending family invites</div>
+                  <div class="sub">1 waiting on you · 1 sent</div>
+                </div>
+              </div>
+              <span class="chev">⌄</span>
+            </div>
+            <div class="pending-list">
+              <div class="pending-row">
+                <div class="avatar">👨‍👩‍👧</div>
+                <div class="info">
+                  <div class="name">The O'Brien Family</div>
+                  <div class="sub">invited your family · 3 mutual</div>
+                </div>
+                <div class="actions">
+                  <button class="btn-accept">Accept</button>
+                  <button class="btn-decline">✕</button>
+                </div>
+              </div>
+              <div class="pending-row">
+                <div class="avatar">👨‍👩‍👦</div>
+                <div class="info">
+                  <div class="name">The Chen Family</div>
+                  <div class="sub">family invite sent 5 days ago</div>
+                </div>
+                <button class="btn-cancel">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Suggested families slider -->
+          <div class="section-header">
+            <h3>Suggested families</h3>
+          </div>
+          <p class="section-subtitle">Families your connected families travel with</p>
+          <div class="slider">
+            <div class="sug-card fam">
+              <div class="avatar">👨‍👩‍👧‍👦</div>
+              <div class="name">The Becker Family</div>
+              <div class="city">Chicago, IL · 4 members</div>
+              <div class="member-stack" style="margin-top:8px;">
+                <div class="m">🧔🏼</div><div class="m">👩🏼</div><div class="m">👦🏼</div><div class="m">👧🏼</div>
+              </div>
+              <div class="mutual-chip">2 mutual</div>
+              <div class="via">via The Rodriguezes</div>
+              <button class="add-btn">+ Connect</button>
+            </div>
+            <div class="sug-card fam">
+              <div class="avatar">👨‍👩‍👧</div>
+              <div class="name">The Tanaka Family</div>
+              <div class="city">Seattle, WA · 3 members</div>
+              <div class="member-stack" style="margin-top:8px;">
+                <div class="m">🧑🏻</div><div class="m">👩🏻</div><div class="m">👧🏻</div>
+              </div>
+              <div class="mutual-chip">3 mutual</div>
+              <div class="via">via The Patels, Parks</div>
+              <button class="add-btn">+ Connect</button>
+            </div>
+            <div class="sug-card fam">
+              <div class="avatar">👨‍👩‍👦‍👦</div>
+              <div class="name">The Silva Family</div>
+              <div class="city">Miami, FL · 4 members</div>
+              <div class="member-stack" style="margin-top:8px;">
+                <div class="m">🧔🏽</div><div class="m">👩🏽</div><div class="m">👦🏽</div><div class="m">👦🏽</div>
+              </div>
+              <div class="mutual-chip">1 mutual</div>
+              <div class="via">via The Rodriguezes</div>
+              <button class="add-btn">+ Connect</button>
+            </div>
+          </div>
+
+          <!-- 3. Search families -->
+          <div class="section-header">
+            <h3>Search</h3>
+          </div>
+          <div class="search-wrap">
+            <input class="search-input" type="text" placeholder="Search families by name…" />
+          </div>
+
+          <!-- 4. Your connected families -->
+          <div class="section-header">
+            <h3>Connected families · 3</h3>
+          </div>
+          <div class="row-card">
+            <div class="avatar fam">👨‍👩‍👧‍👦</div>
+            <div class="info">
+              <div class="name">The Rodriguez Family</div>
+              <div class="sub">4 members · Nashville, TN</div>
+              <div class="member-stack">
+                <div class="m">🧔🏽</div><div class="m">👩🏽</div><div class="m">👧🏽</div><div class="m">👦🏽</div>
+              </div>
+            </div>
+            <span class="trip-badge">2 trips</span>
+            <span class="chev">›</span>
+          </div>
+          <div class="row-card">
+            <div class="avatar fam">👨‍👩‍👦</div>
+            <div class="info">
+              <div class="name">The Park Family</div>
+              <div class="sub">3 members · Portland, OR</div>
+              <div class="member-stack">
+                <div class="m">🧑🏻</div><div class="m">👩🏻</div><div class="m">👦🏻</div>
+              </div>
+            </div>
+            <span class="trip-badge">1 trip</span>
+            <span class="chev">›</span>
+          </div>
+          <div class="row-card">
+            <div class="avatar fam">👨‍👩‍👧‍👧</div>
+            <div class="info">
+              <div class="name">The Patel Family</div>
+              <div class="sub">5 members · San Francisco, CA</div>
+              <div class="member-stack">
+                <div class="m">🧔🏽</div><div class="m">👩🏽</div><div class="m">👧🏽</div><div class="m">👧🏽</div><div class="m plus">+1</div>
+              </div>
+            </div>
+            <span class="trip-badge">3 trips</span>
+            <span class="chev">›</span>
+          </div>
+
+          <!-- 5. Other families on the app -->
+          <div class="section-header">
+            <h3>Other families on the app</h3>
+          </div>
+          <p class="section-subtitle">Browse other families using Trip Planner Pro</p>
+          <div class="row-card">
+            <div class="avatar fam">👨‍👩‍👦‍👦</div>
+            <div class="info">
+              <div class="name">The Johnson Family</div>
+              <div class="sub">4 members · Boise, ID</div>
+              <div class="member-stack">
+                <div class="m">🧔🏻</div><div class="m">👩🏻</div><div class="m">👦🏻</div><div class="m">👦🏻</div>
+              </div>
+            </div>
+            <button class="add-inline">+ Connect</button>
+          </div>
+          <div class="row-card">
+            <div class="avatar fam">👨‍👩‍👧</div>
+            <div class="info">
+              <div class="name">The Kim Family</div>
+              <div class="sub">3 members · San Diego, CA</div>
+              <div class="member-stack">
+                <div class="m">🧑🏻</div><div class="m">👩🏻</div><div class="m">👧🏻</div>
+              </div>
+            </div>
+            <button class="add-inline">+ Connect</button>
+          </div>
+          <div class="row-card">
+            <div class="avatar fam">👨‍👩‍👦</div>
+            <div class="info">
+              <div class="name">The Brown Family</div>
+              <div class="sub">3 members · New Orleans, LA</div>
+              <div class="member-stack">
+                <div class="m">🧔🏾</div><div class="m">👩🏾</div><div class="m">👦🏾</div>
+              </div>
+            </div>
+            <button class="add-inline">+ Connect</button>
+          </div>
+
+        </div>
+
+        <button class="fab">+</button>
+      </div>
+      <div class="phone-label">Families pill</div>
+    </div>
+
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <h2>Section order (both pills follow this)</h2>
+    <ol>
+      <li><strong>Pending invites</strong> — collapsed dropdown at top with count chip. Tap to expand; each row has Accept/✕ (incoming) or Cancel (outgoing).</li>
+      <li><strong>Suggested slider</strong> — horizontal scroll, cards with mutual-friend/family count and "via <em>Sarah, Priya</em>" attribution.</li>
+      <li><strong>Search</strong> — input that filters the list below.</li>
+      <li><strong>Your friends / Connected families</strong> — full list with mutual count and "X trips" badge if you've traveled together.</li>
+      <li><strong>Other people / families on the app</strong> — everyone else, with an inline "+ Add" / "+ Connect" button. The browse/discovery surface.</li>
+    </ol>
+  </div>
+</body>
+</html>

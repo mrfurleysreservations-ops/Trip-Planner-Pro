@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Supplies Tab — Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #eae3da;
+    color: #1a1a1a;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+  h1.page-h1 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .page-sub {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+
+  .phones {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .phone-col { display: flex; flex-direction: column; align-items: center; width: 420px; }
+  .phone-label {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4a7c59;
+    margin-bottom: 10px;
+  }
+
+  /* ── Phone frame ── */
+  .phone {
+    width: 420px;
+    background: #f5f0eb;
+    border-radius: 28px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    overflow: hidden;
+    position: relative;
+    min-height: 820px;
+    border: 1px solid #d8cfc2;
+  }
+
+  /* ── Accent: camping trip = forest green ── */
+  .accent  { color: #4a7c59; }
+  .accent-bg { background: #4a7c59; }
+  .accent-tint { background: #4a7c5914; }
+  .accent-tint-strong { background: #4a7c5926; }
+
+  /* ── Sticky page header ── */
+  .page-header {
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(12px);
+    padding: 12px 16px 0;
+    border-bottom: 1px solid #e8e8e8;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+  .back-btn {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    border: 1px solid #e8e8e8;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .page-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    flex: 1;
+  }
+  .header-action-btn {
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: #4a7c59;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    border: none;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .header-action-counter {
+    padding: 8px 12px;
+    border-radius: 20px;
+    background: #4a7c5914;
+    color: #4a7c59;
+    font-weight: 700;
+    font-size: 12px;
+    border: 1px solid #4a7c5933;
+  }
+
+  /* ── Segmented control ── */
+  .seg {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #e8e8e8;
+  }
+  .seg-btn {
+    flex: 1;
+    padding: 12px 0;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: #777;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+  }
+  .seg-btn.active {
+    color: #4a7c59;
+    font-weight: 700;
+    border-bottom-color: #4a7c59;
+  }
+
+  /* ── Scrolling body ── */
+  .body {
+    padding: 14px 16px 40px;
+  }
+
+  /* ── Day header ── */
+  .day-hdr {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #888;
+    text-transform: uppercase;
+    margin: 6px 2px 8px;
+  }
+  .day-hdr:first-child { margin-top: 0; }
+
+  /* ── Meal card ── */
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e8e8e8;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  }
+  .meal-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .meal-time {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: #4a7c59;
+    background: #4a7c5914;
+    padding: 4px 8px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+  .meal-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    flex: 1;
+    line-height: 1.25;
+    padding-top: 2px;
+  }
+  .chev {
+    color: #bbb;
+    font-size: 18px;
+    padding-top: 2px;
+  }
+  .meal-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #f2edea;
+    color: #555;
+  }
+  .pill.attend { background: #eaf2ec; color: #4a7c59; }
+  .pill.items  { background: #fff3e0; color: #b8651d; }
+  .pill.empty  { background: #fde7e1; color: #c75a2a; font-weight: 700; }
+  .pill.mine   { background: #4a7c5926; color: #2d5a3a; font-weight: 700; }
+  .claim-ava {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .ava-joe  { background: #4a7c59; }
+  .ava-sar  { background: #c75a2a; }
+  .ava-mik  { background: #5a7cb5; }
+  .ava-ell  { background: #b55a8c; }
+
+  /* ── Grocery section ── */
+  .gsection-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 16px 2px 8px;
+  }
+  .gsection-hdr:first-child { margin-top: 4px; }
+  .gsection-name {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #4a7c59;
+    text-transform: uppercase;
+  }
+  .gsection-count {
+    font-size: 11px;
+    color: #999;
+    font-weight: 600;
+  }
+  .grow {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e8e8e8;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .gcheck {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    border: 2px solid #c5c0b7;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff;
+  }
+  .gcheck.checked {
+    background: #4a7c59;
+    border-color: #4a7c59;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .grow.checked .gitem-name { text-decoration: line-through; color: #aaa; }
+  .grow.checked .gsource { opacity: 0.5; }
+  .gitem-main { flex: 1; min-width: 0; }
+  .gitem-name {
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.25;
+  }
+  .gsource {
+    font-size: 11px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .gqty {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #4a7c59;
+    flex-shrink: 0;
+  }
+
+  /* ── Grocery empty state ── */
+  .gempty {
+    text-align: center;
+    padding: 30px 14px;
+    color: #888;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ── Supplies card ── */
+  .scard {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e8e8e8;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  }
+  .stop {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .sname {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    flex: 1;
+    line-height: 1.3;
+  }
+  .sqty {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    background: #f2edea;
+    color: #555;
+    padding: 3px 8px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+  .smeta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .cat-chip {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 12px;
+    background: #4a7c5914;
+    color: #4a7c59;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .status-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .dot.needed    { background: #c75a2a; }
+  .dot.claimed   { background: #e8943a; }
+  .dot.purchased { background: #4a7c59; }
+  .needed-text    { color: #c75a2a; }
+  .claimed-text   { color: #b8651d; }
+  .purchased-text { color: #4a7c59; }
+
+  /* ── Annotations ── */
+  .annotations {
+    width: 420px;
+    margin-top: 16px;
+    padding: 16px 18px;
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e8e8e8;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .annotations h3 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 8px;
+    color: #4a7c59;
+  }
+  .annotations ul { padding-left: 18px; }
+  .annotations li { margin-bottom: 4px; color: #444; }
+  .annotations li strong { color: #1a1a1a; }
+
+  /* ── Sub-nav mockup at bottom ── */
+  .subnav {
+    background: #fff;
+    border-top: 1px solid #e8e8e8;
+    padding: 8px 4px 14px;
+    display: flex;
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 2px;
+    color: #999;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .nav-item.active { color: #4a7c59; }
+  .nav-icon { font-size: 18px; }
+</style>
+</head>
+<body>
+
+<h1 class="page-h1">Supplies Tab — Three Views</h1>
+<p class="page-sub">Camping trip: Joe + family, 2026-04-25 weekend. Joe has claimed Sat Breakfast &amp; Sun Pancake Breakfast.</p>
+
+<div class="phones">
+
+  <!-- ════════════════ VIEW 1: MEALS ════════════════ -->
+  <div class="phone-col">
+    <div class="phone-label">1. Meals</div>
+    <div class="phone">
+      <div class="page-header">
+        <div class="header-row">
+          <div class="back-btn">‹</div>
+          <div class="page-title">Supplies</div>
+          <button class="header-action-btn">＋ Meal</button>
+        </div>
+        <div class="seg">
+          <button class="seg-btn active">Meals</button>
+          <button class="seg-btn">Grocery</button>
+          <button class="seg-btn">Supplies</button>
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="day-hdr">Saturday · April 25</div>
+
+        <div class="card">
+          <div class="meal-top">
+            <div class="meal-time">8:00 AM</div>
+            <div class="meal-title">Campsite Breakfast</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="meal-meta">
+            <span class="pill attend">👥 6 attending</span>
+            <span class="pill mine"><span class="claim-ava ava-joe">JM</span> You're buying</span>
+            <span class="pill items">5 items</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="meal-top">
+            <div class="meal-time">12:30 PM</div>
+            <div class="meal-title">Trail Lunch</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="meal-meta">
+            <span class="pill attend">👥 4 attending</span>
+            <span class="pill empty">Needs a buyer</span>
+            <span class="pill">Tap to add items</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="meal-top">
+            <div class="meal-time">6:30 PM</div>
+            <div class="meal-title">Group Dinner · Foil Packs</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="meal-meta">
+            <span class="pill attend">👥 8 attending</span>
+            <span class="pill"><span class="claim-ava ava-sar">SP</span> Sarah</span>
+            <span class="pill items">7 items</span>
+          </div>
+        </div>
+
+        <div class="day-hdr">Sunday · April 26</div>
+
+        <div class="card">
+          <div class="meal-top">
+            <div class="meal-time">9:00 AM</div>
+            <div class="meal-title">Pancake Breakfast</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="meal-meta">
+            <span class="pill attend">👥 6 attending</span>
+            <span class="pill mine"><span class="claim-ava ava-joe">JM</span> You're buying</span>
+            <span class="pill items">4 items</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="subnav">
+        <div class="nav-item"><span class="nav-icon">📅</span>Itinerary</div>
+        <div class="nav-item"><span class="nav-icon">💰</span>Expenses</div>
+        <div class="nav-item"><span class="nav-icon">🧳</span>Packing</div>
+        <div class="nav-item active"><span class="nav-icon">🛒</span>Supplies</div>
+        <div class="nav-item"><span class="nav-icon">⋯</span>More</div>
+      </div>
+    </div>
+
+    <div class="annotations">
+      <h3>What's on screen</h3>
+      <ul>
+        <li><strong>Header right button</strong> creates a new meal event (becomes `event_type='meal'` on itinerary).</li>
+        <li><strong>Time pill</strong> comes from the itinerary event's start_time.</li>
+        <li><strong>"X attending"</strong> is a live count from `event_participants`, honoring family auto-attend.</li>
+        <li><strong>Claim pills</strong> — green = you're buying, avatar = someone else, red = unclaimed.</li>
+        <li><strong>Tap a card</strong> → bottom-sheet to edit ingredients + toggle "I'll buy this".</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════════════ VIEW 2: GROCERY LIST ════════════════ -->
+  <div class="phone-col">
+    <div class="phone-label">2. Grocery List</div>
+    <div class="phone">
+      <div class="page-header">
+        <div class="header-row">
+          <div class="back-btn">‹</div>
+          <div class="page-title">Supplies</div>
+          <span class="header-action-counter">2 meals claimed</span>
+        </div>
+        <div class="seg">
+          <button class="seg-btn">Meals</button>
+          <button class="seg-btn active">Grocery</button>
+          <button class="seg-btn">Supplies</button>
+        </div>
+      </div>
+
+      <div class="body">
+
+        <div class="gsection-hdr">
+          <div class="gsection-name">Produce</div>
+          <div class="gsection-count">3 items</div>
+        </div>
+        <div class="grow">
+          <div class="gcheck"></div>
+          <div class="gitem-main">
+            <div class="gitem-name">Bell peppers</div>
+            <div class="gsource">for Sat Breakfast</div>
+          </div>
+          <div class="gqty">4 ea</div>
+        </div>
+        <div class="grow checked">
+          <div class="gcheck checked">✓</div>
+          <div class="gitem-main">
+            <div class="gitem-name">Onions</div>
+            <div class="gsource">for Sat Breakfast</div>
+          </div>
+          <div class="gqty">2 ea</div>
+        </div>
+        <div class="grow">
+          <div class="gcheck"></div>
+          <div class="gitem-main">
+            <div class="gitem-name">Blueberries</div>
+            <div class="gsource">for Sun Pancakes</div>
+          </div>
+          <div class="gqty">1 pint</div>
+        </div>
+
+        <div class="gsection-hdr">
+          <div class="gsection-name">Meat &amp; Seafood</div>
+          <div class="gsection-count">1 item</div>
+        </div>
+        <div class="grow">
+          <div class="gcheck"></div>
+          <div class="gitem-main">
+            <div class="gitem-name">Bacon</div>
+            <div class="gsource">for Sat Breakfast</div>
+          </div>
+          <div class="gqty">2 lb</div>
+        </div>
+
+        <div class="gsection-hdr">
+          <div class="gsection-name">Dairy &amp; Eggs</div>
+          <div class="gsection-count">3 items</div>
+        </div>
+        <div class="grow">
+          <div class="gcheck"></div>
+          <div class="gitem-main">
+            <div class="gitem-name">Eggs</div>
+            <div class="gsource">Sat Breakfast · Sun Pancakes</div>
+          </div>
+          <div class="gqty">18 ea</div>
+        </div>
+        <div class="grow">
+          <div class="gcheck"></div>
+          <div class="gitem-main">
+            <div class="gitem-name">Butter</div>
+            <div class="gsource">for Sun Pancakes</div>
+          </div>
+          <div class="gqty">1 lb</div>
+        </div>
+        <div class="grow checked">
+          <div class="gcheck checked">✓</div>
+          <div class="gitem-main">
+            <div class="gitem-name">Milk</div>
+            <div class="gsource">for Sun Pancakes</div>
+          </div>
+          <div class="gqty">1 gal</div>
+        </div>
+
+        <div class="gsection-hdr">
+          <div class="gsection-name">Pantry</div>
+          <div class="gsection-count">2 items</div>
+        </div>
+        <div class="grow">
+          <div class="gcheck"></div>
+          <div class="gitem-main">
+            <div class="gitem-name">Pancake mix</div>
+            <div class="gsource">for Sun Pancakes</div>
+          </div>
+          <div class="gqty">2 lb</div>
+        </div>
+        <div class="grow">
+          <div class="gcheck"></div>
+          <div class="gitem-main">
+            <div class="gitem-name">Maple syrup</div>
+            <div class="gsource">for Sun Pancakes</div>
+          </div>
+          <div class="gqty">1 bottle</div>
+        </div>
+      </div>
+
+      <div class="subnav">
+        <div class="nav-item"><span class="nav-icon">📅</span>Itinerary</div>
+        <div class="nav-item"><span class="nav-icon">💰</span>Expenses</div>
+        <div class="nav-item"><span class="nav-icon">🧳</span>Packing</div>
+        <div class="nav-item active"><span class="nav-icon">🛒</span>Supplies</div>
+        <div class="nav-item"><span class="nav-icon">⋯</span>More</div>
+      </div>
+    </div>
+
+    <div class="annotations">
+      <h3>What's on screen</h3>
+      <ul>
+        <li><strong>Derived, not stored</strong> — items are computed every load from the meals Joe claimed × each meal's attending count.</li>
+        <li><strong>Sections are store aisles</strong> in shopping order. Empty sections are hidden.</li>
+        <li><strong>Eggs row combines</strong> two meals (Sat + Sun) because Joe claimed both — qty auto-summed.</li>
+        <li><strong>Checkboxes are personal</strong> — stored in `grocery_checkoffs`, scoped to Joe. Sarah's checkboxes stay her own.</li>
+        <li><strong>Empty state</strong>: if Joe hasn't claimed any meals, shows "Claim a meal on the Meals tab to build your list."</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════════════ VIEW 3: SUPPLIES ════════════════ -->
+  <div class="phone-col">
+    <div class="phone-label">3. Supplies</div>
+    <div class="phone">
+      <div class="page-header">
+        <div class="header-row">
+          <div class="back-btn">‹</div>
+          <div class="page-title">Supplies</div>
+          <button class="header-action-btn">＋ Supply</button>
+        </div>
+        <div class="seg">
+          <button class="seg-btn">Meals</button>
+          <button class="seg-btn">Grocery</button>
+          <button class="seg-btn active">Supplies</button>
+        </div>
+      </div>
+
+      <div class="body">
+
+        <div class="day-hdr">Fuel</div>
+        <div class="scard">
+          <div class="stop">
+            <div class="sname">Firewood</div>
+            <div class="sqty">3 bundles</div>
+          </div>
+          <div class="smeta">
+            <span class="cat-chip">Fuel</span>
+            <span class="status-dot purchased-text"><span class="dot purchased"></span>Purchased</span>
+            <span class="pill"><span class="claim-ava ava-sar">SP</span> Sarah</span>
+          </div>
+        </div>
+        <div class="scard">
+          <div class="stop">
+            <div class="sname">Propane canisters</div>
+            <div class="sqty">×4</div>
+          </div>
+          <div class="smeta">
+            <span class="cat-chip">Fuel</span>
+            <span class="status-dot needed-text"><span class="dot needed"></span>Needed</span>
+            <span class="pill empty">Needs a buyer</span>
+          </div>
+        </div>
+
+        <div class="day-hdr">Consumables</div>
+        <div class="scard">
+          <div class="stop">
+            <div class="sname">Ice</div>
+            <div class="sqty">3 bags</div>
+          </div>
+          <div class="smeta">
+            <span class="cat-chip">Consumables</span>
+            <span class="status-dot claimed-text"><span class="dot claimed"></span>Claimed</span>
+            <span class="pill mine"><span class="claim-ava ava-joe">JM</span> You</span>
+          </div>
+        </div>
+        <div class="scard">
+          <div class="stop">
+            <div class="sname">AA batteries</div>
+            <div class="sqty">1 pack</div>
+          </div>
+          <div class="smeta">
+            <span class="cat-chip">Consumables</span>
+            <span class="status-dot purchased-text"><span class="dot purchased"></span>Purchased</span>
+            <span class="pill"><span class="claim-ava ava-mik">MK</span> Mike</span>
+          </div>
+        </div>
+
+        <div class="day-hdr">Disposables</div>
+        <div class="scard">
+          <div class="stop">
+            <div class="sname">Paper plates</div>
+            <div class="sqty">1 pack</div>
+          </div>
+          <div class="smeta">
+            <span class="cat-chip">Disposables</span>
+            <span class="status-dot claimed-text"><span class="dot claimed"></span>Claimed</span>
+            <span class="pill mine"><span class="claim-ava ava-joe">JM</span> You</span>
+          </div>
+        </div>
+        <div class="scard">
+          <div class="stop">
+            <div class="sname">Trash bags</div>
+            <div class="sqty">1 roll</div>
+          </div>
+          <div class="smeta">
+            <span class="cat-chip">Disposables</span>
+            <span class="status-dot needed-text"><span class="dot needed"></span>Needed</span>
+            <span class="pill empty">Needs a buyer</span>
+          </div>
+        </div>
+
+        <div class="day-hdr">Toiletries</div>
+        <div class="scard">
+          <div class="stop">
+            <div class="sname">Sunscreen</div>
+            <div class="sqty">×2</div>
+          </div>
+          <div class="smeta">
+            <span class="cat-chip">Toiletries</span>
+            <span class="status-dot claimed-text"><span class="dot claimed"></span>Claimed</span>
+            <span class="pill"><span class="claim-ava ava-ell">EV</span> Ellie</span>
+          </div>
+        </div>
+        <div class="scard">
+          <div class="stop">
+            <div class="sname">Bug spray</div>
+            <div class="sqty">×3</div>
+          </div>
+          <div class="smeta">
+            <span class="cat-chip">Toiletries</span>
+            <span class="status-dot needed-text"><span class="dot needed"></span>Needed</span>
+            <span class="pill empty">Needs a buyer</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="subnav">
+        <div class="nav-item"><span class="nav-icon">📅</span>Itinerary</div>
+        <div class="nav-item"><span class="nav-icon">💰</span>Expenses</div>
+        <div class="nav-item"><span class="nav-icon">🧳</span>Packing</div>
+        <div class="nav-item active"><span class="nav-icon">🛒</span>Supplies</div>
+        <div class="nav-item"><span class="nav-icon">⋯</span>More</div>
+      </div>
+    </div>
+
+    <div class="annotations">
+      <h3>What's on screen</h3>
+      <ul>
+        <li><strong>Six categories</strong>: fuel, consumables, disposables, toiletries, event, other. Empty categories are hidden (no "Event" row on a camping trip).</li>
+        <li><strong>Durable gear is NOT here</strong> — tents, stoves, chairs, sleeping bags live on the Packing tab under a new Gear view. Supplies = bought/consumed for this trip only.</li>
+        <li><strong>Three statuses</strong> — red dot (Needed), amber (Claimed), green (Purchased). Claim toggles Needed → Claimed; buyer marks it Purchased.</li>
+        <li><strong>One claimer per item</strong> (v1). "Everyone bring your own X" lives in v2.</li>
+        <li><strong>Where notes land</strong> — finalizing a supply-type note creates a row here with `source_note_id` → back to the note.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

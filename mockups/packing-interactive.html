@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Packing — Interactive Mockup (exactly what the refactor delivers)</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8f8f8;
+    --headerBg: #fff;
+    --text: #1a1a1a;
+    --muted: #777;
+    --accent: #e8943a;
+    --accent2: #c75a2a;
+    --card: rgba(0,0,0,0.03);
+    --cardBorder: #e0e0e0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #c8ccd4; font-family: 'DM Sans', sans-serif; color: var(--text); }
+  body { display: flex; flex-direction: column; align-items: center; padding: 28px 20px 60px; gap: 16px; min-height: 100vh; }
+
+  .hint { font-size: 12px; color: #444; text-align: center; max-width: 420px; line-height: 1.5; }
+  .hint strong { color: var(--accent2); }
+
+  /* Phone */
+  .phone {
+    width: 400px; height: 840px;
+    background: var(--bg); border-radius: 32px;
+    overflow: hidden; position: relative;
+    box-shadow: 0 22px 55px rgba(0,0,0,0.25);
+  }
+  .phone-scroll {
+    width: 100%; height: 100%;
+    overflow-y: auto; overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ─── STICKY TOP ─── */
+  .sticky-top {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--headerBg);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--cardBorder);
+  }
+
+  /* Row 1 — header */
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px 10px; gap: 8px;
+  }
+  .back {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(232,148,58,0.1); border: 1.5px solid rgba(232,148,58,0.25);
+    color: var(--accent); font-size: 22px; font-weight: 700;
+    cursor: pointer; padding: 0; transition: all 0.15s;
+  }
+  .back:hover { background: rgba(232,148,58,0.18); border-color: var(--accent); }
+  .back:active { transform: scale(0.92); }
+  .page-title {
+    flex: 1; margin: 0 0 0 10px;
+    font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 20px; color: var(--text);
+  }
+  .style-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(232,148,58,0.14);
+    padding: 6px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; color: var(--accent);
+  }
+
+  /* Row 2 — Person tabs (underline style, preserved from current code) */
+  .person-tabs {
+    display: flex; gap: 0;
+    padding: 0 16px;
+    overflow-x: auto; scrollbar-width: none;
+    background: var(--bg);
+    border-top: 1px solid var(--cardBorder);
+  }
+  .person-tabs::-webkit-scrollbar { display: none; }
+  .person-tab {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px;
+    background: none; border: none; cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .person-tab.active { border-bottom-color: var(--accent); }
+  .person-tab .pname { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .person-tab.active .pname { font-weight: 700; color: var(--text); }
+  .person-tab .host-badge {
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    background: rgba(232,148,58,0.2); color: var(--accent);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  .person-tab .mini-avatar {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 11px; font-weight: 700;
+  }
+
+  /* Row 3 — View mode pill (canonical style) */
+  .pill-bar {
+    display: flex; justify-content: center;
+    padding: 10px 16px 10px;
+  }
+  .pill {
+    display: inline-flex;
+    background: var(--card);
+    border: 1.5px solid var(--cardBorder);
+    border-radius: 20px;
+  }
+  .pill button {
+    background: transparent; border: none;
+    padding: 8px 18px; border-radius: 20px;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .pill button.active {
+    background: var(--accent); color: #fff; font-weight: 700;
+  }
+
+  /* Body */
+  .body {
+    padding: 14px 16px 80px;
+  }
+
+  /* Style banner (shows packing style description) */
+  .style-banner {
+    background: rgba(232,148,58,0.06);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px; border-radius: 8px;
+    font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.5;
+  }
+  .style-banner strong { color: var(--accent); }
+
+  /* Step pill (walkthrough) */
+  .step-pill {
+    font-size: 11px; color: var(--muted); font-weight: 600;
+    background: var(--card); padding: 4px 10px; border-radius: 14px;
+    display: inline-block; margin-bottom: 10px;
+  }
+
+  /* Outfit card */
+  .outfit-card {
+    background: #fff; border: 1px solid var(--cardBorder);
+    border-radius: 14px; padding: 14px;
+    margin-bottom: 12px;
+  }
+  .outfit-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 10px; margin-bottom: 10px;
+  }
+  .outfit-head h4 {
+    margin: 0; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 15px;
+  }
+  .outfit-head .events-sub {
+    margin: 2px 0 0; font-size: 11px; color: var(--muted);
+  }
+  .dress-badge {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    background: rgba(232,148,58,0.18); color: var(--accent);
+    padding: 3px 9px; border-radius: 10px; white-space: nowrap;
+  }
+
+  .outfit-inspo {
+    width: 100%; height: 120px; border-radius: 10px;
+    background: linear-gradient(135deg, #ffe8d6 0%, #ffcab1 50%, #e68a00 100%);
+    margin-bottom: 12px; position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.7);
+    font-size: 40px;
+  }
+  .outfit-inspo .inspo-caption {
+    position: absolute; bottom: 8px; left: 10px;
+    font-size: 10px; color: rgba(255,255,255,0.8);
+    background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;
+  }
+
+  /* Pack rows */
+  .pack-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px dashed rgba(0,0,0,0.08);
+  }
+  .pack-row:last-child { border-bottom: none; }
+  .pack-row .chk {
+    width: 20px; height: 20px; border-radius: 4px;
+    border: 2px solid var(--accent); flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 12px; cursor: pointer; background: #fff;
+  }
+  .pack-row .chk.on { background: var(--accent); }
+  .pack-row .label {
+    flex: 1; font-size: 13px; color: var(--text); font-family: 'DM Sans', sans-serif;
+  }
+  .pack-row.off .label { color: var(--muted); text-decoration: line-through; }
+  .pack-row .multi {
+    font-size: 10px; color: #e68a00; font-weight: 700;
+    background: rgba(230,138,0,0.1); padding: 2px 6px; border-radius: 6px;
+  }
+  .pack-row .menu {
+    background: transparent; border: none; color: var(--muted); cursor: pointer;
+    font-size: 16px; padding: 2px 6px;
+  }
+
+  /* Dress-code suggestion chips */
+  .suggestions-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); margin: 14px 0 6px;
+  }
+  .sugg-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .sugg-chip {
+    font-size: 12px; font-weight: 600; color: var(--accent);
+    background: rgba(232,148,58,0.1); border: 1px dashed rgba(232,148,58,0.4);
+    padding: 5px 10px; border-radius: 14px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .sugg-chip:hover { background: rgba(232,148,58,0.18); }
+
+  /* Reuse outfit row */
+  .reuse-row {
+    margin-top: 12px; padding: 10px 12px;
+    background: var(--card); border-radius: 8px;
+    display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted);
+  }
+  .reuse-row select {
+    margin-left: auto; padding: 4px 8px; font-size: 12px;
+    border: 1px solid var(--cardBorder); border-radius: 6px; background: #fff;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Walkthrough footer nav (fixed, preserved from current code) */
+  .walk-foot {
+    position: absolute;
+    bottom: 56px; left: 0; right: 0;
+    padding: 12px 16px;
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
+    display: flex; gap: 8px; z-index: 50;
+  }
+  .walk-foot button {
+    flex: 1; padding: 14px; border-radius: 14px;
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+    cursor: pointer; border: none;
+  }
+  .walk-foot .prev {
+    background: var(--card); color: var(--muted);
+    border: 1px solid var(--cardBorder);
+  }
+  .walk-foot .next {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    color: #fff; box-shadow: 0 4px 14px rgba(232,148,58,0.35);
+  }
+
+  /* Pack & Go view content */
+  .progress-wrap { margin: 0 0 14px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .progress-label strong { color: var(--text); font-weight: 700; }
+  .progress-bar { height: 8px; background: var(--card); border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%); }
+  .progress-meta { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  .section-title {
+    font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px; margin: 16px 0 8px;
+    color: var(--text); display: flex; justify-content: space-between; align-items: center;
+  }
+  .section-title .count { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+  .bag-section {
+    background: #fff; border: 1px solid var(--cardBorder); border-radius: 12px;
+    padding: 10px 14px; margin-bottom: 8px;
+  }
+  .bag-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 12px; color: var(--muted); }
+  .bag-head strong { color: var(--text); font-weight: 700; font-size: 13px; }
+
+  /* Grouping view */
+  .group-card {
+    background: #fff; border: 1px solid var(--cardBorder); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 10px;
+    cursor: pointer;
+  }
+  .group-card:hover { border-color: var(--accent); }
+  .group-card h4 { margin: 0 0 3px; font-family: 'Outfit'; font-weight: 700; font-size: 14px; }
+  .group-card .events { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .group-card .meta { display: flex; gap: 8px; align-items: center; }
+
+  /* Sub-nav */
+  .sub-nav {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 56px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--cardBorder);
+    display: flex; align-items: center; justify-content: space-around; z-index: 100;
+  }
+  .sub-nav button {
+    background: transparent; border: none;
+    font-size: 10px; font-weight: 600; color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer;
+  }
+  .sub-nav button.active { color: var(--accent); font-weight: 700; }
+  .sub-nav button span:first-child { font-size: 17px; }
+
+  .scroll-anno {
+    position: absolute; top: 48%; transform: rotate(-90deg);
+    left: -42px; font-size: 11px; color: #333;
+    letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .anno-list {
+    max-width: 420px; background: #fff; border-radius: 12px; padding: 14px 18px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06); font-size: 12px; color: #333; line-height: 1.6;
+  }
+  .anno-list h4 { margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 13px; color: var(--accent2); }
+  .anno-list .check { color: #2e7d32; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="hint">
+  <strong>Interactive packing mockup — try it:</strong><br>
+  Switch people via the <strong>underline tabs</strong> · toggle between <strong>Group / Outfits / Pack & Go</strong> · scroll to see the sticky header stay put · check items off · click Prev / Next in walkthrough.
+</div>
+
+<div style="position: relative;">
+  <div class="scroll-anno">↑ sticky · body scrolls ↓</div>
+  <div class="phone">
+    <div class="phone-scroll" id="scrollArea">
+      <!-- ─── STICKY TOP ─── -->
+      <div class="sticky-top">
+        <!-- Row 1 — Header -->
+        <div class="page-header">
+          <button class="back" title="Back to trip hub" onclick="alert('Back → /trip/[id] (trip hub)')">←</button>
+          <h1 class="page-title">Packing</h1>
+          <div class="style-badge">🎯 Planner</div>
+        </div>
+
+        <!-- Row 2 — Person tabs -->
+        <div class="person-tabs" id="personTabs"></div>
+
+        <!-- Row 3 — View mode pill (canonical style) -->
+        <div class="pill-bar">
+          <div class="pill">
+            <button id="viewGroup">Group</button>
+            <button id="viewWalk" class="active">Outfits</button>
+            <button id="viewPack">Pack &amp; Go ✓</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── BODY ─── -->
+      <div class="body">
+        <div class="style-banner" id="styleBanner">
+          <strong>Planner style:</strong> Organized by day, grouped by dress code. You're in outfits mode — walk through event by event.
+        </div>
+
+        <!-- Walkthrough view (default) -->
+        <div id="walkView"></div>
+        <!-- Grouping view -->
+        <div id="groupView" style="display:none;"></div>
+        <!-- Pack & Go view -->
+        <div id="packView" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Walkthrough fixed bottom nav (preserved from current code) -->
+    <div class="walk-foot" id="walkFoot">
+      <button class="prev" id="btnPrev">← Prev</button>
+      <button class="next" id="btnNext">Next →</button>
+    </div>
+
+    <!-- Sub-nav -->
+    <div class="sub-nav">
+      <button><span>🗓</span><span>Itinerary</span></button>
+      <button><span>💸</span><span>Expenses</span></button>
+      <button class="active"><span>🎒</span><span>Packing</span></button>
+      <button><span>📝</span><span>Notes</span></button>
+      <button><span>🍽</span><span>Meals</span></button>
+      <button><span>👥</span><span>Group</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="anno-list">
+  <h4>✅ Behaviors preserved</h4>
+  <div>
+    <span class="check">✓</span> Person tabs (Joe with Host badge, Sarah, Emma, Noah)<br>
+    <span class="check">✓</span> All 3 view modes: Group / Outfits (walkthrough) / Pack & Go<br>
+    <span class="check">✓</span> Walkthrough steps with outfit inspo images<br>
+    <span class="check">✓</span> Multi-use item detection (↻ ×2 badge on swim trunks)<br>
+    <span class="check">✓</span> Dress-code suggestion chips (click "+ sunscreen" etc.)<br>
+    <span class="check">✓</span> Reuse outfit dropdown<br>
+    <span class="check">✓</span> Prev / Next walkthrough nav (fixed, above sub-nav)<br>
+    <span class="check">✓</span> Pack & Go consolidation with bag hierarchy<br>
+    <span class="check">✓</span> Style banner explaining current mode<br>
+    <span class="check">✓</span> No FAB (adds happen inside walkthrough — unchanged)
+  </div>
+  <h4 style="margin-top:12px;">🔀 Only three things change from today</h4>
+  <div>
+    <span class="check">1.</span> Header + person tabs + view mode pill pinned in one sticky container<br>
+    <span class="check">2.</span> View mode control restyled from underline tabs → canonical pill (matches other tabs)<br>
+    <span class="check">3.</span> Back button upgraded to 40x40 circular accent-tinted (same handler: router.push to trip hub)
+  </div>
+  <h4 style="margin-top:12px;">❌ NOT changed</h4>
+  <div>
+    Person tabs keep their underline-tab styling (they're a different control than the view pill — distinct visual is intentional). All walkthrough body content, outfit logic, bag hierarchy, style-detection, onboarding gate — untouched.
+  </div>
+</div>
+
+<script>
+  // ─── Data ────────────
+  const PEOPLE = [
+    { id: "joe", name: "Joe", initial: "J", color: "#2188a8", host: true },
+    { id: "sarah", name: "Sarah", initial: "S", color: "#7b1fa2", host: false },
+    { id: "emma", name: "Emma", initial: "E", color: "#e67e22", host: false },
+    { id: "noah", name: "Noah", initial: "N", color: "#c62828", host: false },
+  ];
+
+  const WALK_STEPS = {
+    joe: [
+      { label: "Tue · Casual", sub: "Molokini snorkel + lunch", dress: "Casual",
+        items: [
+          { name: "Swim trunks", packed: true, multi: 2 },
+          { name: "Rash guard", packed: true },
+          { name: "Reef-safe sunscreen", packed: false },
+          { name: "Goggles", packed: false },
+          { name: "Casual shorts + t-shirt", packed: false },
+        ],
+        suggestions: ["+ sunscreen", "+ hat", "+ towel", "+ flip-flops"],
+      },
+      { label: "Tue · Resort Casual", sub: "Mama's Fish House", dress: "Resort Casual",
+        items: [
+          { name: "Linen pants", packed: true },
+          { name: "Aloha shirt", packed: false },
+          { name: "Dress shoes", packed: false },
+        ],
+        suggestions: ["+ nice belt", "+ watch", "+ cologne"],
+      },
+      { label: "Wed · Casual", sub: "Road to Hana", dress: "Casual",
+        items: [
+          { name: "Hiking shoes", packed: false },
+          { name: "Sunhat", packed: false },
+          { name: "Day pack", packed: false },
+        ],
+        suggestions: ["+ bug spray", "+ water bottle", "+ snacks"],
+      },
+    ],
+    sarah: [
+      { label: "Tue · Casual", sub: "Molokini snorkel + lunch", dress: "Casual",
+        items: [
+          { name: "One-piece swimsuit", packed: true },
+          { name: "Rash guard", packed: false },
+          { name: "Beach cover-up", packed: false },
+        ],
+        suggestions: ["+ sunscreen", "+ hat", "+ sunglasses"],
+      },
+    ],
+    emma: [
+      { label: "Tue · Casual", sub: "Molokini snorkel + lunch", dress: "Casual",
+        items: [
+          { name: "Kids swimsuit", packed: false },
+          { name: "Little rash guard", packed: false },
+          { name: "Water shoes", packed: false },
+        ],
+        suggestions: ["+ goggles", "+ sandhat", "+ snacks"],
+      },
+    ],
+    noah: [
+      { label: "Tue · Casual", sub: "Molokini snorkel + lunch", dress: "Casual",
+        items: [
+          { name: "Kids swim trunks", packed: true },
+          { name: "Little rash guard", packed: false },
+        ],
+        suggestions: ["+ goggles", "+ floaties"],
+      },
+    ],
+  };
+
+  const GROUP_VIEW = {
+    joe: [
+      { label: "Casual · Tue Jun 9", events: "Molokini snorkel · Lunch at Coconut's", count: 5, dress: "Casual" },
+      { label: "Resort Casual · Tue Jun 9", events: "Mama's Fish House", count: 3, dress: "Resort Casual" },
+      { label: "Casual · Wed Jun 10", events: "Road to Hana", count: 3, dress: "Casual" },
+      { label: "Casual · Thu Jun 11", events: "Beach day", count: 4, dress: "Casual" },
+      { label: "Smart Casual · Thu Jun 11", events: "Old Lahaina Luau", count: 4, dress: "Smart Casual" },
+    ],
+    sarah: [
+      { label: "Casual · Tue Jun 9", events: "Molokini snorkel", count: 3, dress: "Casual" },
+    ],
+    emma: [
+      { label: "Casual · Tue Jun 9", events: "Molokini snorkel", count: 3, dress: "Casual" },
+    ],
+    noah: [
+      { label: "Casual · Tue Jun 9", events: "Molokini snorkel", count: 2, dress: "Casual" },
+    ],
+  };
+
+  const PACK_VIEW = {
+    joe: {
+      packed: 14, total: 38, percent: 37,
+      meta: "38 items · 6 multi-use · 5 outfit groups",
+      sections: [
+        { bag: "🎒 Carry-on", sub: "Electronics cube", items: [
+          { name: "Phone charger", packed: true },
+          { name: "Kindle", packed: true },
+          { name: "Headphones", packed: false },
+        ]},
+        { bag: "🧳 Main suitcase", sub: "Clothes packing cube", items: [
+          { name: "Swim trunks", packed: true, multi: 2 },
+          { name: "Linen pants", packed: true },
+          { name: "Aloha shirt", packed: false },
+          { name: "Dress shoes", packed: false },
+          { name: "Hiking shoes", packed: false },
+        ]},
+        { bag: "🧴 Main suitcase", sub: "Toiletries pouch", items: [
+          { name: "Reef-safe sunscreen", packed: false },
+          { name: "Toothbrush", packed: false },
+        ]},
+        { bag: "❓ Unassigned", sub: "Pick a bag", items: [
+          { name: "Sunhat", packed: false },
+          { name: "Day pack", packed: false },
+        ]},
+        { bag: "🔔 Don't forget", sub: "", items: [
+          { name: "Passport / ID", packed: false },
+          { name: "Medications", packed: false },
+        ]},
+      ],
+    },
+    sarah: { packed: 3, total: 12, percent: 25, meta: "12 items · 2 outfit groups",
+      sections: [{ bag: "🧳 Main suitcase", sub: "Clothes", items: [
+        { name: "One-piece swimsuit", packed: true },
+        { name: "Rash guard", packed: false },
+      ]}],
+    },
+    emma: { packed: 0, total: 9, percent: 0, meta: "9 items · kid's bag",
+      sections: [{ bag: "🎒 Emma's small bag", sub: "Clothes", items: [
+        { name: "Kids swimsuit", packed: false },
+        { name: "Water shoes", packed: false },
+      ]}],
+    },
+    noah: { packed: 1, total: 7, percent: 14, meta: "7 items · kid's bag",
+      sections: [{ bag: "🎒 Noah's bag", sub: "Clothes", items: [
+        { name: "Kids swim trunks", packed: true },
+        { name: "Little rash guard", packed: false },
+      ]}],
+    },
+  };
+
+  // ─── State ────────────
+  let activeMember = "joe";
+  let activeView = "walkthrough"; // grouping | walkthrough | pack
+  let stepIdx = 0;
+
+  // ─── Render ────────────
+  function renderPersonTabs() {
+    const el = document.getElementById("personTabs");
+    el.innerHTML = PEOPLE.map(p => {
+      const active = p.id === activeMember ? " active" : "";
+      return `<button class="person-tab${active}" data-id="${p.id}">
+        <span class="mini-avatar" style="background:${p.color};">${p.initial}</span>
+        <span class="pname">${p.name}</span>
+        ${p.host ? `<span class="host-badge">HOST</span>` : ""}
+      </button>`;
+    }).join("");
+    el.querySelectorAll(".person-tab").forEach(b => {
+      b.onclick = () => {
+        activeMember = b.dataset.id;
+        stepIdx = 0;
+        renderPersonTabs();
+        renderBody();
+      };
+    });
+  }
+
+  function renderPills() {
+    document.getElementById("viewGroup").classList.toggle("active", activeView === "grouping");
+    document.getElementById("viewWalk").classList.toggle("active", activeView === "walkthrough");
+    document.getElementById("viewPack").classList.toggle("active", activeView === "pack");
+  }
+
+  function renderBody() {
+    renderPills();
+    const showWalk = activeView === "walkthrough";
+    const showGroup = activeView === "grouping";
+    const showPack = activeView === "pack";
+
+    document.getElementById("walkView").style.display = showWalk ? "block" : "none";
+    document.getElementById("groupView").style.display = showGroup ? "block" : "none";
+    document.getElementById("packView").style.display = showPack ? "block" : "none";
+    document.getElementById("walkFoot").style.display = showWalk ? "flex" : "none";
+
+    const styleBanner = document.getElementById("styleBanner");
+    if (showGroup) styleBanner.innerHTML = `<strong>Planner style:</strong> Events auto-grouped by dress code per day. Tap a group to edit its outfit.`;
+    else if (showWalk) styleBanner.innerHTML = `<strong>Planner style:</strong> Walk through each event and build the outfit.`;
+    else styleBanner.innerHTML = `<strong>Planner style:</strong> Consolidated packing list. Check items off as you pack them.`;
+
+    if (showWalk) renderWalk();
+    if (showGroup) renderGroup();
+    if (showPack) renderPack();
+
+    document.getElementById("scrollArea").scrollTop = 0;
+  }
+
+  function renderWalk() {
+    const steps = WALK_STEPS[activeMember] || [];
+    if (!steps.length) {
+      document.getElementById("walkView").innerHTML = `<div style="text-align:center; padding: 40px 20px; color:var(--muted); font-size:13px;">No events for this person.</div>`;
+      return;
+    }
+    stepIdx = Math.min(stepIdx, steps.length - 1);
+    const s = steps[stepIdx];
+    const items = s.items.map((it, i) => `
+      <div class="pack-row ${it.packed ? 'off' : ''}" data-idx="${i}">
+        <span class="chk ${it.packed ? 'on' : ''}">${it.packed ? '✓' : ''}</span>
+        <span class="label">${it.name}</span>
+        ${it.multi ? `<span class="multi">↻ ×${it.multi}</span>` : ""}
+        <button class="menu">⋯</button>
+      </div>`).join("");
+    const suggs = s.suggestions.map(t => `<button class="sugg-chip">${t}</button>`).join("");
+    document.getElementById("walkView").innerHTML = `
+      <div class="step-pill">Step ${stepIdx + 1} of ${steps.length}</div>
+      <div class="outfit-card">
+        <div class="outfit-inspo">
+          👕
+          <span class="inspo-caption">inspo · unsplash</span>
+        </div>
+        <div class="outfit-head">
+          <div>
+            <h4>${s.label}</h4>
+            <p class="events-sub">${s.sub}</p>
+          </div>
+          <span class="dress-badge">${s.dress}</span>
+        </div>
+        ${items}
+        <div class="suggestions-label">Dress code suggestions</div>
+        <div class="sugg-chips">${suggs}</div>
+        <div class="reuse-row">
+          Reuse outfit from:
+          <select><option>— pick an event</option><option>Lunch at Coconut's</option><option>Stargazing</option></select>
+        </div>
+      </div>
+    `;
+    document.getElementById("walkView").querySelectorAll(".pack-row").forEach(r => {
+      r.querySelector(".chk").onclick = () => {
+        const i = parseInt(r.dataset.idx, 10);
+        steps[stepIdx].items[i].packed = !steps[stepIdx].items[i].packed;
+        renderWalk();
+      };
+    });
+    document.getElementById("btnPrev").onclick = () => { if (stepIdx > 0) { stepIdx--; renderWalk(); document.getElementById("scrollArea").scrollTop = 0; } };
+    document.getElementById("btnNext").textContent = stepIdx === steps.length - 1 ? "Pack & Go →" : "Next →";
+    document.getElementById("btnNext").onclick = () => {
+      if (stepIdx === steps.length - 1) { activeView = "pack"; renderBody(); }
+      else { stepIdx++; renderWalk(); document.getElementById("scrollArea").scrollTop = 0; }
+    };
+  }
+
+  function renderGroup() {
+    const groups = GROUP_VIEW[activeMember] || [];
+    const html = groups.map(g => `
+      <div class="group-card">
+        <h4>${g.label}</h4>
+        <div class="events">${g.events}</div>
+        <div class="meta">
+          <span class="dress-badge">${g.dress}</span>
+          <span style="font-size:11px; color:var(--muted);">${g.count} items</span>
+        </div>
+      </div>
+    `).join("");
+    document.getElementById("groupView").innerHTML = html || `<div style="text-align:center; padding:30px; color:var(--muted); font-size:13px;">No groups yet.</div>`;
+  }
+
+  function renderPack() {
+    const p = PACK_VIEW[activeMember];
+    if (!p) { document.getElementById("packView").innerHTML = ""; return; }
+    const sections = p.sections.map(s => {
+      const items = s.items.map(it => `
+        <div class="pack-row ${it.packed ? 'off' : ''}">
+          <span class="chk ${it.packed ? 'on' : ''}">${it.packed ? '✓' : ''}</span>
+          <span class="label">${it.name}</span>
+          ${it.multi ? `<span class="multi">↻ ×${it.multi}</span>` : ""}
+        </div>`).join("");
+      return `<div class="bag-section">
+        <div class="bag-head">
+          <strong>${s.bag}</strong>
+          ${s.sub ? `· ${s.sub}` : ""}
+        </div>
+        ${items}
+      </div>`;
+    }).join("");
+    document.getElementById("packView").innerHTML = `
+      <div class="progress-wrap">
+        <div class="progress-label"><strong>${p.packed} of ${p.total} packed</strong><span>${p.percent}%</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${p.percent}%"></div></div>
+        <div class="progress-meta">${p.meta}</div>
+      </div>
+      ${sections}
+    `;
+  }
+
+  // ─── Init ────────────
+  document.getElementById("viewGroup").onclick = () => { activeView = "grouping"; renderBody(); };
+  document.getElementById("viewWalk").onclick = () => { activeView = "walkthrough"; renderBody(); };
+  document.getElementById("viewPack").onclick = () => { activeView = "pack"; renderBody(); };
+
+  renderPersonTabs();
+  renderBody();
+</script>
+</body>
+</html>

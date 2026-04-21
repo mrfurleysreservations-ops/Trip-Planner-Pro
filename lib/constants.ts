@@ -361,7 +361,8 @@ export type RolePreference = (typeof ROLE_PREFERENCES)[number]["value"];
 export const NOTE_CONVERT_OPTIONS = [
   { value: "event", label: "Itinerary Event", icon: "📅", description: "Add to the schedule with a date & time" },
   { value: "packing", label: "Packing / Shopping Item", icon: "🛍️", description: "Something to buy, bring, or pack" },
-  { value: "meal", label: "Meal Idea", icon: "🍽️", description: "Restaurant, recipe, or food to plan" },
+  { value: "meal", label: "Meal", icon: "🍽️", description: "Restaurant, recipe, or food to plan" },
+  { value: "supply", label: "Supply", icon: "🛒", description: "Shared gear, fuel, or consumables the group needs" },
   { value: "reference", label: "Keep as Reference", icon: "📌", description: "Pin this note — no action needed" },
 ] as const;
 

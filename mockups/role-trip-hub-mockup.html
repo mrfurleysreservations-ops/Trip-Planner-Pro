@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Trip Hub by Role (Final) — Trip Planner Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: #111; color: #fff; padding: 24px; }
+
+  .page-title { font-family: 'Outfit', sans-serif; text-align: center; margin-bottom: 4px; font-size: 22px; font-weight: 800; }
+  .page-sub { text-align: center; color: #888; font-size: 13px; margin-bottom: 24px; }
+
+  .key-change { background: #1a2a1a; border: 1px solid #2a4a2a; border-radius: 12px; max-width: 1100px; margin: 0 auto 32px; padding: 18px 22px; }
+  .key-change h3 { color: #4caf50; font-family: 'Outfit', sans-serif; margin-bottom: 8px; font-size: 15px; }
+  .key-change p { color: #bbb; font-size: 13px; line-height: 1.6; }
+  .key-change strong { color: #fff; }
+  .key-change .pill { display: inline-block; background: rgba(76,175,80,0.2); color: #4caf50; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin: 0 3px; }
+  .key-change .pill.new { background: rgba(232,148,58,0.25); color: #e8943a; }
+
+  .row { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; max-width: 375px; }
+  .phone-label {
+    font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.10em;
+    margin-bottom: 8px; padding: 5px 14px; border-radius: 20px;
+  }
+  .phone-label.all-in { background: rgba(232,148,58,0.2); color: #e8943a; }
+  .phone-label.helping-out { background: rgba(0,151,167,0.2); color: #4dd0e1; }
+  .phone-label.just-here { background: rgba(149,117,205,0.2); color: #b39ddb; }
+  .phone-label.vibes-only { background: rgba(102,187,106,0.2); color: #81c784; }
+  .role-tagline { font-size: 11px; color: #888; margin-bottom: 8px; font-style: italic; text-align: center; max-width: 350px; }
+
+  .phone {
+    width: 375px; height: 812px; border: 2px solid #444; border-radius: 36px;
+    overflow: hidden; background: #f8f8f8; position: relative; flex-shrink: 0;
+    display: flex; flex-direction: column;
+  }
+
+  .app-header {
+    padding: 12px 18px 10px; background: #fff; border-bottom: 1px solid #e5e5e5; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .app-header .back { font-size: 22px; color: #555; }
+  .app-header .role-badge {
+    font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .app-header .role-badge.all-in { background: #fff1de; color: #c75a2a; }
+  .app-header .role-badge.helping-out { background: #e0f7fa; color: #00838f; }
+  .app-header .role-badge.just-here { background: #f3e5f5; color: #6a1b9a; }
+  .app-header .role-badge.vibes-only { background: #e8f5e9; color: #2e7d32; }
+
+  .content { flex: 1; overflow-y: auto; padding: 14px 16px 74px; font-family: 'Outfit', system-ui, sans-serif; color: #1a1a1a; }
+
+  .trip-card {
+    border-radius: 18px; padding: 12px 14px; margin-bottom: 12px;
+    background: linear-gradient(135deg, #fff 0%, #fafafa 100%);
+    border: 1px solid #e5e5e5;
+  }
+  .trip-card.all-in { background: linear-gradient(135deg, #fff8ef 0%, #fff1de 100%); border-color: rgba(232,148,58,0.3); }
+  .trip-card.helping-out { background: linear-gradient(135deg, #f0fafb 0%, #e0f7fa 100%); border-color: rgba(0,151,167,0.3); }
+  .trip-card.just-here { background: linear-gradient(135deg, #faf5fc 0%, #f3e5f5 100%); border-color: rgba(149,117,205,0.3); }
+  .trip-card.vibes-only { background: linear-gradient(135deg, #f1f8f2 0%, #e8f5e9 100%); border-color: rgba(102,187,106,0.3); }
+  .trip-name { font-size: 18px; font-weight: 800; line-height: 1.2; }
+  .trip-meta { font-size: 11.5px; color: #777; margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .section {
+    background: #fff; border: 1px solid #e5e5e5; border-radius: 14px; padding: 11px 13px; margin-bottom: 9px;
+  }
+  .section.dim { background: #fafafa; }
+  .section .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+  .section .title { font-size: 12.5px; font-weight: 700; color: #1a1a1a; }
+  .section .title .icon { margin-right: 6px; }
+  .section .meta { font-size: 10.5px; color: #888; font-weight: 600; }
+  .section .body { font-size: 12px; color: #444; line-height: 1.45; font-family: 'DM Sans', sans-serif; }
+
+  .hero {
+    color: #fff; border-radius: 16px; padding: 14px; margin-bottom: 10px;
+  }
+  .hero.all-in { background: linear-gradient(135deg, #e8943a 0%, #c75a2a 100%); }
+  .hero.helping-out { background: linear-gradient(135deg, #00bcd4 0%, #00838f 100%); }
+  .hero.just-here { background: linear-gradient(135deg, #9575cd 0%, #5e35b1 100%); }
+  .hero.vibes-only { background: linear-gradient(135deg, #66bb6a 0%, #388e3c 100%); }
+  .hero .label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85; }
+  .hero .title { font-size: 16px; font-weight: 800; margin-top: 5px; line-height: 1.25; font-family: 'Outfit', sans-serif; }
+  .hero .meta { font-size: 11.5px; opacity: 0.9; margin-top: 4px; }
+  .hero .btn { display: inline-block; background: rgba(255,255,255,0.2); color: #fff; font-weight: 700; font-size: 11.5px; padding: 6px 11px; border-radius: 10px; margin-top: 9px; border: 1px solid rgba(255,255,255,0.3); }
+
+  .amount-card {
+    text-align: center; padding: 16px 14px; border-radius: 16px; margin-bottom: 10px;
+    background: #fff; border: 1px solid #e5e5e5;
+  }
+  .amount-card .lbl { font-size: 11px; color: #888; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+  .amount-card .amt { font-size: 32px; font-weight: 900; margin-top: 4px; font-family: 'Outfit', sans-serif; }
+  .amount-card .amt.owe { color: #d32f2f; }
+  .amount-card .pay-btn {
+    display: inline-block; padding: 9px 24px; border-radius: 14px; background: #1a1a1a; color: #fff;
+    font-weight: 700; font-size: 12.5px; margin-top: 10px;
+  }
+
+  .event-mini { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed #eee; }
+  .event-mini:last-child { border-bottom: none; }
+  .event-mini .time { font-size: 10.5px; color: #888; font-weight: 700; width: 48px; flex-shrink: 0; }
+  .event-mini .nm { font-size: 12.5px; font-weight: 600; color: #1a1a1a; flex: 1; }
+  .event-mini .yes { font-size: 10.5px; color: #2e7d32; font-weight: 700; }
+
+  /* Chat ping card */
+  .chat-card {
+    background: #fff; border: 1px solid #e5e5e5; border-radius: 14px; padding: 10px 12px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .chat-card .chat-icon { font-size: 22px; }
+  .chat-card .chat-body { flex: 1; }
+  .chat-card .chat-body .who { font-size: 11px; color: #888; font-weight: 600; }
+  .chat-card .chat-body .preview { font-size: 12.5px; color: #1a1a1a; font-weight: 600; margin-top: 2px; line-height: 1.3; font-family: 'DM Sans', sans-serif; }
+  .chat-card .chat-badge { background: #d32f2f; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 10px; }
+
+  /* Sub-nav - 7 TABS, every role */
+  .subnav {
+    flex-shrink: 0; height: 56px; display: flex; background: #fff; border-top: 1px solid #e5e5e5;
+    padding: 0 2px;
+  }
+  .subnav .tab {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    border-top: 3px solid transparent; min-width: 0; position: relative;
+  }
+  .subnav .tab .icn { font-size: 15px; line-height: 1; }
+  .subnav .tab .lbl { font-size: 8.5px; font-weight: 500; color: #999; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+  .subnav .tab.active .lbl { font-weight: 800; }
+  .subnav .tab .unread { position: absolute; top: 4px; right: calc(50% - 18px); background: #d32f2f; color: #fff; font-size: 8px; font-weight: 800; min-width: 14px; height: 14px; border-radius: 7px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+  .subnav .tab .muted-dot { position: absolute; top: 6px; right: calc(50% - 14px); width: 6px; height: 6px; border-radius: 50%; background: #bbb; }
+  .subnav.all-in .tab.active { border-top-color: #e8943a; }
+  .subnav.all-in .tab.active .lbl { color: #e8943a; }
+  .subnav.helping-out .tab.active { border-top-color: #00838f; }
+  .subnav.helping-out .tab.active .lbl { color: #00838f; }
+  .subnav.just-here .tab.active { border-top-color: #5e35b1; }
+  .subnav.just-here .tab.active .lbl { color: #5e35b1; }
+  .subnav.vibes-only .tab.active { border-top-color: #2e7d32; }
+  .subnav.vibes-only .tab.active .lbl { color: #2e7d32; }
+
+  .anno {
+    max-width: 350px; font-size: 11.5px; line-height: 1.5; color: #aaa; margin-top: 14px;
+    background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 10px 14px;
+  }
+  .anno strong { color: #fff; display: block; margin-bottom: 4px; font-size: 12px; }
+  .anno em { color: #4caf50; font-style: normal; font-weight: 700; }
+
+  .section-title-big { text-align: center; font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; margin: 32px 0 20px; color: #e8943a; border-bottom: 1px solid #333; padding-bottom: 8px; max-width: 1100px; margin-left: auto; margin-right: auto; }
+
+  .compare-table { max-width: 1100px; margin: 24px auto; border-collapse: collapse; width: 100%; font-size: 12.5px; background: #1a1a1a; border-radius: 12px; overflow: hidden; }
+  .compare-table th { background: #222; color: #e8943a; padding: 12px 12px; text-align: left; border-bottom: 2px solid #333; font-family: 'Outfit', sans-serif; }
+  .compare-table td { padding: 9px 12px; border-bottom: 1px solid #2a2a2a; color: #ccc; vertical-align: top; }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table .row-label { font-weight: 700; color: #fff; }
+  .compare-table .check { color: #4caf50; font-weight: 700; }
+  .compare-table .star { color: #e8943a; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">Trip Hub by Role — Final</h1>
+<p class="page-sub">Same trip (🎸 Nashville Bach Weekend), four landings — all 7 sub-nav tabs reachable in every role</p>
+
+<div class="key-change">
+  <h3>🔒 Updated Constraint: Nothing Disappears (Chat Included)</h3>
+  <p>
+    Every persona sees <strong>all 7 sub-nav tabs</strong>
+    <span class="pill">Itinerary</span><span class="pill">Expenses</span><span class="pill new">Chat</span><span class="pill">Packing</span><span class="pill">Notes</span><span class="pill">Meals</span><span class="pill">Group</span>
+    — including the newly added chat feature. What changes per role:
+    <strong>(1) tab order</strong>, <strong>(2) which tab is active by default</strong>,
+    <strong>(3) what the hub hero shows</strong>, and <strong>(4) chat notification defaults</strong> (Vibes Only mutes chat by default; others follow their role's noise tolerance).
+  </p>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+
+<div class="row">
+
+  <!-- ═══════════ ALL IN ═══════════ -->
+  <div class="phone-wrap">
+    <div class="phone-label all-in">🔥 All In</div>
+    <div class="role-tagline">Default: Itinerary · Chat @ position 3 (standard) · Full density</div>
+    <div class="phone">
+
+      <div class="app-header">
+        <span class="back">←</span>
+        <span style="font-family: 'Outfit'; font-weight: 800; font-size: 14px;">Nashville Bach</span>
+        <span class="role-badge all-in">🔥 All In</span>
+      </div>
+
+      <div class="content">
+        <div class="trip-card all-in">
+          <div class="trip-name">🎸 Nashville Bach Weekend</div>
+          <div class="trip-meta">
+            <span>📅 Jun 12–14</span><span>👥 8 going</span><span>⏰ 57 days</span>
+          </div>
+        </div>
+
+        <div class="hero all-in">
+          <div class="label">You're running the show</div>
+          <div class="title">3 events still need a time slot</div>
+          <div class="meta">2 friends haven't RSVP'd · 5 new in chat</div>
+          <div class="btn">Open Itinerary →</div>
+        </div>
+
+        <div class="chat-card">
+          <div class="chat-icon">💬</div>
+          <div class="chat-body">
+            <div class="who">Mike · 2m ago</div>
+            <div class="preview">"Can we push dinner to 8? flight delayed"</div>
+          </div>
+          <div class="chat-badge">5</div>
+        </div>
+
+        <div class="section">
+          <div class="head">
+            <div class="title"><span class="icon">📅</span>Day 1 — Friday Jun 12</div>
+            <div class="meta">5 events</div>
+          </div>
+          <div class="event-mini"><span class="time">3:00p</span><span class="nm">Pickup at BNA</span><span class="yes">✓ all in</span></div>
+          <div class="event-mini"><span class="time">7:00p</span><span class="nm">Dinner — Husk</span><span class="yes">⚠ 2 pending</span></div>
+          <div class="event-mini"><span class="time">10:00p</span><span class="nm">Broadway crawl</span><span class="yes">✓ all in</span></div>
+        </div>
+
+        <div class="section">
+          <div class="head">
+            <div class="title"><span class="icon">🔔</span>Nudge the group</div>
+            <div class="meta">→</div>
+          </div>
+          <div class="body">2 friends haven't opted in to Saturday's pontoon. Send a reminder?</div>
+        </div>
+      </div>
+
+      <nav class="subnav all-in">
+        <div class="tab active"><span class="icn">📅</span><span class="lbl">Itinerary</span></div>
+        <div class="tab"><span class="icn">💰</span><span class="lbl">Expenses</span></div>
+        <div class="tab"><span class="icn">💬</span><span class="lbl">Chat</span><span class="unread">5</span></div>
+        <div class="tab"><span class="icn">🧳</span><span class="lbl">Packing</span></div>
+        <div class="tab"><span class="icn">📝</span><span class="lbl">Notes</span></div>
+        <div class="tab"><span class="icn">🍽️</span><span class="lbl">Meals</span></div>
+        <div class="tab"><span class="icn">👥</span><span class="lbl">Group</span></div>
+      </nav>
+    </div>
+
+    <div class="anno">
+      <strong>All In density</strong>
+      Lands on Itinerary. Hero card shows host action items plus a chat pulse. <em>Chat stays at position 3</em> (standard order) — unread badge shows all activity. <em>All 7 tabs, default order.</em>
+    </div>
+  </div>
+
+  <!-- ═══════════ HELPING OUT ═══════════ -->
+  <div class="phone-wrap">
+    <div class="phone-label helping-out">🙌 Helping Out</div>
+    <div class="role-tagline">Default: Itinerary · Packing pulled forward · Chat near top</div>
+    <div class="phone">
+
+      <div class="app-header">
+        <span class="back">←</span>
+        <span style="font-family: 'Outfit'; font-weight: 800; font-size: 14px;">Nashville Bach</span>
+        <span class="role-badge helping-out">🙌 Helping Out</span>
+      </div>
+
+      <div class="content">
+        <div class="trip-card helping-out">
+          <div class="trip-name">🎸 Nashville Bach Weekend</div>
+          <div class="trip-meta">
+            <span>📅 Jun 12–14</span><span>👥 8 going</span><span>⏰ 57 days</span>
+          </div>
+        </div>
+
+        <div class="hero helping-out">
+          <div class="label">Want to help?</div>
+          <div class="title">2 open tasks Dan hasn't claimed</div>
+          <div class="meta">Pick up the cake · Confirm Sunday brunch</div>
+          <div class="btn">Claim a task →</div>
+        </div>
+
+        <div class="chat-card">
+          <div class="chat-icon">💬</div>
+          <div class="chat-body">
+            <div class="who">Dan mentioned you · 12m ago</div>
+            <div class="preview">"@you can you grab ice on the way?"</div>
+          </div>
+          <div class="chat-badge">2</div>
+        </div>
+
+        <div class="section">
+          <div class="head">
+            <div class="title"><span class="icon">📅</span>Coming up</div>
+            <div class="meta">read-first</div>
+          </div>
+          <div class="event-mini"><span class="time">Fri 7p</span><span class="nm">Dinner — Husk</span><span class="yes">✓ in</span></div>
+          <div class="event-mini"><span class="time">Sat 11a</span><span class="nm">Pontoon on Percy</span><span class="yes">✓ in</span></div>
+        </div>
+
+        <div class="section">
+          <div class="head">
+            <div class="title"><span class="icon">🧳</span>Your packing</div>
+            <div class="meta">3 events ready</div>
+          </div>
+          <div class="body">Outfit suggested for Friday dinner (smart casual). 12 items — tap to review.</div>
+        </div>
+
+        <div class="section dim">
+          <div class="head">
+            <div class="title"><span class="icon">💰</span>You owe</div>
+            <div class="meta">$45</div>
+          </div>
+          <div class="body">Shared Uber · Settled with Venmo</div>
+        </div>
+      </div>
+
+      <nav class="subnav helping-out">
+        <div class="tab active"><span class="icn">📅</span><span class="lbl">Itinerary</span></div>
+        <div class="tab"><span class="icn">🧳</span><span class="lbl">Packing</span></div>
+        <div class="tab"><span class="icn">💬</span><span class="lbl">Chat</span><span class="unread">2</span></div>
+        <div class="tab"><span class="icn">💰</span><span class="lbl">Expenses</span></div>
+        <div class="tab"><span class="icn">📝</span><span class="lbl">Notes</span></div>
+        <div class="tab"><span class="icn">🍽️</span><span class="lbl">Meals</span></div>
+        <div class="tab"><span class="icn">👥</span><span class="lbl">Group</span></div>
+      </nav>
+    </div>
+
+    <div class="anno">
+      <strong>Helping Out density</strong>
+      Packing pulled to position 2 (helpers pack early). <em>Chat @ position 3</em>, prioritizing @mentions. Notifications fire for events, tasks, and direct mentions — general chat noise suppressed. <em>All 7 tabs present.</em>
+    </div>
+  </div>
+
+</div>
+
+<div class="row">
+
+  <!-- ═══════════ JUST HERE ═══════════ -->
+  <div class="phone-wrap">
+    <div class="phone-label just-here">🎟️ Just Here</div>
+    <div class="role-tagline">Default: Expenses · Chat @ position 2 (logistics pings matter)</div>
+    <div class="phone">
+
+      <div class="app-header">
+        <span class="back">←</span>
+        <span style="font-family: 'Outfit'; font-weight: 800; font-size: 14px;">Nashville Bach</span>
+        <span class="role-badge just-here">🎟️ Just Here</span>
+      </div>
+
+      <div class="content">
+        <div class="trip-card just-here">
+          <div class="trip-name">🎸 Nashville Bach Weekend</div>
+          <div class="trip-meta">
+            <span>📅 Jun 12–14</span><span>👥 8 going</span>
+          </div>
+        </div>
+
+        <div class="amount-card">
+          <div class="lbl">You owe Dan</div>
+          <div class="amt owe">$165.00</div>
+          <div style="font-size: 11px; color: #888; margin-top: 4px;">Hotel · Friday dinner · Pontoon</div>
+          <div class="pay-btn">Pay with Venmo</div>
+        </div>
+
+        <div class="chat-card" style="border-color: #9575cd;">
+          <div class="chat-icon">💬</div>
+          <div class="chat-body">
+            <div class="who">Dan mentioned you · 1h ago</div>
+            <div class="preview">"@you airport pickup is 3pm not 4"</div>
+          </div>
+          <div class="chat-badge">3</div>
+        </div>
+
+        <div class="section">
+          <div class="head">
+            <div class="title"><span class="icon">📅</span>Where to be</div>
+            <div class="meta">Today</div>
+          </div>
+          <div class="event-mini"><span class="time">7:00p</span><span class="nm">Dinner — Husk</span><span class="yes">✓ in</span></div>
+          <div style="font-size: 11px; color: #888; margin-top: 6px; text-align: center;">→ Tap Itinerary for full schedule</div>
+        </div>
+
+        <div class="section dim">
+          <div class="head">
+            <div class="title"><span class="icon">🧳</span>Packing list</div>
+            <div class="meta">opt-in</div>
+          </div>
+          <div class="body">Want a personalized packing list? <strong style="color: #5e35b1;">Set it up →</strong></div>
+        </div>
+      </div>
+
+      <nav class="subnav just-here">
+        <div class="tab active"><span class="icn">💰</span><span class="lbl">Expenses</span></div>
+        <div class="tab"><span class="icn">💬</span><span class="lbl">Chat</span><span class="unread">3</span></div>
+        <div class="tab"><span class="icn">📅</span><span class="lbl">Itinerary</span></div>
+        <div class="tab"><span class="icn">👥</span><span class="lbl">Group</span></div>
+        <div class="tab"><span class="icn">🧳</span><span class="lbl">Packing</span></div>
+        <div class="tab"><span class="icn">📝</span><span class="lbl">Notes</span></div>
+        <div class="tab"><span class="icn">🍽️</span><span class="lbl">Meals</span></div>
+      </nav>
+    </div>
+
+    <div class="anno">
+      <strong>Just Here density</strong>
+      Lands on Expenses. <em>Chat pulled to position 2</em> — Just Here users need logistics pings ("airport pickup moved") even if they don't follow the whole chat. Notifications default to @mentions + day-of reminders only. <em>All 7 tabs present, reordered.</em>
+    </div>
+  </div>
+
+  <!-- ═══════════ VIBES ONLY ═══════════ -->
+  <div class="phone-wrap">
+    <div class="phone-label vibes-only">✌️ Vibes Only</div>
+    <div class="role-tagline">Default: Itinerary-Today · Chat muted by default · Bare bones</div>
+    <div class="phone">
+
+      <div class="app-header">
+        <span class="back">←</span>
+        <span style="font-family: 'Outfit'; font-weight: 800; font-size: 14px;">Nashville Bach</span>
+        <span class="role-badge vibes-only">✌️ Vibes Only</span>
+      </div>
+
+      <div class="content">
+        <div class="trip-card vibes-only">
+          <div class="trip-name">🎸 Nashville Bach Weekend</div>
+          <div class="trip-meta">
+            <span>📅 Jun 12–14</span><span>👥 8 going</span>
+          </div>
+        </div>
+
+        <div class="hero vibes-only">
+          <div class="label">Today, 7:00pm</div>
+          <div class="title">Dinner at Husk</div>
+          <div class="meta">📍 37 Rutledge Ave · Smart casual · Res under "Dan"</div>
+          <div class="btn">Open in Maps →</div>
+        </div>
+
+        <div class="amount-card">
+          <div class="lbl">You owe</div>
+          <div class="amt owe">$165</div>
+          <div class="pay-btn">Pay with Venmo</div>
+        </div>
+
+        <div class="section dim">
+          <div class="head">
+            <div class="title"><span class="icon">🔕</span>Chat is muted</div>
+            <div class="meta">7 unread</div>
+          </div>
+          <div class="body">We've muted chat for you. Tap 💬 in the nav to check in — or leave it to Dan.</div>
+        </div>
+
+        <div class="section dim">
+          <div class="head">
+            <div class="title"><span class="icon">📋</span>Want the full trip?</div>
+            <div class="meta">→</div>
+          </div>
+          <div class="body">Full itinerary, packing, and group are all one tap below.</div>
+        </div>
+      </div>
+
+      <nav class="subnav vibes-only">
+        <div class="tab active"><span class="icn">📅</span><span class="lbl">Itinerary</span></div>
+        <div class="tab"><span class="icn">💰</span><span class="lbl">Expenses</span></div>
+        <div class="tab"><span class="icn">💬</span><span class="lbl">Chat</span><span class="muted-dot"></span></div>
+        <div class="tab"><span class="icn">👥</span><span class="lbl">Group</span></div>
+        <div class="tab"><span class="icn">🧳</span><span class="lbl">Packing</span></div>
+        <div class="tab"><span class="icn">📝</span><span class="lbl">Notes</span></div>
+        <div class="tab"><span class="icn">🍽️</span><span class="lbl">Meals</span></div>
+      </nav>
+    </div>
+
+    <div class="anno">
+      <strong>Vibes Only density</strong>
+      Lands on Itinerary-Today-mode. Chat is <em>muted by default</em> — shown with a gray dot instead of a red badge so they don't feel pulled at. Still fully functional when tapped. <em>All 7 tabs present.</em>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<h2 class="section-title-big">What Actually Changes Per Role (with Chat)</h2>
+
+<table class="compare-table">
+  <thead>
+    <tr>
+      <th>Lever</th>
+      <th>🔥 All In</th>
+      <th>🙌 Helping Out</th>
+      <th>🎟️ Just Here</th>
+      <th>✌️ Vibes Only</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="row-label">Default tab on landing</td>
+      <td>Itinerary</td>
+      <td>Itinerary</td>
+      <td><span class="star">Expenses</span></td>
+      <td>Itinerary (Today)</td>
+    </tr>
+    <tr>
+      <td class="row-label">Sub-nav order (7 tabs)</td>
+      <td>Itin · Exp · <span class="star">Chat</span> · Pack · Notes · Meals · Grp</td>
+      <td>Itin · <span class="star">Pack</span> · <span class="star">Chat</span> · Exp · Notes · Meals · Grp</td>
+      <td><span class="star">Exp · Chat</span> · Itin · Grp · Pack · Notes · Meals</td>
+      <td>Itin · Exp · Chat · Grp · Pack · Notes · Meals</td>
+    </tr>
+    <tr>
+      <td class="row-label">All 7 tabs visible?</td>
+      <td class="check">✓ Yes</td>
+      <td class="check">✓ Yes</td>
+      <td class="check">✓ Yes</td>
+      <td class="check">✓ Yes</td>
+    </tr>
+    <tr>
+      <td class="row-label">Chat notifications</td>
+      <td>All messages</td>
+      <td>@mentions + tasks</td>
+      <td>@mentions + day-of</td>
+      <td>🔕 Muted by default</td>
+    </tr>
+    <tr>
+      <td class="row-label">Chat unread indicator</td>
+      <td>Red badge (count)</td>
+      <td>Red badge (mentions)</td>
+      <td>Red badge (mentions)</td>
+      <td>Gray dot only</td>
+    </tr>
+    <tr>
+      <td class="row-label">Hub hero content</td>
+      <td>Host action items + chat pulse</td>
+      <td>Open tasks to claim</td>
+      <td>"You owe" + Venmo CTA</td>
+      <td>Single "next event" card</td>
+    </tr>
+    <tr>
+      <td class="row-label">Itinerary default state</td>
+      <td>Full editor, all days</td>
+      <td>Read-first, all days</td>
+      <td>Today + tomorrow</td>
+      <td>Today only</td>
+    </tr>
+    <tr>
+      <td class="row-label">Packing tab</td>
+      <td>Full walkthrough</td>
+      <td>Full walkthrough</td>
+      <td>Opt-in upsell on hub</td>
+      <td>Opt-in upsell on hub</td>
+    </tr>
+    <tr>
+      <td class="row-label">Special widget</td>
+      <td>"Nudge the group" button</td>
+      <td>"Claim a task" card</td>
+      <td>Big Venmo CTA</td>
+      <td>"Chat is muted" card</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="key-change" style="margin-top: 32px;">
+  <h3>💡 How Chat fits the model</h3>
+  <p>
+    Chat was the newest addition and the biggest test of the "nothing disappears" rule. Here's how it threads through:
+    <strong>(1)</strong> All 7 tabs including Chat render for every role.
+    <strong>(2)</strong> Chat tab POSITION shifts per role — All In keeps it default (3rd), Just Here pulls it to 2nd (logistics pings matter), Vibes Only keeps it mid-nav but mutes notifications.
+    <strong>(3)</strong> The <strong>unread indicator itself changes shape</strong> — red count badge for users who want it, gray dot for Vibes Only so chat isn't visually pestering them.
+    <strong>(4)</strong> Notification defaults per role are stored on <code style="background:#2a2a2a; padding:1px 5px; border-radius:3px; color:#e8943a;">trip_members.chat_notification_level</code> — driven by role_preference at pick time but overridable.
+  </p>
+</div>
+
+</body>
+</html>

@@ -1,15 +1,12 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Trip, TripMember, TripExpense, ExpensePayer, ExpenseSplit, ItineraryEvent, FamilyMember } from "@/types/database.types";
+import { buildFamilyGroups, type FamilyGroup } from "@/lib/family-groups";
 import ExpensesPage from "./expenses-page";
 
-// ─── Family group type used by the expenses system ───
-export interface FamilyGroup {
-  familyId: string;
-  label: string;
-  members: TripMember[];
-  isSingle: boolean;
-}
+// Re-export so existing imports (`./page`) keep working — the type moved
+// to lib/family-groups.ts because the trip-hub hero needs it too.
+export type { FamilyGroup };
 
 export interface ExpenseWithRelations extends TripExpense {
   payers: ExpensePayer[];
@@ -75,56 +72,8 @@ export default async function ExpensesServerPage({
     familyMembersData = (data ?? []) as FamilyMember[];
   }
 
-  // Build family groups
-  // Members with family_member_id → look up family_id from family_members table
-  // Members sharing same family_id → one family group
-  // Members without family_member_id → individual singles
-  const familyMemberMap = new Map<string, FamilyMember>();
-  familyMembersData.forEach((fm) => familyMemberMap.set(fm.id, fm));
-
-  const familyGroupMap = new Map<string, TripMember[]>();
-  const singles: TripMember[] = [];
-
-  for (const m of allMembers) {
-    if (m.family_member_id) {
-      const fm = familyMemberMap.get(m.family_member_id);
-      if (fm) {
-        const key = fm.family_id;
-        if (!familyGroupMap.has(key)) familyGroupMap.set(key, []);
-        familyGroupMap.get(key)!.push(m);
-      } else {
-        singles.push(m);
-      }
-    } else {
-      singles.push(m);
-    }
-  }
-
-  const familyGroups: FamilyGroup[] = [];
-
-  // Family groups
-  for (const [familyId, fMembers] of familyGroupMap) {
-    // Label: host member's name + " Family", or first alphabetically
-    const hostMember = fMembers.find((m) => m.role === "host");
-    const labelMember = hostMember || fMembers.sort((a, b) => a.name.localeCompare(b.name))[0];
-    const lastName = labelMember.name.split(" ").pop() || labelMember.name;
-    familyGroups.push({
-      familyId,
-      label: `${lastName} Family`,
-      members: fMembers,
-      isSingle: false,
-    });
-  }
-
-  // Singles
-  for (const m of singles) {
-    familyGroups.push({
-      familyId: m.id, // use trip_member id as familyId for singles
-      label: m.name,
-      members: [m],
-      isSingle: true,
-    });
-  }
+  // Build family groups (shared with the trip hub hero — see lib/family-groups.ts).
+  const familyGroups = buildFamilyGroups(allMembers, familyMembersData);
 
   // Fetch expenses with payers and splits
   const { data: expenses } = await supabase
