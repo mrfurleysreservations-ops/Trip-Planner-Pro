@@ -796,6 +796,8 @@ export default function SuppliesPage({
         {view === "meals" && (
           <MealsView
             th={th}
+            tripId={trip.id}
+            router={router}
             mealsByDay={mealsByDay}
             itemsByMeal={itemsByMeal}
             participantsByMeal={participantsByMeal}
@@ -817,6 +819,8 @@ export default function SuppliesPage({
         {view === "supplies" && (
           <SuppliesView
             th={th}
+            tripId={trip.id}
+            router={router}
             groups={suppliesByCategory}
             memberById={memberById}
             currentMember={currentMember}
@@ -996,6 +1000,8 @@ function pillBase(): React.CSSProperties {
 
 function MealsView({
   th,
+  tripId,
+  router,
   mealsByDay,
   itemsByMeal,
   participantsByMeal,
@@ -1005,6 +1011,8 @@ function MealsView({
   focusId,
 }: {
   th: (typeof THEMES)["home"];
+  tripId: string;
+  router: ReturnType<typeof useRouter>;
   mealsByDay: [string, ItineraryEvent[]][];
   itemsByMeal: Map<string, MealItem[]>;
   participantsByMeal: Map<string, EventParticipant[]>;
@@ -1090,6 +1098,36 @@ function MealsView({
                   >
                     {meal.title}
                   </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const params = new URLSearchParams({
+                        fromEvent: meal.id,
+                        title: meal.title,
+                        ...(meal.date ? { date: meal.date } : {}),
+                      });
+                      router.push(`/trip/${tripId}/expenses?${params.toString()}`);
+                    }}
+                    aria-label="Add expense for this meal"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background: `${th.accent}14`,
+                      border: `1px solid ${th.accent}33`,
+                      color: th.accent,
+                      fontSize: 14,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      padding: 0,
+                    }}
+                  >
+                    💳
+                  </button>
                   <span style={{ color: "#bbb", fontSize: 18, paddingTop: 2 }}>›</span>
                 </div>
                 <div
@@ -1318,6 +1356,8 @@ function GroceryView({
 
 function SuppliesView({
   th,
+  tripId,
+  router,
   groups,
   memberById,
   currentMember,
@@ -1325,6 +1365,8 @@ function SuppliesView({
   focusId,
 }: {
   th: (typeof THEMES)["home"];
+  tripId: string;
+  router: ReturnType<typeof useRouter>;
   groups: Array<{ category: string; label: string; items: SupplyItem[] }>;
   memberById: Map<string, TripMember>;
   currentMember: TripMember | null;
@@ -1391,6 +1433,35 @@ function SuppliesView({
                   >
                     {s.name}
                   </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const params = new URLSearchParams({
+                        fromSupply: s.id,
+                        title: s.name,
+                      });
+                      router.push(`/trip/${tripId}/expenses?${params.toString()}`);
+                    }}
+                    aria-label="Add expense for this supply"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background: `${th.accent}14`,
+                      border: `1px solid ${th.accent}33`,
+                      color: th.accent,
+                      fontSize: 14,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      padding: 0,
+                    }}
+                  >
+                    💳
+                  </button>
                   <span
                     style={{
                       fontFamily: "'Outfit', sans-serif",
@@ -1503,6 +1574,19 @@ function emptyStateStyle(th: (typeof THEMES)["home"]): React.CSSProperties {
 }
 
 // ─── Bottom-sheet shell (shared by all three sheets) ───
+//
+// Structure enforced by slot components:
+//   <Sheet>
+//     <SheetHandle />
+//     <SheetHeader ... />
+//     <SheetBody> ... scrolling content ... </SheetBody>
+//     [optional] <SheetStickyBar> ... sticky add-bar ... </SheetStickyBar>
+//     <SheetFooter> ... primary action + secondary ... </SheetFooter>
+//   </Sheet>
+//
+// The body is the only scrolling region — handle/header/sticky-bar/footer
+// never move. This prevents the Save button from scrolling off-screen when
+// a long list (e.g. ingredients) grows inside the body.
 
 function Sheet({
   onClose,
@@ -1532,8 +1616,9 @@ function Sheet({
         style={{
           width: "100%",
           maxWidth: 480,
-          maxHeight: "92vh",
+          maxHeight: "90vh",
           height: height ?? undefined,
+          minHeight: 0,
           borderRadius: "20px 20px 0 0",
           boxShadow: "0 -8px 40px rgba(0,0,0,0.15)",
           background: "#fff",
@@ -1544,6 +1629,55 @@ function Sheet({
       >
         {children}
       </div>
+    </div>
+  );
+}
+
+function SheetBody({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        overflowY: "auto",
+        minHeight: 0,
+        padding: "14px 20px 16px",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SheetStickyBar({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        flexShrink: 0,
+        padding: "10px 16px",
+        borderTop: "1px solid #eee",
+        background: "#fafaf7",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SheetFooter({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        flexShrink: 0,
+        padding: "12px 20px 18px",
+        borderTop: "1px solid #eee",
+        background: "#fff",
+        borderRadius: "0 0 20px 20px",
+        display: "flex",
+        gap: 10,
+        alignItems: "center",
+      }}
+    >
+      {children}
     </div>
   );
 }
@@ -1662,7 +1796,6 @@ function MealEditorSheet({
   onDeleteItem: (id: string) => Promise<void>;
 }) {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [addingNew, setAddingNew] = useState(false);
   const [changingClaimer, setChangingClaimer] = useState(false);
 
   const claimedByMe = currentMember ? meal.claimed_by === currentMember.id : false;
@@ -1677,13 +1810,7 @@ function MealEditorSheet({
     <Sheet onClose={onClose}>
       <SheetHandle />
       <SheetHeader title={meal.title} subtitle={subtitle} onClose={onClose} />
-      <div
-        style={{
-          padding: "14px 20px 16px",
-          overflowY: "auto",
-          flex: 1,
-        }}
-      >
+      <SheetBody>
         {/* Attendees */}
         <SheetSecLabel>Attending ({attendCount})</SheetSecLabel>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
@@ -1728,120 +1855,8 @@ function MealEditorSheet({
           ⓘ Manage attendees on the Itinerary tab.
         </div>
 
-        {/* Ingredients */}
-        <SheetSecLabel>
-          Ingredients{" "}
-          <span style={{ fontWeight: 500, color: "#aaa", textTransform: "none", letterSpacing: 0 }}>
-            per-person qty × {attendCount} attending
-          </span>
-        </SheetSecLabel>
-
-        {items.map((item) =>
-          editingItemId === item.id ? (
-            <IngredientEditor
-              key={item.id}
-              th={th}
-              initial={item}
-              onCancel={() => setEditingItemId(null)}
-              onSave={async (draft) => {
-                await onUpdateItem(item.id, {
-                  item_name: draft.itemName.trim(),
-                  quantity_per_person: draft.quantityPerPerson,
-                  unit: draft.unit,
-                  grocery_section: draft.grocerySection,
-                  notes: draft.notes.trim() || null,
-                });
-                setEditingItemId(null);
-              }}
-              onDelete={async () => {
-                await onDeleteItem(item.id);
-                setEditingItemId(null);
-              }}
-            />
-          ) : (
-            <button
-              key={item.id}
-              onClick={() => setEditingItemId(item.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: 12,
-                border: "1px solid #eee",
-                borderRadius: 12,
-                marginBottom: 6,
-                background: "#fff",
-                width: "100%",
-                textAlign: "left",
-                cursor: "pointer",
-                fontFamily: "'DM Sans', sans-serif",
-              }}
-            >
-              <span style={{ color: "#ccc", fontSize: 14 }}>⋮⋮</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontWeight: 600, fontSize: 14 }}>
-                  {item.item_name}
-                </span>
-                <span style={{ display: "block", fontSize: 11.5, color: "#888", marginTop: 2 }}>
-                  {formatQty(Number(item.quantity_per_person))} {item.unit}/person ·{" "}
-                  <span
-                    style={{
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                      padding: "2px 7px",
-                      background: `${th.accent}14`,
-                      color: th.accent,
-                      borderRadius: 10,
-                      letterSpacing: "0.04em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {SECTION_LABEL.get(item.grocery_section) ?? item.grocery_section}
-                  </span>
-                </span>
-              </span>
-              <span style={{ fontSize: 15, color: "#bbb" }}>›</span>
-            </button>
-          ),
-        )}
-
-        {addingNew ? (
-          <IngredientEditor
-            th={th}
-            initial={null}
-            onCancel={() => setAddingNew(false)}
-            onSave={async (draft) => {
-              await onAddItem(draft);
-              setAddingNew(false);
-            }}
-            onDelete={null}
-          />
-        ) : (
-          <button
-            onClick={() => setAddingNew(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              padding: 12,
-              border: "1.5px dashed #c5bdae",
-              borderRadius: 12,
-              background: "transparent",
-              color: th.accent,
-              fontWeight: 700,
-              fontSize: 13.5,
-              width: "100%",
-              marginTop: 4,
-              cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            ＋ Add ingredient
-          </button>
-        )}
-
-        {/* Who's buying */}
+        {/* Who's buying — moved above ingredients so the claim control is always
+            visible near the top of the scrolling body. */}
         <SheetSecLabel>Who's buying?</SheetSecLabel>
         <div
           style={{
@@ -1928,36 +1943,240 @@ function MealEditorSheet({
             </select>
           </div>
         )}
-      </div>
 
-      <div
-        style={{
-          padding: "12px 20px 18px",
-          borderTop: "1px solid #eee",
-          background: "#fff",
-          borderRadius: "0 0 20px 20px",
-          flexShrink: 0,
-        }}
-      >
+        {/* Ingredients list (the "+ Add ingredient" bar lives in the sticky
+            sub-bar below the body so it stays reachable while the list scrolls). */}
+        <SheetSecLabel>
+          Ingredients{" "}
+          <span style={{ fontWeight: 500, color: "#aaa", textTransform: "none", letterSpacing: 0 }}>
+            per-person qty × {attendCount} attending
+          </span>
+        </SheetSecLabel>
+
+        {items.length === 0 && (
+          <div style={{ fontSize: 12.5, color: "#aaa", padding: "2px 2px 6px" }}>
+            No ingredients yet — add one below.
+          </div>
+        )}
+
+        {items.map((item) =>
+          editingItemId === item.id ? (
+            <IngredientEditor
+              key={item.id}
+              th={th}
+              initial={item}
+              onCancel={() => setEditingItemId(null)}
+              onSave={async (draft) => {
+                await onUpdateItem(item.id, {
+                  item_name: draft.itemName.trim(),
+                  quantity_per_person: draft.quantityPerPerson,
+                  unit: draft.unit,
+                  grocery_section: draft.grocerySection,
+                  notes: draft.notes.trim() || null,
+                });
+                setEditingItemId(null);
+              }}
+              onDelete={async () => {
+                await onDeleteItem(item.id);
+                setEditingItemId(null);
+              }}
+            />
+          ) : (
+            <button
+              key={item.id}
+              onClick={() => setEditingItemId(item.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: 12,
+                border: "1px solid #eee",
+                borderRadius: 12,
+                marginBottom: 6,
+                background: "#fff",
+                width: "100%",
+                textAlign: "left",
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              <span style={{ color: "#ccc", fontSize: 14 }}>⋮⋮</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontWeight: 600, fontSize: 14 }}>
+                  {item.item_name}
+                </span>
+                <span style={{ display: "block", fontSize: 11.5, color: "#888", marginTop: 2 }}>
+                  {formatQty(Number(item.quantity_per_person))} {item.unit}/person ·{" "}
+                  <span
+                    style={{
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      padding: "2px 7px",
+                      background: `${th.accent}14`,
+                      color: th.accent,
+                      borderRadius: 10,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {SECTION_LABEL.get(item.grocery_section) ?? item.grocery_section}
+                  </span>
+                </span>
+              </span>
+              <span style={{ fontSize: 15, color: "#bbb" }}>›</span>
+            </button>
+          ),
+        )}
+      </SheetBody>
+
+      {/* Sticky sub-bar: always-visible "+ Add ingredient" form.
+          Sits between the scrolling body and the fixed footer so the user can
+          keep adding items while the list grows in the body above. */}
+      <SheetStickyBar>
+        <AddIngredientBar th={th} onAdd={onAddItem} />
+      </SheetStickyBar>
+
+      <SheetFooter>
         <button
           onClick={onClose}
           style={{
-            width: "100%",
+            ...btnPrimaryStyle(th.accent),
+            flex: 1,
             padding: 14,
-            borderRadius: 14,
-            background: th.accent,
-            color: "#fff",
-            fontWeight: 700,
             fontSize: 14,
-            border: "none",
-            cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif",
           }}
         >
           Done
         </button>
-      </div>
+      </SheetFooter>
     </Sheet>
+  );
+}
+
+// ─── Compact add-ingredient bar (lives in the MealEditorSheet sticky sub-bar) ───
+//
+// Two compact rows: [item | qty | unit] / [section | Add]. After a successful
+// add, the form resets so the user can keep adding rows without scrolling.
+
+function AddIngredientBar({
+  th,
+  onAdd,
+}: {
+  th: (typeof THEMES)["home"];
+  onAdd: (draft: {
+    itemName: string;
+    quantityPerPerson: number;
+    unit: string;
+    grocerySection: string;
+    notes: string;
+  }) => Promise<MealItem | null>;
+}) {
+  const [itemName, setItemName] = useState("");
+  const [qty, setQty] = useState("1");
+  const [unit, setUnit] = useState("each");
+  const [section, setSection] = useState<GrocerySection>("other");
+  const [saving, setSaving] = useState(false);
+
+  const parsedQty = parseFloat(qty);
+  const canAdd =
+    !!itemName.trim() && Number.isFinite(parsedQty) && parsedQty > 0 && !saving;
+
+  const reset = () => {
+    setItemName("");
+    setQty("1");
+    setUnit("each");
+    setSection("other");
+  };
+
+  const handleAdd = async () => {
+    if (!canAdd) return;
+    setSaving(true);
+    const row = await onAdd({
+      itemName,
+      quantityPerPerson: parsedQty,
+      unit,
+      grocerySection: section,
+      notes: "",
+    });
+    setSaving(false);
+    if (row) reset();
+  };
+
+  const compactInputStyle: React.CSSProperties = {
+    ...fieldInputStyle,
+    padding: "8px 10px",
+    fontSize: 13,
+    borderRadius: 8,
+  };
+  const compactSelectStyle: React.CSSProperties = {
+    ...fieldSelectStyle,
+    padding: "8px 24px 8px 8px",
+    fontSize: 12.5,
+    borderRadius: 8,
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", gap: 6 }}>
+        <input
+          value={itemName}
+          onChange={(e) => setItemName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleAdd();
+          }}
+          placeholder="+ Add ingredient"
+          aria-label="Ingredient name"
+          style={{ ...compactInputStyle, flex: 2, minWidth: 0 }}
+        />
+        <input
+          value={qty}
+          onChange={(e) => setQty(e.target.value)}
+          inputMode="decimal"
+          aria-label="Quantity per person"
+          style={{ ...compactInputStyle, width: 52, textAlign: "center" }}
+        />
+        <select
+          value={unit}
+          onChange={(e) => setUnit(e.target.value)}
+          aria-label="Unit"
+          style={{ ...compactSelectStyle, width: 72 }}
+        >
+          {MEAL_UNITS.map((u) => (
+            <option key={u} value={u}>
+              {u}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div style={{ display: "flex", gap: 6 }}>
+        <select
+          value={section}
+          onChange={(e) => setSection(e.target.value as GrocerySection)}
+          aria-label="Grocery section"
+          style={{ ...compactSelectStyle, flex: 1, minWidth: 0 }}
+        >
+          {GROCERY_SECTIONS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={handleAdd}
+          disabled={!canAdd}
+          aria-label="Add ingredient"
+          style={{
+            ...btnPrimaryStyle(th.accent),
+            padding: "8px 18px",
+            fontSize: 13,
+            opacity: canAdd ? 1 : 0.5,
+            flexShrink: 0,
+          }}
+        >
+          {saving ? "Adding…" : "Add"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -2201,7 +2420,7 @@ function NewMealSheet({
         subtitle="Meals become itinerary events with event_type = 'meal'."
         onClose={onClose}
       />
-      <div style={{ padding: "14px 20px 16px", overflowY: "auto", flex: 1 }}>
+      <SheetBody>
         <FieldLabel>Title</FieldLabel>
         <input
           value={title}
@@ -2293,19 +2512,9 @@ function NewMealSheet({
             </label>
           </div>
         )}
-      </div>
+      </SheetBody>
 
-      <div
-        style={{
-          padding: "12px 20px 18px",
-          borderTop: "1px solid #eee",
-          background: "#fff",
-          borderRadius: "0 0 20px 20px",
-          display: "flex",
-          gap: 10,
-          flexShrink: 0,
-        }}
-      >
+      <SheetFooter>
         <button onClick={onClose} style={{ ...btnGhostStyle, flex: 1 }} disabled={saving}>
           Cancel
         </button>
@@ -2333,7 +2542,7 @@ function NewMealSheet({
         >
           {saving ? "Creating…" : "Create meal"}
         </button>
-      </div>
+      </SheetFooter>
     </Sheet>
   );
 }
@@ -2437,7 +2646,7 @@ function SupplyEditorSheet({
         subtitle={isEdit ? `${CATEGORY_LABEL.get(supply!.category) ?? "Other"}` : "Add something the group needs."}
         onClose={onClose}
       />
-      <div style={{ padding: "14px 20px 16px", overflowY: "auto", flex: 1 }}>
+      <SheetBody>
         <FieldLabel>Item</FieldLabel>
         <div style={{ display: "flex", gap: 8 }}>
           <div style={{ flex: 2 }}>
@@ -2610,20 +2819,9 @@ function SupplyEditorSheet({
           placeholder="e.g. pickup at REI"
           style={fieldInputStyle}
         />
-      </div>
+      </SheetBody>
 
-      <div
-        style={{
-          padding: "12px 20px 18px",
-          borderTop: "1px solid #eee",
-          background: "#fff",
-          borderRadius: "0 0 20px 20px",
-          display: "flex",
-          gap: 10,
-          alignItems: "center",
-          flexShrink: 0,
-        }}
-      >
+      <SheetFooter>
         {isEdit && onDelete && !confirmDelete && (
           <button
             onClick={() => setConfirmDelete(true)}
@@ -2679,7 +2877,7 @@ function SupplyEditorSheet({
         >
           {saving ? "Saving…" : isEdit ? "Save supply" : "Add supply"}
         </button>
-      </div>
+      </SheetFooter>
     </Sheet>
   );
 }
