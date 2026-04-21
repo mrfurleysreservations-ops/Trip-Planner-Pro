@@ -16,6 +16,11 @@ export interface OnboardingData {
   orgMethod: string | null;
   foldingMethod: string | null;
   compartmentSystem: string | null;
+  // Password fields are only used during the invitee onboarding flow.
+  // They are ephemeral — never persisted to user_profiles. We hand the
+  // password directly to supabase.auth.updateUser() and drop them.
+  password: string;
+  passwordConfirm: string;
 }
 
 export interface AppUser {
@@ -71,6 +76,15 @@ export interface OnboardingPageProps {
   standalone?: boolean;
   standaloneStep?: string | null;
   onboardingCompleted?: boolean;
+  // ─── Invite flow continuation ───
+  // When present, saveAndFinish redirects here instead of /dashboard so
+  // invitees land on the trip invite landing page after onboarding.
+  nextUrl?: string | null;
+  // ─── Password step gate ───
+  // True for users who were created via Supabase invite (no password yet).
+  // Causes onboarding-page to insert a "password" step and call updateUser
+  // when the user finishes.
+  requiresPassword?: boolean;
   initialProfileSeed?: {
     gender: string | null;
     ageRange: string | null;

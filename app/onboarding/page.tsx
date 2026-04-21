@@ -4,10 +4,18 @@ import OnboardingPage from "./onboarding-page";
 
 const STANDALONE_STEPS = new Set(["details", "style", "people", "packing"]);
 
+// Only allow safe, same-origin redirects through the `next` param.
+// Absolute URLs and protocol-relative URLs are dropped so we can't be used as an open redirect.
+function sanitizeNext(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
+
 export default async function OnboardingRoute({
   searchParams,
 }: {
-  searchParams?: { standalone?: string; step?: string };
+  searchParams?: { standalone?: string; step?: string; next?: string };
 }) {
   const supabase = createServerSupabaseClient();
 
@@ -35,9 +43,22 @@ export default async function OnboardingRoute({
   const rawStep = searchParams?.step ?? null;
   const standalone = rawStandalone && !!rawStep && STANDALONE_STEPS.has(rawStep);
 
+  // ─── Invite flow continuation ───
+  // /auth/confirm forwards `?next=/trip/[id]/invite` when the user still needs
+  // onboarding. We thread it through so the final CTA returns the user to the
+  // invite landing page instead of /dashboard. Only accept same-origin paths.
+  const nextUrl = sanitizeNext(searchParams?.next);
+
   if (!standalone && profile?.onboarding_completed) {
-    redirect("/dashboard");
+    redirect(nextUrl ?? "/dashboard");
   }
+
+  // ─── Password requirement for invitees ───
+  // Invited users were created via Supabase's invite flow (magic link) and have
+  // no password yet. We show a password step once and stamp
+  // user_metadata.password_set so repeat visits skip it.
+  const metadata = (user.user_metadata ?? {}) as { password_set?: boolean };
+  const requiresPassword = !standalone && !!user.invited_at && !metadata.password_set;
 
   const prefs = (profile?.packing_preferences ?? null) as Record<string, string | null> | null;
 
@@ -51,6 +72,8 @@ export default async function OnboardingRoute({
       standalone={standalone}
       standaloneStep={standalone ? rawStep : null}
       onboardingCompleted={profile?.onboarding_completed ?? false}
+      nextUrl={nextUrl}
+      requiresPassword={requiresPassword}
       initialProfileSeed={{
         gender: profile?.gender ?? null,
         ageRange: profile?.age_range ?? null,

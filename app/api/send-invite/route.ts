@@ -64,11 +64,16 @@ export async function POST(request: NextRequest) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Where the email link should land. Prefer NEXT_PUBLIC_SITE_URL so prod URLs
-    // stay stable; fall back to the request origin for local dev.
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
-    const next = `/trip/${tripId}/invite`;
-    const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+    // Where the email link should land. Prefer NEXT_PUBLIC_SITE_URL so prod
+    // URLs stay stable; fall back to the request origin for local dev. Strip
+    // any trailing slash so `${origin}/path` never produces a `//` artifact.
+    const rawOrigin = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
+    const origin = rawOrigin.replace(/\/+$/, "");
+    // The email link's `{{ .RedirectTo }}` becomes the `?next=` param on our
+    // /auth/confirm route. Since /auth/confirm already creates the session via
+    // verifyOtp, it should hand off directly to the invite landing — NOT back
+    // through /auth/callback (that route is for PKCE OAuth only).
+    const redirectTo = `${origin}/trip/${tripId}/invite`;
 
     const inviteMetadata = {
       trip_id: tripId,

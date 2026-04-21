@@ -6,6 +6,8 @@ import { ACCENT } from "../constants";
 interface StepWelcomeProps {
   onSetup: () => void;
   onSkip: () => void;
+  /** Where the "Explore the App" button routes. Defaults to /dashboard; invite flow threads /trip/[id]/invite. */
+  exploreUrl?: string;
 }
 
 const FEATURES = [
@@ -14,8 +16,9 @@ const FEATURES = [
   { icon: "📋", title: "Your Packing Personality", desc: "Planner? Minimalist? Overpacker? We adapt to you" },
 ];
 
-export default function StepWelcome({ onSetup, onSkip }: StepWelcomeProps) {
+export default function StepWelcome({ onSetup, onSkip, exploreUrl = "/dashboard" }: StepWelcomeProps) {
   const router = useRouter();
+  void onSkip; // onSkip param preserved for API compatibility; skip logic lives inline below.
 
   return (
     <div style={{ padding: "0 20px 40px" }}>
@@ -139,7 +142,7 @@ export default function StepWelcome({ onSetup, onSkip }: StepWelcomeProps) {
         <button
           onClick={() => {
             document.cookie = "skipped_onboarding=true; path=/; max-age=31536000";
-            router.push("/dashboard");
+            router.push(exploreUrl);
           }}
           style={{
             width: "100%",

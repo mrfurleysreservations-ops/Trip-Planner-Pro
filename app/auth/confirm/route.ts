@@ -33,7 +33,10 @@ export async function GET(request: NextRequest) {
           .single();
 
         if (profile && !profile.onboarding_completed) {
-          return NextResponse.redirect(`${origin}/onboarding`);
+          // Preserve the intended destination through onboarding so invitees
+          // land on /trip/[id]/invite after finishing instead of /dashboard.
+          const qs = next !== "/dashboard" ? `?next=${encodeURIComponent(next)}` : "";
+          return NextResponse.redirect(`${origin}/onboarding${qs}`);
         }
       }
 
