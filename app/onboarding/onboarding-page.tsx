@@ -18,7 +18,6 @@ import StepFriendSuggestions from "./steps/step-friend-suggestions";
 import StepPacking from "./steps/step-packing";
 import StepDone from "./steps/step-done";
 import StepWelcome from "./steps/step-welcome";
-import StepPassword from "./steps/step-password";
 
 
 // ═══════════════════════════════════════════════════════════
@@ -26,17 +25,18 @@ import StepPassword from "./steps/step-password";
 //  ───────────────────────────────────────────────────────────
 //  All In / Helping Out → full 8-step flow.
 //  Just Here / Vibes Only → minimal profile + abbreviated done.
-//  Invitees (requiresPassword=true) get a "password" step inserted
-//  right after the welcome gate in both flows so they can pick a
-//  password before doing profile setup.
 //  See docs/role-based-onboarding.md Skip/Keep/Defer matrix.
 //  The skipped steps are not deleted — they return as opt-in
 //  cards on /profile (Phase F).
+//  NOTE: Invitees (arrived via /auth/confirm with invited_at set) never
+//  reach this wizard — /auth/confirm routes them to /auth/invitee-setup
+//  which asks for name+password only and drops them at the trip invite.
+//  They'll see the dashboard's "Finish setting up your profile" card
+//  later and come back here at their own pace.
 // ═══════════════════════════════════════════════════════════
 
 type StepName =
   | "welcome"
-  | "password"
   | "profile"
   | "profile-minimal"
   | "details"
@@ -68,19 +68,6 @@ function stepsForRole(role: string | null): StepName[] {
   return FULL_FLOW;
 }
 
-// Splice the password step into a flow. Full flow: after welcome. Minimal flow:
-// before profile-minimal (no welcome gate there). We keep it near the front so
-// invitees can't get deep into onboarding before setting credentials.
-function withPasswordStep(flow: StepName[]): StepName[] {
-  if (flow === FULL_FLOW) {
-    return ["welcome", "password", "profile", "details", "style", "people", "friend-suggestions", "packing", "done"];
-  }
-  if (flow === MINIMAL_FLOW) {
-    return ["password", "profile-minimal", "done-abbreviated"];
-  }
-  return flow;
-}
-
 
 export default function OnboardingPage({
   userId,
@@ -92,24 +79,20 @@ export default function OnboardingPage({
   standaloneStep = null,
   onboardingCompleted = false,
   nextUrl = null,
-  requiresPassword = false,
   initialProfileSeed,
 }: OnboardingPageProps) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const containerRef = useRef<HTMLDivElement>(null);
+  void userEmail; // reserved for future use; kept on props for callsite parity
 
   // In standalone mode, the "flow" is a single existing step so we can reuse the
   // step components verbatim. Nav + save paths are swapped for a profile-return CTA.
-  // Password step is only inserted for invitees going through full onboarding.
   const activeSteps = useMemo(() => {
     if (standalone && standaloneStep) return [standaloneStep as StepName];
-    const baseFlow = stepsForRole(defaultRolePreference);
-    return requiresPassword ? withPasswordStep(baseFlow) : baseFlow;
-  }, [defaultRolePreference, standalone, standaloneStep, requiresPassword]);
-  // Track whether we're in the minimal flow by comparing the *role-derived* base flow,
-  // since activeSteps may include a spliced password step.
-  const isMinimalFlow = !standalone && stepsForRole(defaultRolePreference) === MINIMAL_FLOW;
+    return stepsForRole(defaultRolePreference);
+  }, [defaultRolePreference, standalone, standaloneStep]);
+  const isMinimalFlow = !standalone && activeSteps === MINIMAL_FLOW;
 
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -136,9 +119,6 @@ export default function OnboardingPage({
     orgMethod: initialProfileSeed?.packingPrefs.organization_method ?? null,
     foldingMethod: initialProfileSeed?.packingPrefs.folding_method ?? null,
     compartmentSystem: initialProfileSeed?.packingPrefs.compartment_system ?? null,
-    // Ephemeral — used only by the invitee password step, never persisted.
-    password: "",
-    passwordConfirm: "",
   });
 
   // ─── Check for inviter on mount (full flow only — minimal flow never hits the suggestions step) ───
@@ -334,31 +314,6 @@ export default function OnboardingPage({
     setSaving(true);
 
     try {
-      // 0. Set password for invitees. We only reach this branch if the server
-      // decided requiresPassword — meaning user.invited_at is set and
-      // user_metadata.password_set wasn't. We stamp password_set so repeat
-      // visits to onboarding skip the password step.
-      if (requiresPassword) {
-        const pw = data.password || "";
-        const pwConfirm = data.passwordConfirm || "";
-        if (pw.length < 8 || pw !== pwConfirm) {
-          // Nav config gates the final CTA, so this is a belt-and-suspenders
-          // check. Don't consume setSaving — let the user keep editing.
-          console.error("Password validation failed in saveAndFinish");
-          setSaving(false);
-          return;
-        }
-        const { error: pwErr } = await supabase.auth.updateUser({
-          password: pw,
-          data: { password_set: true },
-        });
-        if (pwErr) {
-          console.error("Failed to set password:", pwErr);
-          setSaving(false);
-          return;
-        }
-      }
-
       // 1. Update user_profiles
       await supabase.from("user_profiles").update({
         full_name: data.name,
@@ -472,12 +427,6 @@ export default function OnboardingPage({
       case "done":
       case "done-abbreviated":
         return null;
-      case "password": {
-        const pw = data.password || "";
-        const pwConfirm = data.passwordConfirm || "";
-        const valid = pw.length >= 8 && pw === pwConfirm;
-        return { showBack: false, nextLabel: "Continue", nextDisabled: !valid, onBack: back, onNext: next };
-      }
       case "profile":
         return { showBack: false, nextLabel: "Let's go", nextDisabled: !data.name?.trim(), onBack: back, onNext: next };
       case "profile-minimal":
@@ -512,7 +461,6 @@ export default function OnboardingPage({
     !isMinimalFlow &&
     !standalone &&
     currentStepName !== "welcome" &&
-    currentStepName !== "password" &&
     currentStepName !== "profile" &&
     currentStepName !== "done";
   const visibleStepTotal = FULL_FLOW.length - 1; // hide welcome from dots
@@ -526,7 +474,6 @@ export default function OnboardingPage({
       </div>
       <div ref={containerRef} style={{ padding: currentStepName === "welcome" ? "0" : "0 16px 80px" }}>
         {currentStepName === "welcome" && <StepWelcome onSetup={next} onSkip={() => router.push(nextUrl || "/dashboard")} exploreUrl={nextUrl || "/dashboard"} />}
-        {currentStepName === "password" && <StepPassword data={data} onChange={updateData} userEmail={userEmail} />}
         {currentStepName === "profile" && <StepProfile data={data} onChange={updateData} userId={userId} />}
         {currentStepName === "profile-minimal" && <StepProfile data={data} onChange={updateData} userId={userId} minimal />}
         {currentStepName === "details" && <StepDetails data={data} onChange={updateData} />}

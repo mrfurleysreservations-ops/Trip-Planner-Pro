@@ -53,13 +53,6 @@ export default async function OnboardingRoute({
     redirect(nextUrl ?? "/dashboard");
   }
 
-  // ─── Password requirement for invitees ───
-  // Invited users were created via Supabase's invite flow (magic link) and have
-  // no password yet. We show a password step once and stamp
-  // user_metadata.password_set so repeat visits skip it.
-  const metadata = (user.user_metadata ?? {}) as { password_set?: boolean };
-  const requiresPassword = !standalone && !!user.invited_at && !metadata.password_set;
-
   const prefs = (profile?.packing_preferences ?? null) as Record<string, string | null> | null;
 
   return (
@@ -73,7 +66,6 @@ export default async function OnboardingRoute({
       standaloneStep={standalone ? rawStep : null}
       onboardingCompleted={profile?.onboarding_completed ?? false}
       nextUrl={nextUrl}
-      requiresPassword={requiresPassword}
       initialProfileSeed={{
         gender: profile?.gender ?? null,
         ageRange: profile?.age_range ?? null,

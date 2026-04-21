@@ -20,12 +20,27 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.verifyOtp({ token_hash, type });
 
     if (!error) {
-      // Check if user needs onboarding
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (user) {
+        // ─── Invitee fast-path ───
+        // Users who arrived via a Supabase invite email have no password yet.
+        // Route them to the minimal /auth/invitee-setup screen (name + password)
+        // which then drops them on the trip invite page. The full onboarding
+        // wizard would be a terrible first experience for someone who just
+        // wanted to RSVP to a trip — we defer it via the dashboard's existing
+        // "Finish setting up your profile" card.
+        const metadata = (user.user_metadata ?? {}) as { password_set?: boolean };
+        const needsInviteeSetup = !!user.invited_at && !metadata.password_set;
+        if (needsInviteeSetup) {
+          const qs = `?next=${encodeURIComponent(next)}`;
+          return NextResponse.redirect(`${origin}/auth/invitee-setup${qs}`);
+        }
+
+        // Everyone else who hasn't finished onboarding: send to the full wizard,
+        // threading `next` so finishing drops them where they were heading.
         const { data: profile } = await supabase
           .from("user_profiles")
           .select("onboarding_completed")
@@ -33,8 +48,6 @@ export async function GET(request: NextRequest) {
           .single();
 
         if (profile && !profile.onboarding_completed) {
-          // Preserve the intended destination through onboarding so invitees
-          // land on /trip/[id]/invite after finishing instead of /dashboard.
           const qs = next !== "/dashboard" ? `?next=${encodeURIComponent(next)}` : "";
           return NextResponse.redirect(`${origin}/onboarding${qs}`);
         }
