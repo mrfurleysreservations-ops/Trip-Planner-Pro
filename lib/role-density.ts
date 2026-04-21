@@ -28,3 +28,18 @@ export function subNavOrderForRole(role: RolePreference | string | null | undefi
 export function defaultTabForRole(role: RolePreference | string | null | undefined): string {
   return getRoleConfig(role).defaultTab;
 }
+
+/** Which tabs ride in the bottom bar (always 4). Rest go into the ⋯ More sheet. */
+export function primaryTabsForRole(role: RolePreference | string | null | undefined): readonly string[] {
+  return getRoleConfig(role).primaryTabs;
+}
+
+/** Tabs that live behind ⋯ More for this role — subNavOrder minus primaryTabs, order preserved. */
+export function moreTabsForRole(role: RolePreference | string | null | undefined): readonly string[] {
+  const cfg = getRoleConfig(role);
+  // Widen to Set<string> so `.has()` accepts any subNavOrder segment. The
+  // `as const` on ROLE_PREFERENCES narrows primaryTabs to a role-specific
+  // literal union, but subNavOrder spans every tab across all roles.
+  const primary = new Set<string>(cfg.primaryTabs);
+  return cfg.subNavOrder.filter((seg) => !primary.has(seg));
+}

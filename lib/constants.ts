@@ -243,6 +243,14 @@ export const EVENT_TYPES = [
 // ─── Role Preferences (RSVP Energy) ───
 // Per-trip role that drives UI density: default tab, sub-nav order, chat noise level.
 // Must never hide features — only reorder/re-default them. See docs/role-based-onboarding.md.
+//
+// Sub-nav invariants (enforced by TripSubNav + lib/role-density.ts):
+//   • `primaryTabs.length === 4` — exactly 4 tabs ride in the bottom bar.
+//   • Every segment in `primaryTabs` MUST also appear in `subNavOrder`.
+//   • The ⋯ More sheet renders `subNavOrder.filter(t => !primaryTabs.includes(t))`,
+//     preserving `subNavOrder` as the canonical ordering of all 7 tabs.
+//   • Adding a new tab = append it to `subNavOrder` for each role. It auto-shows
+//     in the More sheet; no other code changes required.
 export const ROLE_PREFERENCES = [
   {
     value: "all_in",
@@ -251,6 +259,7 @@ export const ROLE_PREFERENCES = [
     tagline: "I'm doing this, get out of my way",
     defaultTab: "itinerary",
     subNavOrder: ["itinerary", "expenses", "chat", "packing", "notes", "meals", "group"],
+    primaryTabs: ["itinerary", "expenses", "chat", "packing"],
     chatDefault: "all",
   },
   {
@@ -260,6 +269,7 @@ export const ROLE_PREFERENCES = [
     tagline: "I've got you on whatever you need",
     defaultTab: "itinerary",
     subNavOrder: ["itinerary", "packing", "chat", "expenses", "notes", "meals", "group"],
+    primaryTabs: ["itinerary", "packing", "chat", "expenses"],
     chatDefault: "all",
   },
   {
@@ -269,6 +279,7 @@ export const ROLE_PREFERENCES = [
     tagline: "I showed up, that's the contribution",
     defaultTab: "expenses",
     subNavOrder: ["expenses", "chat", "itinerary", "group", "packing", "notes", "meals"],
+    primaryTabs: ["expenses", "chat", "itinerary", "group"],
     chatDefault: "mentions",
   },
   {
@@ -278,6 +289,7 @@ export const ROLE_PREFERENCES = [
     tagline: "Don't @ me, I'll see you there",
     defaultTab: "itinerary",
     subNavOrder: ["itinerary", "expenses", "chat", "group", "packing", "notes", "meals"],
+    primaryTabs: ["itinerary", "chat", "expenses", "group"],
     chatDefault: "muted",
   },
 ] as const;
