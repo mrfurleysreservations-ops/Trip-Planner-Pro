@@ -4,6 +4,7 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES, EXPENSE_CATEGORIES, SPLIT_TYPES } from "@/lib/constants";
 import { logActivity } from "@/lib/trip-activity";
+import { computeFamilyBalances } from "@/lib/expense-balance";
 import type { Trip, TripMember, ItineraryEvent, ExpensePayer, ExpenseSplit } from "@/types/database.types";
 import type { ExpensesPageProps, ExpenseWithRelations, FamilyGroup } from "./page";
 import TripSubNav from "../trip-sub-nav";
@@ -55,34 +56,13 @@ function computeSettleUpTransfers(
   expenses: ExpenseWithRelations[],
   members: TripMember[],
 ): Transfer[] {
-  // Net balance per family: total paid - total owed
-  const balances = new Map<string, number>();
+  // Net balance per family — pulled from the shared helper so the hub hero
+  // and this detail view stay in lockstep. Raw (unrounded) values; we round
+  // per-family below.
+  const balances = computeFamilyBalances(expenses, familyGroups, members);
+
   const labelMap = new Map<string, string>();
-
-  familyGroups.forEach((fg) => {
-    balances.set(fg.familyId, 0);
-    labelMap.set(fg.familyId, fg.label);
-  });
-
-  // Build member→familyGroup lookup
-  const memberToFamily = new Map<string, string>();
-  familyGroups.forEach((fg) => {
-    fg.members.forEach((m) => memberToFamily.set(m.id, fg.familyId));
-  });
-
-  for (const exp of expenses) {
-    // Add paid amounts
-    for (const p of exp.payers) {
-      const famId = memberToFamily.get(p.trip_member_id);
-      if (famId) balances.set(famId, (balances.get(famId) || 0) + Number(p.amount_paid));
-    }
-    // Subtract owed amounts
-    for (const s of exp.splits) {
-      if (balances.has(s.family_id)) {
-        balances.set(s.family_id, (balances.get(s.family_id) || 0) - Number(s.amount_owed));
-      }
-    }
-  }
+  familyGroups.forEach((fg) => labelMap.set(fg.familyId, fg.label));
 
   // Separate into debtors (negative balance) and creditors (positive balance)
   const debtors: { id: string; amount: number }[] = [];

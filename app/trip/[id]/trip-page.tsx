@@ -11,7 +11,13 @@ import { logActivity } from "@/lib/trip-activity";
 import type { Trip, TripBooking, TripMember, ItineraryEvent } from "@/types/database.types";
 import TripSubNav from "./trip-sub-nav";
 import WeatherCard from "./weather-card";
-import RoleHero from "./role-hero";
+import RoleHero, { type RoleHeroData } from "./role-hero";
+
+// Re-export so server `page.tsx` can import RoleHeroData through its client
+// boundary without reaching directly into role-hero.tsx. Keeps the hero
+// payload shape owned by one file while the server page stays wired to the
+// client page it renders.
+export type { RoleHeroData };
 
 export interface TripPageProps {
   trip: Trip;
@@ -26,8 +32,10 @@ export interface TripPageProps {
   currentUserRole: string | null;
   /** Earliest upcoming itinerary event (date >= today), or null if nothing scheduled. */
   nextEvent: ItineraryEvent | null;
-  /** Count of events with date >= today. Used by the All In hero headline. */
-  upcomingEventCount: number;
+  /** Up to 3 upcoming events (date >= today). Fed to the All In "Quick scan" row. */
+  upcomingEvents: ItineraryEvent[];
+  /** Pre-computed hero data (balances, unread chat, packing %, latest message). */
+  heroData: RoleHeroData;
 }
 
 // ─── Booking helpers ───
@@ -592,7 +600,8 @@ export default function TripPage({
   members,
   currentUserRole,
   nextEvent,
-  upcomingEventCount,
+  upcomingEvents,
+  heroData,
 }: TripPageProps) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
@@ -609,6 +618,14 @@ export default function TripPage({
   const [collapsedTypes, setCollapsedTypes] = useState<Record<string, boolean>>({});
   const [showAddBookingModal, setShowAddBookingModal] = useState(false);
   const [showEditBookingModal, setShowEditBookingModal] = useState(false);
+
+  // Vibes Only role: the whole Travel & Lodging section starts collapsed so
+  // the hub stays calm — the feature isn't hidden (memory:
+  // role_density_no_feature_loss.md), tapping the header expands the full
+  // list. All other roles keep the default expanded behavior.
+  const [lodgingCollapsed, setLodgingCollapsed] = useState<boolean>(
+    currentUserRole === "vibes_only"
+  );
 
   // Member name lookup
   const memberNameMap = useMemo(() => {
@@ -796,8 +813,9 @@ export default function TripPage({
             trip={trip}
             theme={th}
             nextEvent={nextEvent}
-            upcomingEventCount={upcomingEventCount}
+            upcomingEvents={upcomingEvents}
             isHost={isHost}
+            heroData={heroData}
           />
 
           {/* Weather Forecast */}
@@ -805,14 +823,35 @@ export default function TripPage({
 
           {/* ─── Travel & Lodging Section ─── */}
           <div className="fade-in" style={{ marginTop: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            {/* Header doubles as a tap-to-expand toggle. For Vibes Only the
+                body starts collapsed so the hub reads as calm; all other
+                roles start expanded and the toggle is a small UX gain. */}
+            <div
+              onClick={() => setLodgingCollapsed((v) => !v)}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: lodgingCollapsed ? 0 : 16,
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
               <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, margin: 0 }}>
                 🧳 Travel & Lodging
+                {lodgingCollapsed && (
+                  <span style={{ fontSize: 12, fontWeight: 500, color: th.muted, marginLeft: 8 }}>
+                    · tap to expand
+                  </span>
+                )}
               </h3>
+              <span style={{ fontSize: 14, color: th.muted }}>
+                {lodgingCollapsed ? "▸" : "▾"}
+              </span>
             </div>
 
             {/* Bookings grouped by type — collapsible */}
-            {Object.keys(bookingsByType).length > 0 ? (
+            {!lodgingCollapsed && Object.keys(bookingsByType).length > 0 ? (
               Object.entries(bookingsByType).map(([type, items]) => {
                 const isCollapsed = collapsedTypes[type] ?? false;
                 return (
@@ -993,7 +1032,7 @@ export default function TripPage({
                 );
               })
             ) : null}
-            {Object.keys(bookingsByType).length === 0 && (
+            {!lodgingCollapsed && Object.keys(bookingsByType).length === 0 && (
               /* Empty state */
               <div style={{ textAlign: "center", padding: "48px 20px" }}>
                 <div style={{ fontSize: 42, marginBottom: 12 }}>🧳</div>

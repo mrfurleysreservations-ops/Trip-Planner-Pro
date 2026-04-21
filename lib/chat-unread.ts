@@ -77,3 +77,113 @@ export function filterUnreadByLevel({ unreadMessages, level, viewerName }: Unrea
 export function countUnreadByLevel(inputs: UnreadInputs): number {
   return filterUnreadByLevel(inputs).length;
 }
+
+// ─── Shared fetcher ─────────────────────────────────────────────
+//
+// Pure async function that encapsulates the query sequence previously
+// inlined in `useTripChatUnread`: resolve the viewer's member row for name
+// + notification level, look up their read marker, pull unread messages,
+// apply the level filter. Works on both the server Supabase client and the
+// browser client because it only uses the `.from()` / `.select()` surface.
+//
+// The hook still owns realtime subscriptions + focus handling; this helper
+// just centralizes the one-shot read path so the trip hub server page can
+// get an unread badge + level without duplicating query logic.
+//
+// Returns { count, level } — the same shape exposed by the hook's state.
+
+export interface ChatUnreadState {
+  count: number;
+  level: ChatNotificationLevel;
+}
+
+// Intentionally structural: both `@supabase/supabase-js` browser and server
+// clients implement the `.from(...).select(...)` surface we use here, but
+// their Database generics differ. Typing against the intersection keeps
+// this helper reusable from either side without a cast dance.
+interface MinimalSupabase {
+  from: (table: string) => any;
+}
+
+export async function fetchUnreadChatState(
+  supabase: MinimalSupabase,
+  tripId: string,
+  userId: string,
+): Promise<ChatUnreadState> {
+  const { data: memberRow } = await supabase
+    .from("trip_members")
+    .select("name, chat_notification_level")
+    .eq("trip_id", tripId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  // Trip owner without a member row — fall back to the user profile name.
+  // Mirrors the hook's fallback path so counts match across tabs/devices.
+  if (!memberRow) {
+    const { data: profileRow } = await supabase
+      .from("user_profiles")
+      .select("full_name")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const { data: readRow } = await supabase
+      .from("trip_message_reads")
+      .select("last_read_at")
+      .eq("trip_id", tripId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    const lastRead = readRow?.last_read_at ?? null;
+
+    let q = supabase
+      .from("trip_messages")
+      .select("*")
+      .eq("trip_id", tripId)
+      .is("deleted_at", null)
+      .neq("sender_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (lastRead) q = q.gt("created_at", lastRead);
+    const { data: msgs } = await q;
+
+    const count = countUnreadByLevel({
+      unreadMessages: (msgs ?? []) as TripMessage[],
+      level: "all",
+      viewerName: profileRow?.full_name ?? null,
+    });
+    return { count, level: "all" };
+  }
+
+  const level = normalizeChatLevel(memberRow.chat_notification_level);
+
+  // Muted viewers short-circuit — no count query needed, the badge is a
+  // dot-only indicator that never displays a number.
+  if (level === "muted") {
+    return { count: 0, level: "muted" };
+  }
+
+  const { data: readRow } = await supabase
+    .from("trip_message_reads")
+    .select("last_read_at")
+    .eq("trip_id", tripId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  const lastRead = readRow?.last_read_at ?? null;
+
+  let q = supabase
+    .from("trip_messages")
+    .select("*")
+    .eq("trip_id", tripId)
+    .is("deleted_at", null)
+    .neq("sender_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (lastRead) q = q.gt("created_at", lastRead);
+  const { data: msgs } = await q;
+
+  const count = countUnreadByLevel({
+    unreadMessages: (msgs ?? []) as TripMessage[],
+    level,
+    viewerName: memberRow.name,
+  });
+  return { count, level };
+}
