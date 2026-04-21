@@ -29,6 +29,7 @@ export interface Database {
           city: string | null;
           clothing_styles: string[] | null;
           default_role_preference: string | null;
+          primary_vehicle_name: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -47,6 +48,26 @@ export interface Database {
           city?: string | null;
           clothing_styles?: string[] | null;
           default_role_preference?: string | null;
+          primary_vehicle_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string | null;
+          full_name?: string | null;
+          age_type?: string | null;
+          avatar_url?: string | null;
+          alerts_last_seen_at?: string | null;
+          packing_preferences?: Json | null;
+          onboarding_completed?: boolean;
+          gender?: string | null;
+          age_range?: string | null;
+          phone?: string | null;
+          city?: string | null;
+          clothing_styles?: string[] | null;
+          default_role_preference?: string | null;
+          primary_vehicle_name?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -407,6 +428,7 @@ export interface Database {
           color: string | null;
           icon: string | null;
           notes: string | null;
+          parent_bin_id: string | null;
           archived_at: string | null;
           created_at: string;
           updated_at: string;
@@ -420,6 +442,7 @@ export interface Database {
           color?: string | null;
           icon?: string | null;
           notes?: string | null;
+          parent_bin_id?: string | null;
           archived_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -433,9 +456,48 @@ export interface Database {
           color?: string | null;
           icon?: string | null;
           notes?: string | null;
+          parent_bin_id?: string | null;
           archived_at?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      trip_gear_bins: {
+        Row: {
+          id: string;
+          trip_id: string;
+          bin_id: string;
+          location_override: "frunk" | "cabin" | "trunk" | "roofbox" | "tow_hitch" | null;
+          loaded: boolean;
+          loaded_at: string | null;
+          loaded_by: string | null;
+          notes: string | null;
+          added_by: string;
+          added_at: string;
+        };
+        Insert: {
+          id?: string;
+          trip_id: string;
+          bin_id: string;
+          location_override?: "frunk" | "cabin" | "trunk" | "roofbox" | "tow_hitch" | null;
+          loaded?: boolean;
+          loaded_at?: string | null;
+          loaded_by?: string | null;
+          notes?: string | null;
+          added_by: string;
+          added_at?: string;
+        };
+        Update: {
+          id?: string;
+          trip_id?: string;
+          bin_id?: string;
+          location_override?: "frunk" | "cabin" | "trunk" | "roofbox" | "tow_hitch" | null;
+          loaded?: boolean;
+          loaded_at?: string | null;
+          loaded_by?: string | null;
+          notes?: string | null;
+          added_by?: string;
+          added_at?: string;
         };
       };
       gear_items: {
@@ -903,6 +965,7 @@ export interface Database {
           total_amount: number;
           category: string;
           event_id: string | null;
+          supply_id: string | null;
           expense_date: string | null;
           notes: string | null;
           split_type: string;
@@ -917,6 +980,7 @@ export interface Database {
           total_amount: number;
           category?: string;
           event_id?: string | null;
+          supply_id?: string | null;
           expense_date?: string | null;
           notes?: string | null;
           split_type?: string;
@@ -1146,6 +1210,9 @@ export type GearBinUpdate = Database["public"]["Tables"]["gear_bins"]["Update"];
 export type GearItem = Database["public"]["Tables"]["gear_items"]["Row"];
 export type GearItemInsert = Database["public"]["Tables"]["gear_items"]["Insert"];
 export type GearItemUpdate = Database["public"]["Tables"]["gear_items"]["Update"];
+export type TripGearBin = Database["public"]["Tables"]["trip_gear_bins"]["Row"];
+export type TripGearBinInsert = Database["public"]["Tables"]["trip_gear_bins"]["Insert"];
+export type TripGearBinUpdate = Database["public"]["Tables"]["trip_gear_bins"]["Update"];
 export type Outfit = Database["public"]["Tables"]["outfits"]["Row"];
 export type OutfitInsert = Database["public"]["Tables"]["outfits"]["Insert"];
 export type OutfitItem = Database["public"]["Tables"]["outfit_items"]["Row"];

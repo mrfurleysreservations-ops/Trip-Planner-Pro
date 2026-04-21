@@ -114,6 +114,7 @@ function getFamilyColor(idx: number): string {
 export default function ExpensesPageComponent({
   trip, members, expenses: initialExpenses, events, familyGroups,
   userId, isHost, fromEvent, fromEventTitle, fromEventDate,
+  fromSupply, fromSupplyTitle,
 }: ExpensesPageProps) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
@@ -136,6 +137,7 @@ export default function ExpensesPageComponent({
   const [addCategory, setAddCategory] = useState("other");
   const [addDate, setAddDate] = useState("");
   const [addEventId, setAddEventId] = useState<string | null>(null);
+  const [addSupplyId, setAddSupplyId] = useState<string | null>(null);
   const [addNotes, setAddNotes] = useState("");
   const [addSplitType, setAddSplitType] = useState("family");
   const [addPayers, setAddPayers] = useState<Map<string, number>>(new Map());
@@ -178,8 +180,18 @@ export default function ExpensesPageComponent({
       // (We don't have participant data here, so select all families as default)
       setAddSelectedFamilies(new Set(familyGroups.map((fg) => fg.familyId)));
       setShowAddModal(true);
+    } else if (fromSupply) {
+      setAddSupplyId(fromSupply);
+      if (fromSupplyTitle) setAddTitle(fromSupplyTitle);
+      // Default the current user as sole payer (they're here because they just bought it).
+      if (currentUserMember) {
+        setAddPayers(new Map([[currentUserMember.id, 0]]));
+      }
+      setAddSelectedFamilies(new Set(familyGroups.map((fg) => fg.familyId)));
+      setShowAddModal(true);
     }
-  }, [fromEvent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromEvent, fromSupply]);
 
   // ─── Filtered expenses ───
   const filteredExpenses = filterCategory
@@ -204,6 +216,7 @@ export default function ExpensesPageComponent({
     setAddCategory("other");
     setAddDate("");
     setAddEventId(null);
+    setAddSupplyId(null);
     setAddNotes("");
     setAddSplitType("family");
     setAddPayers(new Map());
@@ -299,6 +312,7 @@ export default function ExpensesPageComponent({
         total_amount: total,
         category: addCategory,
         event_id: addEventId || null,
+        supply_id: addSupplyId || null,
         expense_date: addDate || null,
         notes: addNotes.trim() || null,
         split_type: addSplitType,

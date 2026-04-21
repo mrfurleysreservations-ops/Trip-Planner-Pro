@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gear — Redesigned Library + Nested-Bin Modal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #5a9a2f;
+    --text: #1a1a1a;
+    --muted: #6a7a5a;
+    --muted-soft: #9aa395;
+    --card: rgba(90,154,47,0.06);
+    --cardBorder: rgba(90,154,47,0.2);
+    --bg: #f6f8f4;
+
+    --loc-frunk:    #4a7bc8;
+    --loc-cabin:    #9b59b6;
+    --loc-trunk:    #e65100;
+    --loc-roofbox:  #0097a7;
+    --loc-tow:      #c8503a;
+  }
+  * { box-sizing: border-box; }
+  html,body { margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background: #eef2e8;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    padding: 24px 16px 48px;
+  }
+
+  h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    max-width: 1200px;
+    margin: 0 auto 6px;
+    text-align: center;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    color: var(--muted); font-size: 13px;
+    max-width: 900px; margin: 0 auto 24px;
+    text-align: center; line-height: 1.5;
+  }
+
+  .row {
+    display: flex; gap: 24px;
+    max-width: 1400px; margin: 0 auto;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .opt { flex: 1 1 360px; max-width: 420px; }
+  .opt > .title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 16px; font-weight: 800; margin: 0 0 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+  .opt > .sub2 {
+    font-size: 12px; color: var(--muted); margin: 0 0 12px; line-height: 1.5;
+  }
+
+  /* ── Phone frame ── */
+  .phone {
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    position: relative;
+    min-height: 620px;
+  }
+  .phone-bg { background: var(--bg); min-height: 100%; position: relative; }
+
+  /* ── Sticky top (library) ── */
+  .sticky-top {
+    position: sticky; top: 0; z-index: 5;
+    background: rgba(246,248,244,0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--cardBorder);
+  }
+  .lib-head {
+    padding: 14px 16px 8px;
+  }
+  .lib-head h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 20px; font-weight: 800; margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .lib-head p {
+    font-size: 11px; color: var(--muted); margin: 2px 0 0;
+  }
+  .search-wrap { padding: 6px 16px 10px; }
+  .search {
+    width: 100%;
+    background: #fff; border: 1.5px solid var(--cardBorder);
+    border-radius: 12px; padding: 9px 12px;
+    font-size: 13px; font-family: inherit;
+    color: var(--muted);
+  }
+
+  /* ── Body ── */
+  .body { padding: 14px 16px 96px; }
+
+  .loc-group { margin-bottom: 14px; }
+  .loc-group-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 2px 8px;
+  }
+  .loc-group-head .pin { width: 8px; height: 8px; border-radius: 50%; }
+  .loc-group-head[data-loc="trunk"] .pin { background: var(--loc-trunk); }
+  .loc-group-head[data-loc="cabin"] .pin { background: var(--loc-cabin); }
+  .loc-group-head[data-loc="frunk"] .pin { background: var(--loc-frunk); }
+  .loc-group-head[data-loc="roofbox"] .pin { background: var(--loc-roofbox); }
+  .loc-group-head .label {
+    font-size: 11px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--muted);
+  }
+  .loc-group-head .c {
+    font-size: 10px; color: var(--muted);
+    background: #fff; border: 1px solid var(--cardBorder);
+    padding: 1px 7px; border-radius: 999px;
+  }
+
+  .bin-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .bin-row .icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--card);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .bin-row .info { flex: 1; min-width: 0; }
+  .bin-row .name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+  .bin-row .meta { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .bin-row .arrow { color: var(--muted-soft); font-size: 14px; flex-shrink: 0; }
+  .bin-row .nested-pill {
+    font-size: 9px; font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(230,81,0,0.1);
+    color: var(--loc-trunk);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── FAB ── */
+  .fab {
+    position: absolute;
+    right: 16px; bottom: 16px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-size: 28px; font-weight: 300;
+    box-shadow: 0 4px 14px rgba(90,154,47,0.4), 0 2px 6px rgba(0,0,0,0.1);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    z-index: 4;
+  }
+
+  /* ── Modal (bottom-sheet) ── */
+  .scrim {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 10;
+    display: flex; align-items: flex-end;
+  }
+  .sheet {
+    width: 100%;
+    background: var(--bg);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    max-height: 92%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.18);
+  }
+  .sheet-grip {
+    display: flex; justify-content: center;
+    padding: 8px 0 4px;
+  }
+  .sheet-grip span {
+    width: 36px; height: 4px;
+    background: var(--muted-soft);
+    border-radius: 999px;
+    opacity: 0.5;
+  }
+  .sheet-head {
+    padding: 4px 18px 12px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--cardBorder);
+  }
+  .sheet-head .back-crumb {
+    background: none; border: none;
+    color: var(--accent); font-size: 12px; font-weight: 700;
+    cursor: pointer; padding: 4px 0; font-family: inherit;
+  }
+  .sheet-head .bin-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--card);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 19px; flex-shrink: 0;
+  }
+  .sheet-head .bin-title {
+    flex: 1; min-width: 0;
+  }
+  .sheet-head .bin-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px; font-weight: 800; line-height: 1.2;
+  }
+  .sheet-head .bin-loc {
+    font-size: 10px; color: var(--muted); margin-top: 2px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .sheet-head .x {
+    background: none; border: none; font-size: 18px; color: var(--muted); cursor: pointer;
+  }
+  .crumb-path {
+    padding: 6px 18px;
+    font-size: 10px; color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    background: rgba(0,0,0,0.02);
+    border-bottom: 1px solid var(--cardBorder);
+  }
+  .crumb-path .slash { margin: 0 4px; opacity: 0.5; }
+  .crumb-path b { color: var(--text); font-weight: 700; }
+
+  .sheet-body { padding: 12px 18px 14px; overflow-y: auto; flex: 1; }
+  .sheet-body .sect {
+    font-size: 10px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 12px 0 6px;
+  }
+  .sheet-body .sect:first-child { margin-top: 4px; }
+
+  /* Child bin (nested) */
+  .child-bin {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-left: 3px solid var(--loc-trunk);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+  }
+  .child-bin .icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--card);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .child-bin .info { flex: 1; min-width: 0; }
+  .child-bin .n { font-size: 12px; font-weight: 700; }
+  .child-bin .m { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .child-bin .arrow { color: var(--muted-soft); font-size: 12px; }
+
+  /* Item row */
+  .item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0;
+    font-size: 12px;
+    border-bottom: 1px dashed rgba(0,0,0,0.06);
+  }
+  .item:last-child { border-bottom: none; }
+  .item .check {
+    width: 16px; height: 16px;
+    border: 1.5px solid var(--cardBorder);
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .item .nm { flex: 1; }
+  .item .qty {
+    font-size: 10px; padding: 2px 8px;
+    background: var(--card); color: var(--muted);
+    border-radius: 999px;
+  }
+  .item .x-mini {
+    background: none; border: none; color: var(--muted-soft);
+    font-size: 12px; cursor: pointer; padding: 0 4px;
+  }
+
+  /* Sticky bottom CTA */
+  .sheet-cta {
+    padding: 10px 14px 14px;
+    border-top: 1px solid var(--cardBorder);
+    background: #fff;
+    display: flex; gap: 8px;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+  .sheet-cta input {
+    flex: 1; min-width: 140px;
+    border: 1.5px solid var(--cardBorder);
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 12px; font-family: inherit;
+  }
+  .sheet-cta .add-item {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 10px; padding: 9px 14px;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  .sheet-cta .add-child {
+    background: #fff; color: var(--accent);
+    border: 1.5px solid var(--accent);
+    border-radius: 10px; padding: 9px 12px;
+    font-size: 11px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    flex: 1 1 100%;
+    text-align: center;
+  }
+
+  /* ── Callouts ── */
+  .callout {
+    max-width: 1200px; margin: 32px auto 0;
+    padding: 18px 20px;
+    background: #fff; border: 1px solid var(--cardBorder);
+    border-radius: 14px;
+    font-size: 13px; color: var(--text); line-height: 1.55;
+  }
+  .callout h3 { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; margin: 0 0 8px; }
+  .callout ul { margin: 6px 0 0 18px; padding: 0; }
+  .callout li { margin: 4px 0; }
+  .callout code {
+    background: rgba(0,0,0,0.05); padding: 1px 6px; border-radius: 4px;
+    font-size: 12px;
+  }
+  .callout .diff-good { color: #2e7d32; font-weight: 700; }
+  .callout .diff-warn { color: #c25a3a; font-weight: 700; }
+
+  .tag-before {
+    display: inline-block; margin-left: 6px;
+    font-size: 10px; font-weight: 800;
+    padding: 2px 8px; border-radius: 999px;
+    background: #f3e3d6; color: #8c5a2c;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .tag-after {
+    display: inline-block; margin-left: 6px;
+    font-size: 10px; font-weight: 800;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--accent); color: #fff;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+
+<h1>Gear — Redesign preview</h1>
+<p class="sub">
+  Three panels. Left: the cleaned-up <code>/gear</code> library (flat rows by location, + FAB). Middle: what happens when you tap
+  a bin — a bottom-sheet modal with <b>child bins</b> AND items in one sheet. Right: the same modal opened from inside a trip's Gear tab.
+</p>
+
+<div class="row">
+
+  <!-- ─── PANEL 1: Redesigned /gear library ─── -->
+  <div class="opt">
+    <div class="title">① /gear — redesigned<span class="tag-after">new</span></div>
+    <div class="sub2">
+      Row-based list grouped by car location. Header carries title + search only. A
+      floating <b>＋</b> button in the bottom-right creates a new top-level bin.
+    </div>
+
+    <div class="phone">
+      <div class="phone-bg">
+        <div class="sticky-top">
+          <div class="lib-head">
+            <h2>🎒 Gear Library</h2>
+            <p>Reusable bins for your family trips</p>
+          </div>
+          <div class="search-wrap">
+            <div class="search">🔍  Search bins and items…</div>
+          </div>
+        </div>
+
+        <div class="body">
+          <div class="loc-group">
+            <div class="loc-group-head" data-loc="trunk">
+              <span class="pin"></span>
+              <span class="label">Trunk</span>
+              <span class="c">3 bins · 54 items</span>
+            </div>
+            <div class="bin-row">
+              <span class="icon">🏕️</span>
+              <div class="info">
+                <div class="name">Camp Kitchen</div>
+                <div class="meta">18 items · 2 child bins</div>
+              </div>
+              <span class="nested-pill">has bins</span>
+              <span class="arrow">›</span>
+            </div>
+            <div class="bin-row">
+              <span class="icon">🔥</span>
+              <div class="info">
+                <div class="name">Fire &amp; Fuel</div>
+                <div class="meta">8 items</div>
+              </div>
+              <span class="arrow">›</span>
+            </div>
+            <div class="bin-row">
+              <span class="icon">🩹</span>
+              <div class="info">
+                <div class="name">First Aid</div>
+                <div class="meta">28 items</div>
+              </div>
+              <span class="arrow">›</span>
+            </div>
+          </div>
+
+          <div class="loc-group">
+            <div class="loc-group-head" data-loc="roofbox">
+              <span class="pin"></span>
+              <span class="label">Roofbox</span>
+              <span class="c">2 bins · 15 items</span>
+            </div>
+            <div class="bin-row">
+              <span class="icon">⛺</span>
+              <div class="info">
+                <div class="name">Tent &amp; Shelter</div>
+                <div class="meta">6 items</div>
+              </div>
+              <span class="arrow">›</span>
+            </div>
+            <div class="bin-row">
+              <span class="icon">🛌</span>
+              <div class="info">
+                <div class="name">Sleep Kit</div>
+                <div class="meta">9 items</div>
+              </div>
+              <span class="arrow">›</span>
+            </div>
+          </div>
+
+          <div class="loc-group">
+            <div class="loc-group-head" data-loc="cabin">
+              <span class="pin"></span>
+              <span class="label">Cabin</span>
+              <span class="c">1 bin · 11 items</span>
+            </div>
+            <div class="bin-row">
+              <span class="icon">🔦</span>
+              <div class="info">
+                <div class="name">Daily Essentials</div>
+                <div class="meta">11 items</div>
+              </div>
+              <span class="arrow">›</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAB -->
+        <button class="fab" aria-label="New bin">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── PANEL 2: Bin modal opened on /gear ─── -->
+  <div class="opt">
+    <div class="title">② Bin modal (with child bins)<span class="tag-after">new</span></div>
+    <div class="sub2">
+      Opens when you tap <b>Camp Kitchen</b>. Child bins up top, then items.
+      The same bottom CTA creates a new item OR a new child bin.
+    </div>
+
+    <div class="phone">
+      <div class="phone-bg">
+        <!-- Library underneath for context -->
+        <div class="sticky-top">
+          <div class="lib-head">
+            <h2>🎒 Gear Library</h2>
+            <p>Reusable bins for your family trips</p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="bin-row" style="opacity: 0.4;">
+            <span class="icon">🏕️</span>
+            <div class="info">
+              <div class="name">Camp Kitchen</div>
+              <div class="meta">18 items · 2 child bins</div>
+            </div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="bin-row" style="opacity: 0.4;">
+            <span class="icon">🔥</span>
+            <div class="info">
+              <div class="name">Fire &amp; Fuel</div>
+              <div class="meta">8 items</div>
+            </div>
+            <span class="arrow">›</span>
+          </div>
+        </div>
+
+        <!-- Modal scrim -->
+        <div class="scrim">
+          <div class="sheet">
+            <div class="sheet-grip"><span></span></div>
+            <div class="sheet-head">
+              <span class="bin-icon">🏕️</span>
+              <div class="bin-title">
+                <div class="bin-name">Camp Kitchen</div>
+                <div class="bin-loc">Trunk · 18 items · 2 child bins</div>
+              </div>
+              <button class="x">✕</button>
+            </div>
+
+            <div class="sheet-body">
+              <div class="sect">Bins inside</div>
+              <div class="child-bin">
+                <span class="icon">🍳</span>
+                <div class="info">
+                  <div class="n">Cookware Tote</div>
+                  <div class="m">7 items</div>
+                </div>
+                <span class="arrow">›</span>
+              </div>
+              <div class="child-bin">
+                <span class="icon">🧺</span>
+                <div class="info">
+                  <div class="n">Spices &amp; Dry Goods</div>
+                  <div class="m">12 items</div>
+                </div>
+                <span class="arrow">›</span>
+              </div>
+
+              <div class="sect">Loose items in this bin</div>
+              <div class="item">
+                <span class="check"></span>
+                <span class="nm">Cast iron skillet</span>
+                <span class="qty">×1</span>
+                <button class="x-mini">✕</button>
+              </div>
+              <div class="item">
+                <span class="check"></span>
+                <span class="nm">Camp stove</span>
+                <span class="qty">×1</span>
+                <button class="x-mini">✕</button>
+              </div>
+              <div class="item">
+                <span class="check"></span>
+                <span class="nm">Fuel canisters</span>
+                <span class="qty">×4</span>
+                <button class="x-mini">✕</button>
+              </div>
+              <div class="item">
+                <span class="check"></span>
+                <span class="nm">Cutting board</span>
+                <span class="qty">×1</span>
+                <button class="x-mini">✕</button>
+              </div>
+            </div>
+
+            <!-- Sticky CTA row -->
+            <div class="sheet-cta">
+              <input placeholder="Add item to this bin…" />
+              <button class="add-item">＋ Add</button>
+              <button class="add-child">＋ Add a bin inside this bin</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── PANEL 3: Same modal from trip Gear tab ─── -->
+  <div class="opt">
+    <div class="title">③ Same modal — from a trip<span class="tag-after">new</span></div>
+    <div class="sub2">
+      Identical sheet, identical behavior. Child bins navigate in, breadcrumb lets you come back. No difference between
+      editing from <code>/gear</code> and editing from a trip.
+    </div>
+
+    <div class="phone">
+      <div class="phone-bg">
+        <!-- Trip gear page underneath -->
+        <div class="sticky-top">
+          <div class="lib-head">
+            <h2>🚙 Yosemite Weekend</h2>
+            <p>Packing · <b>Gear</b></p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="bin-row" style="opacity: 0.4;">
+            <span class="icon">🏕️</span>
+            <div class="info">
+              <div class="name">Camp Kitchen</div>
+              <div class="meta">18 items · loaded</div>
+            </div>
+            <span class="arrow">›</span>
+          </div>
+        </div>
+
+        <div class="scrim">
+          <div class="sheet">
+            <div class="sheet-grip"><span></span></div>
+            <div class="sheet-head">
+              <button class="back-crumb">‹ Camp Kitchen</button>
+            </div>
+            <div class="crumb-path">
+              Camp Kitchen <span class="slash">/</span> <b>Cookware Tote</b>
+            </div>
+            <div class="sheet-head" style="border-bottom: 1px solid var(--cardBorder);">
+              <span class="bin-icon">🍳</span>
+              <div class="bin-title">
+                <div class="bin-name">Cookware Tote</div>
+                <div class="bin-loc">Inside Camp Kitchen · 7 items</div>
+              </div>
+              <button class="x">✕</button>
+            </div>
+            <div class="sheet-body">
+              <div class="sect">Items</div>
+              <div class="item">
+                <span class="check"></span>
+                <span class="nm">8" cast iron</span>
+                <span class="qty">×1</span>
+                <button class="x-mini">✕</button>
+              </div>
+              <div class="item">
+                <span class="check"></span>
+                <span class="nm">Dutch oven</span>
+                <span class="qty">×1</span>
+                <button class="x-mini">✕</button>
+              </div>
+              <div class="item">
+                <span class="check"></span>
+                <span class="nm">Spatula &amp; tongs</span>
+                <span class="qty">×1</span>
+                <button class="x-mini">✕</button>
+              </div>
+              <div class="item">
+                <span class="check"></span>
+                <span class="nm">Grate &amp; grill brush</span>
+                <span class="qty">×1</span>
+                <button class="x-mini">✕</button>
+              </div>
+            </div>
+            <div class="sheet-cta">
+              <input placeholder="Add item to Cookware Tote…" />
+              <button class="add-item">＋ Add</button>
+              <button class="add-child">＋ Add a bin inside this bin</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="callout">
+  <h3>What's changing vs. Phase 1</h3>
+  <ul>
+    <li><b>Layout:</b> <span class="diff-warn">inline expanding cards</span> → <span class="diff-good">flat row list grouped by location</span>. No more "jumbled" expanded cards pushing other bins down the page.</li>
+    <li><b>Edit surface:</b> <span class="diff-warn">inline expansion</span> → <span class="diff-good">bottom-sheet modal</span>. Same modal on <code>/gear</code> and inside a trip. One edit UI to maintain.</li>
+    <li><b>New bin button:</b> <span class="diff-warn">header button</span> → <span class="diff-good">floating ＋ FAB</span> bottom-right.</li>
+    <li><b>Nested bins:</b> <span class="diff-good">new</span>. Schema change — <code>gear_bins.parent_bin_id</code> (self-reference, nullable).</li>
+    <li><b>Sticky CTA:</b> input + "Add" always pinned to the bottom of the sheet (matches Add Booking pattern).</li>
+  </ul>
+</div>
+
+<div class="callout">
+  <h3>One thing I need you to decide: how deep does nesting go?</h3>
+  <ul>
+    <li><b>One level only</b> (top-level bins contain child bins; child bins only contain items). Simple model, easy to reason about, covers most real-world cases. <i>Camp Kitchen → Cookware Tote → items</i>.</li>
+    <li><b>Arbitrary depth</b> (any bin can contain bins and items). More flexible, but UI gets harder — breadcrumbs can grow long, and on small screens the sheet starts to feel like a file browser.</li>
+  </ul>
+  <p>The rest of the build is the same either way; only the validation logic + a couple of UX details differ.</p>
+</div>
+
+</body>
+</html>

@@ -876,6 +876,13 @@ export default function SuppliesPage({
           onClose={() => setOpenSupplyId(null)}
           onSave={(patch) => updateSupply(openSupply.id, patch)}
           onDelete={() => deleteSupply(openSupply.id)}
+          onAddExpense={() => {
+            const params = new URLSearchParams({
+              fromSupply: openSupply.id,
+              title: openSupply.name,
+            });
+            router.push(`/trip/${trip.id}/expenses?${params.toString()}`);
+          }}
         />
       )}
 
@@ -2343,6 +2350,7 @@ function SupplyEditorSheet({
   onSave,
   onCreate,
   onDelete,
+  onAddExpense,
   prefillFromNote,
 }: {
   th: (typeof THEMES)["home"];
@@ -2362,6 +2370,7 @@ function SupplyEditorSheet({
     sourceNoteId?: string | null;
   }) => Promise<void>;
   onDelete?: () => Promise<void>;
+  onAddExpense?: () => void;
   prefillFromNote?: {
     noteId: string | null;
     title: string;
@@ -2558,6 +2567,40 @@ function SupplyEditorSheet({
               ))}
             </select>
           </div>
+        )}
+
+        {isEdit && onAddExpense && (
+          <>
+            <SheetSecLabel>Cost & reimbursement</SheetSecLabel>
+            <button
+              type="button"
+              onClick={onAddExpense}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "12px 14px",
+                borderRadius: 12,
+                border: `1.5px solid ${th.accent}40`,
+                background: `${th.accent}0d`,
+                color: th.accent,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              <span aria-hidden style={{ fontSize: 16 }}>💳</span>
+              <span style={{ flex: 1, textAlign: "left" }}>
+                Add expense for reimbursement
+              </span>
+              <span aria-hidden style={{ fontSize: 14, opacity: 0.7 }}>→</span>
+            </button>
+            <div style={{ fontSize: 11, color: "#888", marginTop: 6, lineHeight: 1.4 }}>
+              Logs what you paid to the Expenses tab so the group can settle up.
+            </div>
+          </>
         )}
 
         <SheetSecLabel>Notes (optional)</SheetSecLabel>

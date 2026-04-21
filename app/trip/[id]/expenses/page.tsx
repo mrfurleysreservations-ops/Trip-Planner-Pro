@@ -24,6 +24,8 @@ export interface ExpensesPageProps {
   fromEvent: string | null;
   fromEventTitle: string | null;
   fromEventDate: string | null;
+  fromSupply: string | null;
+  fromSupplyTitle: string | null;
 }
 
 export default async function ExpensesServerPage({
@@ -31,7 +33,7 @@ export default async function ExpensesServerPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { fromEvent?: string; title?: string; date?: string };
+  searchParams: { fromEvent?: string; fromSupply?: string; title?: string; date?: string };
 }) {
   const supabase = createServerSupabaseClient();
   const { id } = params;
@@ -126,8 +128,10 @@ export default async function ExpensesServerPage({
       userId={user.id}
       isHost={isHost}
       fromEvent={searchParams?.fromEvent || null}
-      fromEventTitle={searchParams?.title || null}
+      fromEventTitle={searchParams?.fromEvent ? (searchParams?.title || null) : null}
       fromEventDate={searchParams?.date || null}
+      fromSupply={searchParams?.fromSupply || null}
+      fromSupplyTitle={searchParams?.fromSupply ? (searchParams?.title || null) : null}
     />
   );
 }
