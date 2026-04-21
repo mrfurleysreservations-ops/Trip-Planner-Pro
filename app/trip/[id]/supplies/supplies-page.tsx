@@ -379,6 +379,7 @@ export default function SuppliesPage({
       if (error) {
         console.error("createMeal error:", JSON.stringify(error, null, 2));
         setLoading(false);
+        alert(`Couldn't save meal: ${error.message}`);
         return null;
       }
       const newMeal = data as ItineraryEvent;
@@ -606,6 +607,7 @@ export default function SuppliesPage({
         .single();
       if (error) {
         console.error("createSupply error:", JSON.stringify(error, null, 2));
+        alert(`Couldn't save supply: ${error.message}`);
         return null;
       }
       const row = data as SupplyItem;

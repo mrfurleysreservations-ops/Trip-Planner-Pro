@@ -294,6 +294,7 @@ export const EVENT_TYPES = [
   { value: "travel", label: "Travel", icon: "✈️" },
   { value: "activity", label: "Activity", icon: "🎯" },
   { value: "dining", label: "Dining", icon: "🍽️" },
+  { value: "meal", label: "Meal", icon: "🍳" },
   { value: "outdoors", label: "Outdoors", icon: "🌿" },
   { value: "nightlife", label: "Nightlife", icon: "🌙" },
   { value: "downtime", label: "Downtime", icon: "☕" },

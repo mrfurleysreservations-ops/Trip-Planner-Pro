@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gear Bin Row — Tap Target Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #5a9a2f;
+    --text: #1a1a1a;
+    --muted: #6a7a5a;
+    --card: rgba(90,154,47,0.06);
+    --cardBorder: rgba(90,154,47,0.2);
+    --bg: #f6f8f4;
+    --loc-trunk: #e65100;
+  }
+  * { box-sizing: border-box; }
+  html,body { margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background: #eef2e8;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    padding: 24px 16px 48px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 800;
+    max-width: 1200px;
+    margin: 0 auto 6px;
+    text-align: center;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 13px;
+    max-width: 1200px;
+    margin: 0 auto 28px;
+    text-align: center;
+  }
+  .row {
+    display: flex;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .opt {
+    flex: 1 1 320px;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+  }
+  .opt-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .opt-title .num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px;
+  }
+  .opt-title h2 { font-size: 15px; font-weight: 800; margin: 0; }
+  .opt-desc { font-size: 12px; color: var(--muted); margin: 0 0 12px; line-height: 1.45; }
+
+  .phone {
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    position: relative;
+  }
+  .phone-bg {
+    background: var(--bg);
+    padding: 0;
+  }
+
+  /* Shared — trip header */
+  .trip-head {
+    padding: 12px 14px 8px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--cardBorder);
+    background: rgba(246,248,244,0.96);
+  }
+  .back {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--card); border: none; font-size: 14px;
+    color: var(--muted); cursor: pointer;
+  }
+  .trip-title .name { font-size: 14px; font-weight: 700; }
+  .trip-title .dates { font-size: 10px; color: var(--muted); }
+
+  .body { padding: 12px 14px 16px; }
+
+  .bin-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 12px;
+    margin-bottom: 6px;
+  }
+  .bin-row.target {
+    outline: 2px solid #e65100;
+    outline-offset: 2px;
+    animation: pulse 1.8s infinite ease-in-out;
+  }
+  @keyframes pulse {
+    0%,100% { outline-offset: 2px; }
+    50% { outline-offset: 6px; }
+  }
+  .bin-row .check {
+    width: 18px; height: 18px; border-radius: 6px;
+    border: 2px solid var(--cardBorder); background: #fff; flex-shrink: 0;
+  }
+  .bin-row .icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--card);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 15px;
+  }
+  .bin-row .info { flex: 1; }
+  .bin-row .name { font-size: 12px; font-weight: 700; }
+  .bin-row .meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .bin-row .arrow { color: var(--muted); font-size: 12px; }
+
+  .arrow-hint {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(230,81,0,0.96);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    z-index: 30;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+  }
+
+  /* ── Option 1: Deep-link preview ── */
+  .gear-lib {
+    background: #f8f8f8;
+    padding: 12px 14px;
+  }
+  .gear-lib-head { font-size: 12px; font-weight: 800; margin-bottom: 8px; }
+  .gear-lib-card {
+    background: #fff;
+    border: 1.5px solid var(--accent);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  }
+  .gear-lib-card .title { font-size: 13px; font-weight: 800; }
+  .gear-lib-card .sub2 { font-size: 10px; color: var(--muted); margin: 2px 0 10px; }
+  .gear-lib-card .item {
+    display: flex; align-items: center; gap: 8px; padding: 4px 0;
+    font-size: 11px;
+    border-top: 1px dashed var(--cardBorder);
+  }
+  .gear-lib-card .item:first-of-type { border-top: none; }
+  .gear-lib-card .item .qty {
+    margin-left: auto;
+    font-size: 9px; padding: 1px 6px; background: var(--card); border-radius: 999px;
+    color: var(--muted);
+  }
+  .back-pill {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 10px; color: var(--accent); font-weight: 700;
+  }
+
+  /* ── Option 2: In-trip modal ── */
+  .scrim {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 10;
+    display: flex; align-items: flex-end;
+  }
+  .sheet {
+    width: 100%;
+    background: var(--bg);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    max-height: 86%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.18);
+  }
+  .sheet-head {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--cardBorder);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .sheet-head h3 { font-size: 14px; font-weight: 800; margin: 0; }
+  .sheet-head .x {
+    background: none; border: none; font-size: 16px; color: var(--muted); cursor: pointer;
+  }
+  .sheet-body { padding: 12px 16px; overflow-y: auto; flex: 1; }
+  .sheet-body .row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0;
+    font-size: 12px;
+    border-bottom: 1px dashed var(--cardBorder);
+  }
+  .sheet-body .row .qty {
+    margin-left: auto;
+    font-size: 10px; padding: 2px 8px; background: var(--card); border-radius: 999px;
+    color: var(--muted);
+  }
+  .sheet-body .x-mini {
+    background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer;
+  }
+  .sheet-cta {
+    padding: 10px 16px 14px;
+    border-top: 1px solid var(--cardBorder);
+    background: #fff;
+    display: flex; gap: 8px;
+  }
+  .sheet-cta input {
+    flex: 1;
+    border: 1.5px solid var(--cardBorder);
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .sheet-cta button {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 10px; padding: 8px 14px;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* ── Option 3: New route (URL bar hint) ── */
+  .url-bar {
+    background: #eee; border-bottom: 1px solid #ddd;
+    padding: 6px 10px; font-size: 10px; color: #666; font-family: ui-monospace, monospace;
+  }
+  .url-bar .host { color: #999; }
+  .url-bar .path { color: #111; font-weight: 600; }
+
+  .dedicated {
+    padding: 14px; background: #fff;
+  }
+  .dedicated h2 { font-size: 15px; font-weight: 800; margin: 0 0 2px; }
+  .dedicated .sub2 { font-size: 11px; color: var(--muted); margin: 0 0 12px; }
+  .dedicated .meta-card {
+    background: var(--card); border: 1px solid var(--cardBorder);
+    border-radius: 10px; padding: 8px 10px; font-size: 11px; margin-bottom: 8px;
+  }
+  .dedicated .item-list .item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 0; font-size: 12px;
+    border-top: 1px dashed var(--cardBorder);
+  }
+  .dedicated .item-list .item:first-child { border-top: none; }
+
+  .pros-cons {
+    font-size: 11px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid var(--cardBorder);
+    border-radius: 10px;
+    line-height: 1.5;
+  }
+  .pros-cons b { font-weight: 800; color: var(--text); }
+  .pros-cons .pro { color: #2e7d32; }
+  .pros-cons .con { color: #c25a3a; }
+
+  .rec {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+
+<h1>When Joe taps a bin row — what happens?</h1>
+<p class="sub">Three options, left-to-right. All show the same starting point: tapping <b>Camp Kitchen</b> in the Gear pill of the Packing tab.</p>
+
+<div class="row">
+
+  <!-- ─── OPTION 1 ─── -->
+  <div class="opt">
+    <div class="opt-title">
+      <span class="num">1</span>
+      <h2>Deep-link to library<span class="rec">RECOMMENDED</span></h2>
+    </div>
+    <p class="opt-desc">
+      Tapping navigates to <code>/gear?bin=…</code> — the existing Gear Library page, with that bin auto-expanded.
+      Uses the edit surface Phase 1 already built. One less thing to maintain.
+    </p>
+
+    <div class="phone">
+      <div class="phone-bg">
+        <div class="trip-head">
+          <button class="back">‹</button>
+          <div class="trip-title">
+            <div class="name">Yosemite Weekend — Gear</div>
+            <div class="dates">Packing · Gear pill</div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="bin-row target">
+            <span class="check"></span>
+            <span class="icon">🏕️</span>
+            <div class="info">
+              <div class="name">Camp Kitchen</div>
+              <div class="meta">23 items · loaded</div>
+            </div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="bin-row">
+            <span class="check"></span>
+            <span class="icon">🔥</span>
+            <div class="info">
+              <div class="name">Fire &amp; Fuel</div>
+              <div class="meta">8 items · not loaded</div>
+            </div>
+            <span class="arrow">›</span>
+          </div>
+        </div>
+
+        <!-- Where you end up -->
+        <div class="gear-lib">
+          <div class="gear-lib-head">→ /gear?bin=camp-kitchen (library, auto-expanded)</div>
+          <div class="gear-lib-card">
+            <div class="title">🏕️ Camp Kitchen</div>
+            <div class="sub2">TRUNK · 23 items</div>
+            <div class="item">Stove <span class="qty">×1</span></div>
+            <div class="item">Cast iron skillet <span class="qty">×1</span></div>
+            <div class="item">Spices kit <span class="qty">×1</span></div>
+            <div class="item">…</div>
+            <a class="back-pill">‹ Back to Yosemite Weekend</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pros-cons">
+      <b>Pros</b> · <span class="pro">Zero new UI</span> · <span class="pro">Library stays the single edit surface</span> · <span class="pro">Shipped quickly</span><br>
+      <b>Cons</b> · <span class="con">Full page navigation — Joe leaves the trip context</span>
+    </div>
+  </div>
+
+  <!-- ─── OPTION 2 ─── -->
+  <div class="opt">
+    <div class="opt-title">
+      <span class="num">2</span>
+      <h2>In-trip bottom-sheet modal</h2>
+    </div>
+    <p class="opt-desc">
+      Tapping opens a modal sheet over the trip. Matches the "Add Booking" pattern in your memory.
+      Joe can add/remove items without leaving the Gear tab.
+    </p>
+
+    <div class="phone">
+      <div class="phone-bg">
+        <div class="trip-head">
+          <button class="back">‹</button>
+          <div class="trip-title">
+            <div class="name">Yosemite Weekend — Gear</div>
+            <div class="dates">Packing · Gear pill</div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="bin-row target">
+            <span class="check"></span>
+            <span class="icon">🏕️</span>
+            <div class="info">
+              <div class="name">Camp Kitchen</div>
+              <div class="meta">23 items · loaded</div>
+            </div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="bin-row">
+            <span class="check"></span>
+            <span class="icon">🔥</span>
+            <div class="info">
+              <div class="name">Fire &amp; Fuel</div>
+              <div class="meta">8 items · not loaded</div>
+            </div>
+            <span class="arrow">›</span>
+          </div>
+        </div>
+
+        <!-- Modal overlay -->
+        <div class="scrim">
+          <div class="sheet">
+            <div class="sheet-head">
+              <h3>🏕️ Camp Kitchen</h3>
+              <button class="x">✕</button>
+            </div>
+            <div class="sheet-body">
+              <div class="row">Stove <span class="qty">×1</span> <button class="x-mini">✕</button></div>
+              <div class="row">Cast iron skillet <span class="qty">×1</span> <button class="x-mini">✕</button></div>
+              <div class="row">Spices kit <span class="qty">×1</span> <button class="x-mini">✕</button></div>
+              <div class="row">Coffee kit <span class="qty">×1</span> <button class="x-mini">✕</button></div>
+              <div class="row" style="color: var(--muted); font-style: italic;">+ 19 more items…</div>
+            </div>
+            <div class="sheet-cta">
+              <input placeholder="Add item…" />
+              <button>＋ Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pros-cons">
+      <b>Pros</b> · <span class="pro">Matches Add-Booking modal pattern</span> · <span class="pro">Stays in trip context</span> · <span class="pro">Sticky bottom CTA you like</span><br>
+      <b>Cons</b> · <span class="con">Duplicates the /gear edit surface in the modal</span> · <span class="con">More code, two places to maintain item CRUD</span>
+    </div>
+  </div>
+
+  <!-- ─── OPTION 3 ─── -->
+  <div class="opt">
+    <div class="opt-title">
+      <span class="num">3</span>
+      <h2>New dedicated route</h2>
+    </div>
+    <p class="opt-desc">
+      Build a new page at <code>/gear/[binId]</code> this phase. A bin gets its own URL, header, edit UI. Biggest
+      scope bump — mostly only worth it if you want shareable/bookmarkable per-bin pages.
+    </p>
+
+    <div class="phone">
+      <div class="phone-bg">
+        <div class="url-bar">
+          <span class="host">tripplannerapp.vercel.app</span><span class="path">/gear/camp-kitchen</span>
+        </div>
+        <div class="dedicated">
+          <h2>🏕️ Camp Kitchen</h2>
+          <div class="sub2">Owner: you · Default: Trunk · 23 items</div>
+
+          <div class="meta-card">📍 Default car location: <b>Trunk</b></div>
+          <div class="meta-card">📝 Pack order: skillet → stove → fuel → food bin on top</div>
+
+          <div class="item-list">
+            <div class="item">Stove <span class="qty" style="margin-left:auto; font-size: 10px; padding: 1px 6px; background: var(--card); border-radius: 999px; color: var(--muted);">×1</span></div>
+            <div class="item">Cast iron skillet <span style="margin-left:auto; font-size: 10px; padding: 1px 6px; background: var(--card); border-radius: 999px; color: var(--muted);">×1</span></div>
+            <div class="item">Spices kit <span style="margin-left:auto; font-size: 10px; padding: 1px 6px; background: var(--card); border-radius: 999px; color: var(--muted);">×1</span></div>
+            <div class="item">…</div>
+          </div>
+          <a class="back-pill">‹ Back to Yosemite Weekend</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="pros-cons">
+      <b>Pros</b> · <span class="pro">Clean URLs per bin</span> · <span class="pro">Room to add bin-specific features</span><br>
+      <b>Cons</b> · <span class="con">Whole new route + component this phase</span> · <span class="con">Third edit surface to keep in sync with /gear</span>
+    </div>
+  </div>
+
+</div>
+
+<p class="sub" style="margin-top: 28px; max-width: 900px;">
+  Option 1 is the cheapest and matches how Phase 1 already works. Option 2 matches your modal pattern but duplicates
+  /gear's edit UI. Option 3 is the heaviest and only pays off if you want per-bin URLs.
+</p>
+
+</body>
+</html>

@@ -4,10 +4,22 @@
 -- =============================================================
 
 -- ─── itinerary_events: new claimed_by column ───
--- event_type already exists (text). A meal is event_type = 'meal'.
+-- event_type needs 'meal' added to its allowed values so the Supplies →
+-- Meals flow can insert into this table.
 alter table public.itinerary_events
   add column if not exists claimed_by uuid
     references public.trip_members(id) on delete set null;
+
+-- Relax event_type CHECK to allow 'meal'. Old constraint only allowed
+-- travel/activity/dining/outdoors/nightlife/downtime/shopping/other.
+alter table public.itinerary_events
+  drop constraint if exists itinerary_events_event_type_check;
+alter table public.itinerary_events
+  add constraint itinerary_events_event_type_check
+    check (event_type in (
+      'travel', 'activity', 'dining', 'meal',
+      'outdoors', 'nightlife', 'downtime', 'shopping', 'other'
+    ));
 
 create index if not exists idx_itinerary_events_event_type on public.itinerary_events(event_type);
 create index if not exists idx_itinerary_events_claimed_by on public.itinerary_events(claimed_by);
