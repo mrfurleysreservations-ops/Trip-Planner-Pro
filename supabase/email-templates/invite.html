@@ -1,0 +1,166 @@
+<!--
+  Trip Planner Pro — "Invite user" email template
+  ════════════════════════════════════════════════════════════════════════
+  Paste this into Supabase Dashboard → Authentication → Email Templates →
+  "Invite user" → Source. Change the subject line to:
+     You're invited to {{ .Data.trip_name }} {{ .Data.trip_emoji }}
+
+  Template vars expected (set by /api/send-invite/route.ts):
+    {{ .Data.trip_name }}         — e.g. "Barcelona Getaway"
+    {{ .Data.trip_emoji }}        — e.g. "✈️"
+    {{ .Data.trip_tagline }}      — e.g. "Beach & beyond"
+    {{ .Data.trip_type }}         — e.g. "Flying"
+    {{ .Data.trip_accent }}       — hex, e.g. "#0097a7"
+    {{ .Data.trip_accent_soft }}  — pale tint, e.g. "#e8f4f6"
+    {{ .Data.trip_location }}     — e.g. "Barcelona, Spain" (may be empty)
+    {{ .Data.trip_dates }}        — e.g. "Jun 12 – 19, 2026" (may be empty)
+    {{ .Data.host_name }}         — e.g. "Joe"
+    {{ .Data.host_avatar_url }}   — URL (may be empty)
+    {{ .Data.invitee_name }}      — e.g. "Alex" (may be empty)
+    {{ .Data.attendee_preview }}  — e.g. "Sarah and 2 others" (may be empty)
+
+  Supabase link vars:
+    {{ .TokenHash }}              — one-time token
+    {{ .SiteURL }}                — site URL (no trailing slash in Supabase config!)
+    {{ .RedirectTo }}             — where we want them to land after confirm
+
+  The link uses the token-hash flow (works with SSR sessions), NOT
+  {{ .ConfirmationURL }} (which is the fragment-based flow that breaks SSR).
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <title>You're invited to {{ .Data.trip_name }}</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4f1ec;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;">
+    <!-- Preheader: the first text Gmail/Apple Mail shows in the inbox preview -->
+    <div style="display:none !important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;">
+      {{ .Data.host_name }} invited you to {{ .Data.trip_name }}{{ if .Data.trip_dates }} · {{ .Data.trip_dates }}{{ end }}{{ if .Data.trip_location }} · {{ .Data.trip_location }}{{ end }}
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f1ec;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+
+          <!-- ══════════════════════ CARD ══════════════════════ -->
+          <table role="presentation" width="520" cellpadding="0" cellspacing="0" border="0" style="width:520px;max-width:100%;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.08);">
+
+            <!-- ─── Themed hero band ─── -->
+            <tr>
+              <td align="center" style="background:{{ .Data.trip_accent_soft }};padding:36px 24px 28px;border-bottom:1px solid rgba(0,0,0,0.04);">
+                <div style="font-size:72px;line-height:1;margin-bottom:12px;">{{ .Data.trip_emoji }}</div>
+                <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:{{ .Data.trip_accent }};margin-bottom:6px;">
+                  You're invited to {{ if .Data.trip_type }}a {{ .Data.trip_type }}{{ else }}a trip{{ end }}
+                </div>
+                <div style="font-size:28px;font-weight:800;line-height:1.2;color:#1a1a1a;max-width:440px;">
+                  {{ .Data.trip_name }}
+                </div>
+                {{ if .Data.trip_tagline }}
+                <div style="font-size:13px;color:#6a6a6a;margin-top:8px;font-style:italic;">
+                  {{ .Data.trip_tagline }}
+                </div>
+                {{ end }}
+              </td>
+            </tr>
+
+            <!-- ─── Body ─── -->
+            <tr>
+              <td style="padding:28px 32px 8px;">
+                <div style="font-size:16px;color:#3a3a3a;line-height:1.55;">
+                  {{ if .Data.invitee_name }}Hey {{ .Data.invitee_name }},{{ else }}Hey,{{ end }}
+                </div>
+                <div style="font-size:16px;color:#3a3a3a;line-height:1.55;margin-top:10px;">
+                  <strong style="color:#1a1a1a;">{{ .Data.host_name }}</strong> wants you on the trip.
+                  {{ if .Data.attendee_preview }}
+                    {{ .Data.attendee_preview }} {{ if eq .Data.attendee_count "1" }}is{{ else }}are{{ end }} already in.
+                  {{ end }}
+                </div>
+              </td>
+            </tr>
+
+            <!-- ─── Trip details row (dates + location) ─── -->
+            {{ if or .Data.trip_dates .Data.trip_location }}
+            <tr>
+              <td style="padding:18px 32px 0;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fafafa;border:1px solid #ececec;border-radius:14px;">
+                  {{ if .Data.trip_dates }}
+                  <tr>
+                    <td style="padding:14px 16px;border-bottom:{{ if .Data.trip_location }}1px solid #ececec{{ else }}0{{ end }};">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td width="36" style="font-size:20px;vertical-align:middle;">📅</td>
+                          <td style="vertical-align:middle;">
+                            <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#999;">When</div>
+                            <div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-top:2px;">{{ .Data.trip_dates }}</div>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  {{ end }}
+                  {{ if .Data.trip_location }}
+                  <tr>
+                    <td style="padding:14px 16px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td width="36" style="font-size:20px;vertical-align:middle;">📍</td>
+                          <td style="vertical-align:middle;">
+                            <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#999;">Where</div>
+                            <div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-top:2px;">{{ .Data.trip_location }}</div>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  {{ end }}
+                </table>
+              </td>
+            </tr>
+            {{ end }}
+
+            <!-- ─── CTA ─── -->
+            <tr>
+              <td align="center" style="padding:24px 32px 8px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" style="background:{{ .Data.trip_accent }};border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,0.08);">
+                      <a
+                        href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next={{ .RedirectTo }}"
+                        style="display:inline-block;padding:16px 34px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:0.01em;"
+                      >
+                        View &amp; Accept Invitation →
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- ─── Small footer copy inside the card ─── -->
+            <tr>
+              <td align="center" style="padding:16px 32px 24px;">
+                <div style="font-size:12px;color:#999;line-height:1.5;">
+                  This link expires in 24 hours.<br />
+                  You'll be asked to set a quick password before heading to the trip.
+                </div>
+              </td>
+            </tr>
+
+          </table>
+          <!-- ══════════════════════ /CARD ══════════════════════ -->
+
+          <!-- Outer footer / signoff -->
+          <div style="margin-top:20px;font-size:12px;color:#999;text-align:center;line-height:1.5;">
+            Sent by <strong style="color:#666;">Trip Planner Pro</strong> on behalf of {{ .Data.host_name }}.<br />
+            If this wasn't meant for you, no action needed — the link will just expire.
+          </div>
+
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
