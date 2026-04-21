@@ -10,6 +10,7 @@ import type { TimeOfDay, WeatherBucket, ForecastCell, ForecastMap } from "@/lib/
 import { weatherChipText } from "@/lib/weather";
 import TripSubNav from "../trip-sub-nav";
 import SlotModal, { type ReuseChip } from "@/components/packing/slot-modal";
+import GearView from "@/components/gear/gear-view";
 import {
   SLOT_DEFS,
   SLOT_ORDER_WITH_DRESS,
@@ -398,6 +399,7 @@ export default function PackingPage({
   packingBags: initialPackingBags, packingBagSections: initialPackingBagSections,
   packingBagContainers: initialPackingBagContainers, packingItemAssignments: initialPackingItemAssignments,
   weatherForecast,
+  libraryBins, libraryItems, tripGearBins, primaryVehicleName,
 }: PackingPageProps) {
   const supabase = createBrowserSupabaseClient();
   const router = useRouter();
@@ -441,7 +443,7 @@ export default function PackingPage({
   const ps = STYLE_DESCRIPTIONS[packingStyle] || STYLE_DESCRIPTIONS.planner;
 
   // ─── State ───
-  const [activeView, setActiveView] = useState<"grouping" | "walkthrough" | "checklist">(packingStyle === "spontaneous" ? "walkthrough" : "grouping");
+  const [activeView, setActiveView] = useState<"grouping" | "walkthrough" | "checklist" | "gear">(packingStyle === "spontaneous" ? "walkthrough" : "grouping");
   const [currentEventIdx, setCurrentEventIdx] = useState(0);
   const [showInspoPanel, setShowInspoPanel] = useState(false);
   const autoGroupingRef = useRef(false); // Guard against concurrent autoGroupEvents calls
@@ -1780,30 +1782,38 @@ export default function PackingPage({
           </div>
         </div>
 
-        {/* Person Tabs */}
-        <div style={{ display: "flex", gap: "0", padding: "0 16px", background: th.bg, borderBottom: `1px solid ${th.cardBorder}`, overflowX: "auto", scrollbarWidth: "none", position: "relative", zIndex: 1 }}>
-          {myFamilyTripMembers.map(m => (
-            <button key={m.id} onClick={() => { setActiveMemberId(m.id); setCurrentEventIdx(0); setGroupingActiveDay(0); }} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "6px", padding: "10px 14px", background: "none", border: "none", borderBottom: `3px solid ${m.id === activeMemberId ? accent : "transparent"}`, cursor: "pointer", transition: "all 0.2s" }}>
-              <span style={{ fontSize: "13px", fontWeight: m.id === activeMemberId ? 700 : 500, color: m.id === activeMemberId ? th.text : th.muted, fontFamily: "'DM Sans', sans-serif" }}>{m.name}</span>
-              {m.role === "host" && <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: "8px", background: `${accent}18`, color: accent, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>Host</span>}
-            </button>
-          ))}
-        </div>
+        {/* Person Tabs — hidden in Gear view since gear is family-shared, not per-person */}
+        {activeView !== "gear" && (
+          <div style={{ display: "flex", gap: "0", padding: "0 16px", background: th.bg, borderBottom: `1px solid ${th.cardBorder}`, overflowX: "auto", scrollbarWidth: "none", position: "relative", zIndex: 1 }}>
+            {myFamilyTripMembers.map(m => (
+              <button key={m.id} onClick={() => { setActiveMemberId(m.id); setCurrentEventIdx(0); setGroupingActiveDay(0); }} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "6px", padding: "10px 14px", background: "none", border: "none", borderBottom: `3px solid ${m.id === activeMemberId ? accent : "transparent"}`, cursor: "pointer", transition: "all 0.2s" }}>
+                <span style={{ fontSize: "13px", fontWeight: m.id === activeMemberId ? 700 : 500, color: m.id === activeMemberId ? th.text : th.muted, fontFamily: "'DM Sans', sans-serif" }}>{m.name}</span>
+                {m.role === "host" && <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: "8px", background: `${accent}18`, color: accent, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>Host</span>}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* View Switcher — canonical pill */}
         <div style={{ display: "flex", justifyContent: "center", padding: "8px 16px 10px" }}>
           <div style={{ display: "inline-flex", background: th.card, border: `1.5px solid ${th.cardBorder}`, borderRadius: 20 }}>
-            {(packingStyle === "spontaneous"
-              ? [
-                  { value: "walkthrough" as const, label: "Quick Pack" },
-                  { value: "checklist" as const, label: "Pack & Go ✓" },
-                ]
-              : [
-                  { value: "grouping" as const, label: "Group" },
-                  { value: "walkthrough" as const, label: "Outfits" },
-                  { value: "checklist" as const, label: "Pack & Go ✓" },
-                ]
-            ).map(v => (
+            {(() => {
+              // Gear is the host's car-loading tab — it's family-shared and
+              // has no per-person breakdown, so only the host sees the pill.
+              const baseViews = packingStyle === "spontaneous"
+                ? [
+                    { value: "walkthrough" as const, label: "Quick Pack" },
+                    { value: "checklist" as const, label: "Pack & Go ✓" },
+                  ]
+                : [
+                    { value: "grouping" as const, label: "Group" },
+                    { value: "walkthrough" as const, label: "Outfits" },
+                    { value: "checklist" as const, label: "Pack & Go ✓" },
+                  ];
+              return isHost
+                ? [...baseViews, { value: "gear" as const, label: "Gear" }]
+                : baseViews;
+            })().map(v => (
               <button
                 key={v.value}
                 onClick={() => setActiveView(v.value)}
@@ -1830,11 +1840,13 @@ export default function PackingPage({
 
       <TripSubNav tripId={trip.id} theme={th} role={currentMember?.role_preference ?? null} />
 
-      {/* Packing Style Banner */}
+      {/* Packing Style Banner — hidden in Gear view (gear is a car-loading tab, not a packing-style concern) */}
       <div style={{ position: "relative", zIndex: 1 }}>
-        <div style={{ margin: "12px 16px 0", padding: "10px 14px", background: `${accent}0a`, border: `1px solid ${th.cardBorder}`, borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "11px", color: th.muted }}>{ps.desc}</span>
-        </div>
+        {activeView !== "gear" && (
+          <div style={{ margin: "12px 16px 0", padding: "10px 14px", background: `${accent}0a`, border: `1px solid ${th.cardBorder}`, borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "11px", color: th.muted }}>{ps.desc}</span>
+          </div>
+        )}
 
         {/* ═══════════════════════════════════════════════════════════ */}
         {/*  VIEW: GROUPING                                           */}
@@ -2723,6 +2735,24 @@ export default function PackingPage({
                 </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/*  VIEW: GEAR (host-only, family-shared car-loading view)   */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {activeView === "gear" && isHost && (
+          <div style={{ padding: "0 16px" }}>
+            <GearView
+              tripId={trip.id}
+              userId={userId}
+              isHost={isHost}
+              initialLibraryBins={libraryBins}
+              initialLibraryItems={libraryItems}
+              initialTripGearBins={tripGearBins}
+              primaryVehicleName={primaryVehicleName}
+              theme={th}
+            />
           </div>
         )}
       </div>

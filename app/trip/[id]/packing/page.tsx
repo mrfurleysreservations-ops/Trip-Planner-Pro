@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Trip, TripMember, ItineraryEvent, EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment, TripWeatherForecast } from "@/types/database.types";
+import type { Trip, TripMember, ItineraryEvent, EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment, TripWeatherForecast, GearBin, GearItem, TripGearBin } from "@/types/database.types";
 import { geocodeLocation, fetchForecast, bucketDailyByTOD, type ForecastMap, type ForecastCell } from "@/lib/weather";
 import PackingPage from "./packing-page";
 
@@ -23,6 +23,13 @@ export interface PackingPageProps {
   packingBagContainers: PackingBagContainer[];
   packingItemAssignments: PackingItemAssignment[];
   weatherForecast: ForecastMap;
+  // Gear Phase 2: host-only visualizer data. `libraryBins` / `libraryItems` are
+  // the owner's gear library so the Add-gear picker can browse without an
+  // extra round-trip; `tripGearBins` is the join rows for this trip.
+  libraryBins: GearBin[];
+  libraryItems: GearItem[];
+  tripGearBins: TripGearBin[];
+  primaryVehicleName: string | null;
 }
 
 // Build the in-memory ForecastMap from cached rows
@@ -124,6 +131,45 @@ export default async function PackingServerPage({ params }: { params: { id: stri
   // Fetch item assignments for this trip
   const { data: packingItemAssignments } = await supabase.from("packing_item_assignments").select("*").eq("trip_id", id);
 
+  // ─── Gear Phase 2: trip gear bins + host's library + vehicle name ────────
+  // Gear is host-only in Phase 2, so we only fetch when the caller is the trip
+  // owner. Non-hosts get empty arrays and the client hides the Gear pill.
+  let libraryBins: GearBin[] = [];
+  let libraryItems: GearItem[] = [];
+  let tripGearBins: TripGearBin[] = [];
+  let primaryVehicleName: string | null = null;
+
+  if (isHost) {
+    const [libBinsRes, joinRes] = await Promise.all([
+      supabase
+        .from("gear_bins")
+        .select("*")
+        .eq("owner_id", user.id)
+        .is("archived_at", null)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("trip_gear_bins")
+        .select("*")
+        .eq("trip_id", id),
+    ]);
+
+    libraryBins = (libBinsRes.data ?? []) as GearBin[];
+    tripGearBins = (joinRes.data ?? []) as TripGearBin[];
+
+    const libBinIds = libraryBins.map((b) => b.id);
+    if (libBinIds.length > 0) {
+      const { data: gearItemsData } = await supabase
+        .from("gear_items")
+        .select("*")
+        .in("bin_id", libBinIds)
+        .order("sort_order", { ascending: true });
+      libraryItems = (gearItemsData ?? []) as GearItem[];
+    }
+
+    primaryVehicleName =
+      (userProfile as UserProfile | null)?.primary_vehicle_name ?? null;
+  }
+
   // ─── Weather: read cached rows; if missing or stale, refetch + upsert ───
   let weatherForecast: ForecastMap = {};
   if (trip.location && trip.start_date && trip.end_date) {
@@ -201,6 +247,10 @@ export default async function PackingServerPage({ params }: { params: { id: stri
       packingBagContainers={packingBagContainers}
       packingItemAssignments={(packingItemAssignments ?? []) as PackingItemAssignment[]}
       weatherForecast={weatherForecast}
+      libraryBins={libraryBins}
+      libraryItems={libraryItems}
+      tripGearBins={tripGearBins}
+      primaryVehicleName={primaryVehicleName}
     />
   );
 }
