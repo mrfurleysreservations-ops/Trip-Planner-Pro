@@ -740,26 +740,10 @@ export default function SuppliesPage({
             Supplies
           </h1>
           <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            {view === "meals" && (
-              <button
-                onClick={() => setShowNewMeal(true)}
-                style={headerActionBtnStyle(th.accent)}
-              >
-                ＋ Meal
-              </button>
-            )}
             {view === "grocery" && (
               <span style={headerCounterStyle(th.accent)}>
                 {claimedMealsCount} meal{claimedMealsCount === 1 ? "" : "s"} claimed
               </span>
-            )}
-            {view === "supplies" && (
-              <button
-                onClick={() => setShowNewSupply(true)}
-                style={headerActionBtnStyle(th.accent)}
-              >
-                ＋ Supply
-              </button>
             )}
           </div>
         </div>
@@ -806,7 +790,7 @@ export default function SuppliesPage({
       </div>
 
       {/* ─── SCROLLABLE BODY ─── */}
-      <div style={{ padding: "14px 16px 24px" }}>
+      <div style={{ padding: "14px 16px 96px" }}>
         {view === "meals" && (
           <MealsView
             th={th}
@@ -915,6 +899,39 @@ export default function SuppliesPage({
         />
       )}
 
+      {/* ─── Add FAB (bottom-right, next to sub-nav) ───
+          Purple/accent circle per tab-layout-standard. Hidden on Grocery
+          since that view is a derived read-only list. */}
+      {(view === "meals" || view === "supplies") && (
+        <button
+          onClick={() =>
+            view === "meals" ? setShowNewMeal(true) : setShowNewSupply(true)
+          }
+          aria-label={view === "meals" ? "Add meal" : "Add supply"}
+          style={{
+            position: "fixed",
+            bottom: 72,
+            right: 16,
+            zIndex: 50,
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            background: `linear-gradient(135deg, ${th.accent} 0%, ${th.accent2 || th.accent} 100%)`,
+            color: "#fff",
+            border: "none",
+            fontSize: 28,
+            fontWeight: 300,
+            cursor: "pointer",
+            boxShadow: `0 4px 20px ${th.accent}60`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          +
+        </button>
+      )}
+
       {/* Shared sub-nav */}
       <TripSubNav tripId={trip.id} theme={th} role={currentUserRole} />
 
@@ -938,20 +955,6 @@ export default function SuppliesPage({
 }
 
 // ─── Shared style helpers ───
-
-function headerActionBtnStyle(accent: string): React.CSSProperties {
-  return {
-    padding: "8px 14px",
-    borderRadius: 20,
-    background: accent,
-    color: "#fff",
-    fontWeight: 700,
-    fontSize: 13,
-    border: "none",
-    cursor: "pointer",
-    fontFamily: "'DM Sans', sans-serif",
-  };
-}
 
 function headerCounterStyle(accent: string): React.CSSProperties {
   return {
