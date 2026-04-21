@@ -1592,10 +1592,12 @@ function Sheet({
   onClose,
   children,
   height,
+  zIndex = 1000,
 }: {
   onClose: () => void;
   children: React.ReactNode;
   height?: string | number;
+  zIndex?: number;
 }) {
   return (
     <div
@@ -1603,7 +1605,7 @@ function Sheet({
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 1000,
+        zIndex,
         background: "rgba(0,0,0,0.45)",
         display: "flex",
         alignItems: "flex-end",
@@ -1616,9 +1618,16 @@ function Sheet({
         style={{
           width: "100%",
           maxWidth: 480,
-          maxHeight: "90vh",
+          // `dvh` tracks the dynamic viewport on iOS Safari so the address-bar
+          // collapse can't push the footer below the visible area. `vh` is the
+          // fallback for browsers that don't support dvh yet.
+          maxHeight: "min(90vh, 90dvh)",
           height: height ?? undefined,
           minHeight: 0,
+          // `overflow: hidden` keeps the flex children (notably SheetBody's
+          // flex:1) from leaking past the rounded container — without it the
+          // footer gets scrolled off-screen when the body grows tall.
+          overflow: "hidden",
           borderRadius: "20px 20px 0 0",
           boxShadow: "0 -8px 40px rgba(0,0,0,0.15)",
           background: "#fff",
@@ -1795,7 +1804,7 @@ function MealEditorSheet({
   onUpdateItem: (id: string, patch: Partial<MealItem>) => Promise<void>;
   onDeleteItem: (id: string) => Promise<void>;
 }) {
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<MealItem | null>(null);
   const [changingClaimer, setChangingClaimer] = useState(false);
 
   const claimedByMe = currentMember ? meal.claimed_by === currentMember.id : false;
@@ -1959,81 +1968,58 @@ function MealEditorSheet({
           </div>
         )}
 
-        {items.map((item) =>
-          editingItemId === item.id ? (
-            <IngredientEditor
-              key={item.id}
-              th={th}
-              initial={item}
-              onCancel={() => setEditingItemId(null)}
-              onSave={async (draft) => {
-                await onUpdateItem(item.id, {
-                  item_name: draft.itemName.trim(),
-                  quantity_per_person: draft.quantityPerPerson,
-                  unit: draft.unit,
-                  grocery_section: draft.grocerySection,
-                  notes: draft.notes.trim() || null,
-                });
-                setEditingItemId(null);
-              }}
-              onDelete={async () => {
-                await onDeleteItem(item.id);
-                setEditingItemId(null);
-              }}
-            />
-          ) : (
-            <button
-              key={item.id}
-              onClick={() => setEditingItemId(item.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: 12,
-                border: "1px solid #eee",
-                borderRadius: 12,
-                marginBottom: 6,
-                background: "#fff",
-                width: "100%",
-                textAlign: "left",
-                cursor: "pointer",
-                fontFamily: "'DM Sans', sans-serif",
-              }}
-            >
-              <span style={{ color: "#ccc", fontSize: 14 }}>⋮⋮</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontWeight: 600, fontSize: 14 }}>
-                  {item.item_name}
-                </span>
-                <span style={{ display: "block", fontSize: 11.5, color: "#888", marginTop: 2 }}>
-                  {formatQty(Number(item.quantity_per_person))} {item.unit}/person ·{" "}
-                  <span
-                    style={{
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                      padding: "2px 7px",
-                      background: `${th.accent}14`,
-                      color: th.accent,
-                      borderRadius: 10,
-                      letterSpacing: "0.04em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {SECTION_LABEL.get(item.grocery_section) ?? item.grocery_section}
-                  </span>
+        {items.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setEditingItem(item)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: 12,
+              border: "1px solid #eee",
+              borderRadius: 12,
+              marginBottom: 6,
+              background: "#fff",
+              width: "100%",
+              textAlign: "left",
+              cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            <span style={{ color: "#ccc", fontSize: 14 }}>⋮⋮</span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: "block", fontWeight: 600, fontSize: 14 }}>
+                {item.item_name}
+              </span>
+              <span style={{ display: "block", fontSize: 11.5, color: "#888", marginTop: 2 }}>
+                {formatQty(Number(item.quantity_per_person))} {item.unit}/person ·{" "}
+                <span
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    padding: "2px 7px",
+                    background: `${th.accent}14`,
+                    color: th.accent,
+                    borderRadius: 10,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {SECTION_LABEL.get(item.grocery_section) ?? item.grocery_section}
                 </span>
               </span>
-              <span style={{ fontSize: 15, color: "#bbb" }}>›</span>
-            </button>
-          ),
-        )}
+            </span>
+            <span style={{ fontSize: 15, color: "#bbb" }}>›</span>
+          </button>
+        ))}
       </SheetBody>
 
       {/* Sticky sub-bar: always-visible "+ Add ingredient" form.
           Sits between the scrolling body and the fixed footer so the user can
           keep adding items while the list grows in the body above. */}
       <SheetStickyBar>
-        <AddIngredientBar th={th} onAdd={onAddItem} />
+        <AddIngredientBar th={th} onAdd={onAddItem} attendeeCount={attendCount} />
       </SheetStickyBar>
 
       <SheetFooter>
@@ -2049,7 +2035,171 @@ function MealEditorSheet({
           Done
         </button>
       </SheetFooter>
+
+      {editingItem && (
+        <EditIngredientSheet
+          th={th}
+          initial={editingItem}
+          attendeeCount={attendCount}
+          onClose={() => setEditingItem(null)}
+          onSave={async (patch) => {
+            await onUpdateItem(editingItem.id, patch);
+            setEditingItem(null);
+          }}
+          onDelete={async () => {
+            await onDeleteItem(editingItem.id);
+            setEditingItem(null);
+          }}
+        />
+      )}
     </Sheet>
+  );
+}
+
+// ─── Ingredient quantity mode (shared between AddIngredientBar + EditIngredientSheet) ───
+//
+// The DB always stores `meal_items.quantity_per_person`. This toggle lets the
+// user type either a per-person number ("2 eggs/person") or a group total
+// ("8 eggs"). In Total mode the parent converts to per-person at save time via
+// resolveQuantity() so grocery-list aggregation continues to work unchanged.
+//
+// `resolveQuantity` is the single source of truth for both validation and the
+// conversion math — the preview chip, the Add handler, and the Edit handler
+// all route through it so the numbers stay in sync.
+
+type QtyMode = "perPerson" | "total";
+
+function resolveQuantity(
+  mode: QtyMode,
+  rawQty: number,
+  attendeeCount: number,
+): { perPerson: number; total: number; error?: string } {
+  if (!Number.isFinite(rawQty) || rawQty <= 0) {
+    return { perPerson: 0, total: 0, error: "Enter a quantity greater than 0." };
+  }
+  if (mode === "total") {
+    if (attendeeCount < 1) {
+      return {
+        perPerson: 0,
+        total: 0,
+        error: "Add attendees on the Itinerary tab to use Total mode.",
+      };
+    }
+    return { perPerson: rawQty / attendeeCount, total: rawQty };
+  }
+  // perPerson mode — use at least 1 head so the preview math doesn't divide by
+  // zero for meals that nobody has opted into yet.
+  const heads = Math.max(attendeeCount, 1);
+  return { perPerson: rawQty, total: rawQty * heads };
+}
+
+function IngredientQtyToggle({
+  th,
+  mode,
+  onModeChange,
+  qty,
+  unit,
+  attendeeCount,
+}: {
+  th: (typeof THEMES)["home"];
+  mode: QtyMode;
+  onModeChange: (next: QtyMode) => void;
+  qty: number;
+  unit: string;
+  attendeeCount: number;
+}) {
+  const noAttendees = attendeeCount < 1;
+  const qtyValid = Number.isFinite(qty) && qty > 0;
+  const resolved = qtyValid ? resolveQuantity(mode, qty, attendeeCount) : null;
+  const unitText = unit || "each";
+
+  const previewText = (() => {
+    if (noAttendees) return "📊 Per person (scales with attendance)";
+    if (!resolved || resolved.error) return "📊 Enter a quantity to preview";
+    if (mode === "perPerson") {
+      return `📊 = ${formatQty(resolved.total)} ${unitText} on grocery list · ${attendeeCount} attending`;
+    }
+    return `📊 ${formatQty(resolved.total)} ${unitText} total → ${formatQty(resolved.perPerson)} per person × ${attendeeCount} attending`;
+  })();
+
+  const pillBtn = (active: boolean, disabled: boolean): React.CSSProperties => ({
+    flex: 1,
+    padding: "5px 10px",
+    borderRadius: 999,
+    border: "none",
+    fontSize: 11.5,
+    fontWeight: active ? 700 : 500,
+    background: active ? th.accent : "transparent",
+    color: active ? "#fff" : "#666",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+    fontFamily: "'DM Sans', sans-serif",
+    whiteSpace: "nowrap",
+    transition: "all 0.15s",
+  });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div
+        role="tablist"
+        aria-label="Quantity mode"
+        style={{
+          display: "inline-flex",
+          alignSelf: "stretch",
+          background: "#fff",
+          border: "1px solid #e0dacd",
+          borderRadius: 999,
+          padding: 2,
+        }}
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "perPerson"}
+          onClick={() => onModeChange("perPerson")}
+          style={pillBtn(mode === "perPerson", false)}
+        >
+          Per person
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "total"}
+          onClick={() => {
+            if (!noAttendees) onModeChange("total");
+          }}
+          disabled={noAttendees}
+          aria-disabled={noAttendees}
+          style={pillBtn(mode === "total", noAttendees)}
+        >
+          Total for group
+        </button>
+      </div>
+      <div
+        style={{
+          fontSize: 11,
+          color: "#666",
+          padding: "2px 6px",
+          lineHeight: 1.35,
+          fontFamily: "'DM Sans', sans-serif",
+        }}
+      >
+        {previewText}
+      </div>
+      {noAttendees && (
+        <div
+          style={{
+            fontSize: 11,
+            color: "#c75a2a",
+            padding: "0 6px",
+            lineHeight: 1.35,
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          Add attendees on the Itinerary tab to use Total mode.
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -2061,6 +2211,7 @@ function MealEditorSheet({
 function AddIngredientBar({
   th,
   onAdd,
+  attendeeCount,
 }: {
   th: (typeof THEMES)["home"];
   onAdd: (draft: {
@@ -2070,12 +2221,15 @@ function AddIngredientBar({
     grocerySection: string;
     notes: string;
   }) => Promise<MealItem | null>;
+  attendeeCount: number;
 }) {
   const [itemName, setItemName] = useState("");
   const [qty, setQty] = useState("1");
   const [unit, setUnit] = useState("each");
   const [section, setSection] = useState<GrocerySection>("other");
+  const [mode, setMode] = useState<QtyMode>("perPerson");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const parsedQty = parseFloat(qty);
   const canAdd =
@@ -2086,14 +2240,22 @@ function AddIngredientBar({
     setQty("1");
     setUnit("each");
     setSection("other");
+    setMode("perPerson");
+    setError(null);
   };
 
   const handleAdd = async () => {
     if (!canAdd) return;
+    const result = resolveQuantity(mode, parsedQty, attendeeCount);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setError(null);
     setSaving(true);
     const row = await onAdd({
       itemName,
-      quantityPerPerson: parsedQty,
+      quantityPerPerson: result.perPerson,
       unit,
       grocerySection: section,
       notes: "",
@@ -2117,6 +2279,30 @@ function AddIngredientBar({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <IngredientQtyToggle
+        th={th}
+        mode={mode}
+        onModeChange={(next) => {
+          setMode(next);
+          setError(null);
+        }}
+        qty={parsedQty}
+        unit={unit}
+        attendeeCount={attendeeCount}
+      />
+      {error && (
+        <div
+          role="alert"
+          style={{
+            fontSize: 11,
+            color: "#c75a2a",
+            padding: "0 6px",
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          {error}
+        </div>
+      )}
       <div style={{ display: "flex", gap: 6 }}>
         <input
           value={itemName}
@@ -2198,65 +2384,100 @@ function SheetSecLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── Inline ingredient editor (in-place expansion inside the meal sheet) ───
+// ─── Sheet: Edit ingredient (nested bottom-sheet that stacks over MealEditorSheet) ───
+//
+// Uses the same Sheet/SheetHandle/SheetHeader/SheetBody/SheetFooter slot shape
+// as every other sheet in this file, with `zIndex=1100` so it stacks over the
+// meal sheet's backdrop. Tapping the nested backdrop closes only this sheet —
+// the meal sheet underneath stays open because SheetHandle's inner container
+// already stops click propagation, so a backdrop click can't reach the outer
+// Sheet's onClose handler.
 
-function IngredientEditor({
+function EditIngredientSheet({
   th,
   initial,
-  onCancel,
+  attendeeCount,
+  onClose,
   onSave,
   onDelete,
 }: {
   th: (typeof THEMES)["home"];
-  initial: MealItem | null;
-  onCancel: () => void;
-  onSave: (draft: {
-    itemName: string;
-    quantityPerPerson: number;
-    unit: string;
-    grocerySection: string;
-    notes: string;
-  }) => Promise<void>;
-  onDelete: (() => Promise<void>) | null;
+  initial: MealItem;
+  attendeeCount: number;
+  onClose: () => void;
+  onSave: (patch: Partial<MealItem>) => Promise<void>;
+  onDelete: () => Promise<void>;
 }) {
-  const [itemName, setItemName] = useState(initial?.item_name ?? "");
-  const [qty, setQty] = useState(
-    initial ? String(initial.quantity_per_person) : "1",
-  );
-  const [unit, setUnit] = useState(initial?.unit ?? "each");
+  // Initial mode is always perPerson — once persisted, the user's original
+  // intent (per-person vs. total) is ambiguous so we don't try to infer it.
+  const [mode, setMode] = useState<QtyMode>("perPerson");
+  const [itemName, setItemName] = useState(initial.item_name);
+  const [qty, setQty] = useState(String(initial.quantity_per_person));
+  const [unit, setUnit] = useState(initial.unit || "each");
   const [section, setSection] = useState<GrocerySection>(
-    (initial?.grocery_section as GrocerySection) ?? "other",
+    (initial.grocery_section as GrocerySection) ?? "other",
   );
-  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [notes, setNotes] = useState(initial.notes ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const parsedQty = parseFloat(qty);
 
   const handleSave = async () => {
-    if (!itemName.trim()) return;
-    const parsed = parseFloat(qty);
-    if (!Number.isFinite(parsed) || parsed <= 0) return;
+    if (!itemName.trim()) {
+      setError("Name can't be empty.");
+      return;
+    }
+    const result = resolveQuantity(mode, parsedQty, attendeeCount);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setError(null);
     setSaving(true);
     await onSave({
-      itemName,
-      quantityPerPerson: parsed,
+      item_name: itemName.trim(),
+      quantity_per_person: result.perPerson,
       unit: unit || "each",
-      grocerySection: section,
-      notes,
+      grocery_section: section,
+      notes: notes.trim() || null,
     });
     setSaving(false);
   };
 
+  const handleDelete = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setSaving(true);
+    await onDelete();
+    setSaving(false);
+  };
+
   return (
-    <div
-      style={{
-        background: "#f7f3ee",
-        border: `1.5px solid ${th.accent}33`,
-        borderRadius: 14,
-        padding: 14,
-        marginBottom: 8,
-      }}
-    >
-      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-        <div style={{ flex: 2 }}>
+    <Sheet onClose={onClose} zIndex={1100}>
+      <SheetHandle />
+      <SheetHeader
+        title={initial.item_name}
+        subtitle={SECTION_LABEL.get(initial.grocery_section) ?? initial.grocery_section}
+        onClose={onClose}
+      />
+      <SheetBody>
+        <IngredientQtyToggle
+          th={th}
+          mode={mode}
+          onModeChange={(next) => {
+            setMode(next);
+            setError(null);
+          }}
+          qty={parsedQty}
+          unit={unit}
+          attendeeCount={attendeeCount}
+        />
+
+        <div style={{ marginTop: 14 }}>
           <FieldLabel>Item</FieldLabel>
           <input
             value={itemName}
@@ -2266,68 +2487,77 @@ function IngredientEditor({
             autoFocus
           />
         </div>
-        <div style={{ flex: 1 }}>
-          <FieldLabel>Qty/person</FieldLabel>
-          <input
-            value={qty}
-            onChange={(e) => setQty(e.target.value)}
-            inputMode="decimal"
-            style={fieldInputStyle}
-          />
+
+        <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+          <div style={{ flex: 1 }}>
+            <FieldLabel>Qty</FieldLabel>
+            <input
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              inputMode="decimal"
+              style={fieldInputStyle}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <FieldLabel>Unit</FieldLabel>
+            <select
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              style={fieldSelectStyle}
+            >
+              {MEAL_UNITS.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div style={{ flex: 1 }}>
-          <FieldLabel>Unit</FieldLabel>
+
+        <div style={{ marginTop: 14 }}>
+          <FieldLabel>Grocery section</FieldLabel>
           <select
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
+            value={section}
+            onChange={(e) => setSection(e.target.value as GrocerySection)}
             style={fieldSelectStyle}
           >
-            {MEAL_UNITS.map((u) => (
-              <option key={u} value={u}>
-                {u}
+            {GROCERY_SECTIONS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
               </option>
             ))}
           </select>
         </div>
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <FieldLabel>Grocery section</FieldLabel>
-        <select
-          value={section}
-          onChange={(e) => setSection(e.target.value as GrocerySection)}
-          style={fieldSelectStyle}
-        >
-          {GROCERY_SECTIONS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <FieldLabel>Note (optional)</FieldLabel>
-        <input
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g. organic, large"
-          style={fieldInputStyle}
-        />
-      </div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: 10,
-        }}
-      >
-        {onDelete ? (
-          <button
-            onClick={async () => {
-              setSaving(true);
-              await onDelete();
-              setSaving(false);
+
+        <div style={{ marginTop: 14 }}>
+          <FieldLabel>Note (optional)</FieldLabel>
+          <input
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. organic, large"
+            style={fieldInputStyle}
+          />
+        </div>
+
+        {error && (
+          <div
+            role="alert"
+            style={{
+              marginTop: 10,
+              fontSize: 12,
+              color: "#c75a2a",
+              fontFamily: "'DM Sans', sans-serif",
             }}
+          >
+            {error}
+          </div>
+        )}
+      </SheetBody>
+
+      <SheetFooter>
+        {!confirmDelete && (
+          <button
+            onClick={handleDelete}
             disabled={saving}
             style={{
               color: "#c75a2a",
@@ -2337,27 +2567,47 @@ function IngredientEditor({
               border: "none",
               cursor: "pointer",
               fontFamily: "'DM Sans', sans-serif",
+              padding: "8px 6px",
+              flexShrink: 0,
             }}
           >
-            🗑 Remove
+            🗑 Delete
           </button>
-        ) : (
-          <span />
         )}
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={onCancel} disabled={saving} style={btnGhostStyle}>
-            Cancel
-          </button>
+        {confirmDelete && (
           <button
-            onClick={handleSave}
-            disabled={saving || !itemName.trim()}
-            style={{ ...btnPrimaryStyle(th.accent), opacity: saving || !itemName.trim() ? 0.6 : 1 }}
+            onClick={handleDelete}
+            disabled={saving}
+            style={{
+              color: "#fff",
+              background: "#c75a2a",
+              fontWeight: 700,
+              fontSize: 12.5,
+              border: "none",
+              borderRadius: 10,
+              padding: "10px 12px",
+              cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+              flexShrink: 0,
+            }}
           >
-            {initial ? "Save item" : "Add item"}
+            Confirm delete
           </button>
-        </div>
-      </div>
-    </div>
+        )}
+        <button
+          onClick={handleSave}
+          disabled={saving || !itemName.trim()}
+          style={{
+            ...btnPrimaryStyle(th.accent),
+            flex: 1,
+            padding: 14,
+            opacity: saving || !itemName.trim() ? 0.6 : 1,
+          }}
+        >
+          {saving ? "Saving…" : "Save item"}
+        </button>
+      </SheetFooter>
+    </Sheet>
   );
 }
 
