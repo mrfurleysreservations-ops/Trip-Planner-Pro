@@ -8,10 +8,11 @@ import type { Trip, TripMember, FamilyMember } from "@/types/database.types";
 import type { GroupPageProps, FriendWithProfile, FamilyWithMembers } from "./page";
 import TripSubNav from "../trip-sub-nav";
 import BulkInviteModal from "./bulk-invite-modal";
+import MemberDetailModal from "./member-detail-modal";
 
 // ─── Small UI components ───
 
-const StatusChip = ({ status }: { status: string }) => {
+export const StatusChip = ({ status }: { status: string }) => {
   const styles: Record<string, { bg: string; text: string; label: string }> = {
     pending:  { bg: "#fef3cd", text: "#856404", label: "Pending" },
     accepted: { bg: "#d4edda", text: "#155724", label: "Accepted" },
@@ -45,6 +46,9 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkSentCount, setBulkSentCount] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  // Set when a host taps a non-host chip — replaces the old destructive behavior
+  // where the tap silently called removeMember(m.id).
+  const [openMember, setOpenMember] = useState<TripMember | null>(null);
 
   // Auto-dismiss the bulk-invite success toast after a few seconds.
   useEffect(() => {
@@ -517,7 +521,8 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
               m.status === "accepted" ? "✓" :
               m.status === "pending"  ? "…" : "×";
 
-            // Click priority: self → role picker; host viewing a non-host → remove.
+            // Click priority: self → role picker; host viewing a non-host → open
+            // the member-detail modal (which handles remove-with-confirmation).
             // Non-host viewing a non-host chip: no-op.
             const handleChipClick = () => {
               if (isMe) {
@@ -526,7 +531,7 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
                 );
                 return;
               }
-              if (isHost && !isHostChip) removeMember(m.id);
+              if (isHost && !isHostChip) setOpenMember(m);
             };
             const chipIsInteractive = isMe || (isHost && !isHostChip);
 
@@ -1028,6 +1033,19 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
       `}</style>
+
+      {/* Member-detail modal — opened when the host taps a non-host chip.
+          Mounted outside the sticky top region so it stays independent of
+          the top's z-index / blur. */}
+      {openMember && (
+        <MemberDetailModal
+          member={openMember}
+          theme={th}
+          isHost={isHost}
+          onClose={() => setOpenMember(null)}
+          onRemove={removeMember}
+        />
+      )}
 
       <TripSubNav tripId={trip.id} theme={th} role={currentUserRole} />
     </div>
