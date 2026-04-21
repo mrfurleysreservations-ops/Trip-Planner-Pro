@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { SavedGear, UserProfile } from "@/types/database.types";
+import type { GearBin, GearItem, UserProfile } from "@/types/database.types";
 import GearPage from "./gear-page";
 
 export default async function GearServerPage() {
@@ -9,11 +9,26 @@ export default async function GearServerPage() {
 
   if (!user) redirect("/auth/login");
 
-  const { data } = await supabase
-    .from("saved_gear")
+  // Library: fetch all non-archived bins + their items in two RLS-scoped queries.
+  const binsRes = await supabase
+    .from("gear_bins")
     .select("*")
     .eq("owner_id", user.id)
-    .order("created_at");
+    .is("archived_at", null)
+    .order("created_at", { ascending: true });
+
+  const bins = (binsRes.data ?? []) as GearBin[];
+  const binIds = bins.map((b) => b.id);
+
+  let items: GearItem[] = [];
+  if (binIds.length > 0) {
+    const itemsRes = await supabase
+      .from("gear_items")
+      .select("*")
+      .in("bin_id", binIds)
+      .order("sort_order", { ascending: true });
+    items = (itemsRes.data ?? []) as GearItem[];
+  }
 
   // Mirror dashboard/page.tsx: fetch the three nav counts so TopNav bubbles are
   // driven by the server, not the now-skipped AppShell effect.
@@ -96,7 +111,8 @@ export default async function GearServerPage() {
   return (
     <GearPage
       userId={user.id}
-      initialGear={(data ?? []) as SavedGear[]}
+      initialBins={bins}
+      initialItems={items}
       unreadChatCount={unreadChatCount}
       pendingFriendCount={pendingFriendCount}
       unreadAlertCount={unreadAlertCount}

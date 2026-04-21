@@ -276,6 +276,7 @@ export interface Database {
           scope: "group" | "personal";
           converted_to: string | null;
           event_id: string | null;
+          supply_id: string | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -292,6 +293,7 @@ export interface Database {
           scope?: "group" | "personal";
           converted_to?: string | null;
           event_id?: string | null;
+          supply_id?: string | null;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
@@ -392,6 +394,76 @@ export interface Database {
           owner_id: string;
           name: string;
           category?: string | null;
+          created_at?: string;
+        };
+      };
+      gear_bins: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          description: string | null;
+          default_location: "frunk" | "cabin" | "trunk" | "roofbox" | "tow_hitch" | null;
+          color: string | null;
+          icon: string | null;
+          notes: string | null;
+          archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          description?: string | null;
+          default_location?: "frunk" | "cabin" | "trunk" | "roofbox" | "tow_hitch" | null;
+          color?: string | null;
+          icon?: string | null;
+          notes?: string | null;
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          name?: string;
+          description?: string | null;
+          default_location?: "frunk" | "cabin" | "trunk" | "roofbox" | "tow_hitch" | null;
+          color?: string | null;
+          icon?: string | null;
+          notes?: string | null;
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      gear_items: {
+        Row: {
+          id: string;
+          bin_id: string;
+          name: string;
+          quantity: number;
+          notes: string | null;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          bin_id: string;
+          name: string;
+          quantity?: number;
+          notes?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          bin_id?: string;
+          name?: string;
+          quantity?: number;
+          notes?: string | null;
+          sort_order?: number;
           created_at?: string;
         };
       };
@@ -542,6 +614,7 @@ export interface Database {
           is_optional: boolean;
           note_id: string | null;
           sort_order: number;
+          claimed_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -565,6 +638,7 @@ export interface Database {
           is_optional?: boolean;
           note_id?: string | null;
           sort_order?: number;
+          claimed_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -581,6 +655,105 @@ export interface Database {
           event_id: string;
           trip_member_id: string;
           status?: string;
+        };
+      };
+      meal_items: {
+        Row: {
+          id: string;
+          event_id: string;
+          item_name: string;
+          quantity_per_person: number;
+          unit: string;
+          grocery_section: string;
+          notes: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          item_name: string;
+          quantity_per_person?: number;
+          unit?: string;
+          grocery_section?: string;
+          notes?: string | null;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          item_name?: string;
+          quantity_per_person?: number;
+          unit?: string;
+          grocery_section?: string;
+          notes?: string | null;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      supply_items: {
+        Row: {
+          id: string;
+          trip_id: string;
+          name: string;
+          category: string;
+          quantity: number;
+          claimed_by: string | null;
+          status: string;
+          source_note_id: string | null;
+          notes: string | null;
+          sort_order: number;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          trip_id: string;
+          name: string;
+          category?: string;
+          quantity?: number;
+          claimed_by?: string | null;
+          status?: string;
+          source_note_id?: string | null;
+          notes?: string | null;
+          sort_order?: number;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          trip_id?: string;
+          name?: string;
+          category?: string;
+          quantity?: number;
+          claimed_by?: string | null;
+          status?: string;
+          source_note_id?: string | null;
+          notes?: string | null;
+          sort_order?: number;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      grocery_checkoffs: {
+        Row: {
+          id: string;
+          meal_item_id: string;
+          user_id: string;
+          checked_at: string;
+        };
+        Insert: {
+          id?: string;
+          meal_item_id: string;
+          user_id: string;
+          checked_at?: string;
         };
       };
       packing_items: {
@@ -967,6 +1140,12 @@ export type WardrobeItem = Database["public"]["Tables"]["wardrobe_items"]["Row"]
 export type WardrobeItemInsert = Database["public"]["Tables"]["wardrobe_items"]["Insert"];
 export type SavedGear = Database["public"]["Tables"]["saved_gear"]["Row"];
 export type SavedGearInsert = Database["public"]["Tables"]["saved_gear"]["Insert"];
+export type GearBin = Database["public"]["Tables"]["gear_bins"]["Row"];
+export type GearBinInsert = Database["public"]["Tables"]["gear_bins"]["Insert"];
+export type GearBinUpdate = Database["public"]["Tables"]["gear_bins"]["Update"];
+export type GearItem = Database["public"]["Tables"]["gear_items"]["Row"];
+export type GearItemInsert = Database["public"]["Tables"]["gear_items"]["Insert"];
+export type GearItemUpdate = Database["public"]["Tables"]["gear_items"]["Update"];
 export type Outfit = Database["public"]["Tables"]["outfits"]["Row"];
 export type OutfitInsert = Database["public"]["Tables"]["outfits"]["Insert"];
 export type OutfitItem = Database["public"]["Tables"]["outfit_items"]["Row"];
@@ -989,6 +1168,16 @@ export type ItineraryEventInsert = Database["public"]["Tables"]["itinerary_event
 
 export type EventParticipant = Database["public"]["Tables"]["event_participants"]["Row"];
 export type EventParticipantInsert = Database["public"]["Tables"]["event_participants"]["Insert"];
+
+// ─── Supplies (Phase 1) ───
+export type MealItem = Database["public"]["Tables"]["meal_items"]["Row"];
+export type MealItemInsert = Database["public"]["Tables"]["meal_items"]["Insert"];
+export type MealItemUpdate = Database["public"]["Tables"]["meal_items"]["Update"];
+export type SupplyItem = Database["public"]["Tables"]["supply_items"]["Row"];
+export type SupplyItemInsert = Database["public"]["Tables"]["supply_items"]["Insert"];
+export type SupplyItemUpdate = Database["public"]["Tables"]["supply_items"]["Update"];
+export type GroceryCheckoff = Database["public"]["Tables"]["grocery_checkoffs"]["Row"];
+export type GroceryCheckoffInsert = Database["public"]["Tables"]["grocery_checkoffs"]["Insert"];
 
 export type PackingItem = Database["public"]["Tables"]["packing_items"]["Row"];
 export type PackingItemInsert = Database["public"]["Tables"]["packing_items"]["Insert"];

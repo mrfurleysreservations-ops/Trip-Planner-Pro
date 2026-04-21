@@ -183,6 +183,25 @@ export const CAR_ZONES = [
   { value: "none", label: "Not Assigned" },
 ];
 
+// ─── Gear Library (Phase 1) ───
+// Reusable gear bins live on /gear and are keyed to a car location.
+// CAR_LOCATIONS is the canonical ordering used for grouping, color, and the
+// `default_location` check constraint on public.gear_bins.
+export const CAR_LOCATIONS = [
+  { value: 'frunk',     label: 'Frunk',     color: '#4a7bc8' },
+  { value: 'cabin',     label: 'Cabin',     color: '#9b59b6' },
+  { value: 'trunk',     label: 'Trunk',     color: '#e65100' },
+  { value: 'roofbox',   label: 'Roofbox',   color: '#0097a7' },
+  { value: 'tow_hitch', label: 'Tow hitch', color: '#c8503a' },
+] as const;
+
+export type CarLocation = typeof CAR_LOCATIONS[number]['value'];
+
+export const GEAR_ICONS = [
+  '📦','🏕️','🔥','💧','🛌','🧰','🩹','🎣','🧺','🔦',
+  '🚴','🧗','❄️','🌞','🛶','🧭','⛺','🪵','🍳','🔋',
+] as const;
+
 export const MEALS = ["Breakfast", "Lunch", "Dinner"];
 
 export const SUGGESTED_MEALS: { [key: string]: { name: string; ingredients: string; baseServings: number }[] } = {
@@ -228,6 +247,48 @@ export const SPLIT_TYPES = [
   { value: "custom", label: "Custom Amounts", description: "Set each party's share manually" },
 ] as const;
 
+// ─── Supplies (Phase 1) ───
+// Grocery aisle ordering for the derived Grocery view — kept in
+// shopping order so the rendered list reads top-to-bottom as a
+// reasonable store path. `value` mirrors the meal_items.grocery_section
+// check constraint exactly.
+export const GROCERY_SECTIONS = [
+  { value: 'produce',   label: 'Produce' },
+  { value: 'meat',      label: 'Meat & Seafood' },
+  { value: 'dairy',     label: 'Dairy & Eggs' },
+  { value: 'pantry',    label: 'Pantry' },
+  { value: 'bakery',    label: 'Bakery' },
+  { value: 'frozen',    label: 'Frozen' },
+  { value: 'beverages', label: 'Beverages' },
+  { value: 'snacks',    label: 'Snacks' },
+  { value: 'other',     label: 'Other' },
+] as const;
+export type GrocerySection = typeof GROCERY_SECTIONS[number]['value'];
+
+// Shared non-food supplies bought/consumed for the trip. Durable owned
+// gear lives in the separate Gear Library (gear_bins/gear_items), not
+// here. `value` mirrors the supply_items.category check constraint.
+export const SUPPLY_CATEGORIES = [
+  { value: 'fuel',        label: 'Fuel' },         // firewood, propane, charcoal, lighter fluid
+  { value: 'consumables', label: 'Consumables' },  // ice, batteries, duct tape, zip ties
+  { value: 'disposables', label: 'Disposables' },  // paper plates, cups, trash bags
+  { value: 'toiletries',  label: 'Toiletries' },   // sunscreen, bug spray, wipes, TP
+  { value: 'event',       label: 'Event' },        // sashes, decorations, favors, games
+  { value: 'other',       label: 'Other' },
+] as const;
+export type SupplyCategory = typeof SUPPLY_CATEGORIES[number]['value'];
+
+export const SUPPLY_STATUSES = [
+  { value: 'needed',    label: 'Needed',    color: '#c75a2a' },
+  { value: 'claimed',   label: 'Claimed',   color: '#e8943a' },
+  { value: 'purchased', label: 'Purchased', color: '#4a7c59' },
+] as const;
+export type SupplyStatus = typeof SUPPLY_STATUSES[number]['value'];
+
+export const MEAL_UNITS = [
+  'each','lb','oz','g','kg','cup','tbsp','tsp','bottle','bag','pkg','gal','qt',
+] as const;
+
 // Itinerary event types
 export const EVENT_TYPES = [
   { value: "travel", label: "Travel", icon: "✈️" },
@@ -258,7 +319,7 @@ export const ROLE_PREFERENCES = [
     icon: "🔥",
     tagline: "I'm doing this, get out of my way",
     defaultTab: "itinerary",
-    subNavOrder: ["itinerary", "expenses", "chat", "packing", "notes", "meals", "group"],
+    subNavOrder: ["itinerary", "expenses", "chat", "packing", "notes", "supplies", "group"],
     primaryTabs: ["itinerary", "expenses", "chat", "packing"],
     chatDefault: "all",
   },
@@ -268,7 +329,7 @@ export const ROLE_PREFERENCES = [
     icon: "🙌",
     tagline: "I've got you on whatever you need",
     defaultTab: "itinerary",
-    subNavOrder: ["itinerary", "packing", "chat", "expenses", "notes", "meals", "group"],
+    subNavOrder: ["itinerary", "packing", "chat", "expenses", "notes", "supplies", "group"],
     primaryTabs: ["itinerary", "packing", "chat", "expenses"],
     chatDefault: "all",
   },
@@ -278,7 +339,7 @@ export const ROLE_PREFERENCES = [
     icon: "🎟️",
     tagline: "I showed up, that's the contribution",
     defaultTab: "expenses",
-    subNavOrder: ["expenses", "chat", "itinerary", "group", "packing", "notes", "meals"],
+    subNavOrder: ["expenses", "chat", "itinerary", "group", "packing", "notes", "supplies"],
     primaryTabs: ["expenses", "chat", "itinerary", "group"],
     chatDefault: "mentions",
   },
@@ -288,7 +349,7 @@ export const ROLE_PREFERENCES = [
     icon: "✌️",
     tagline: "Don't @ me, I'll see you there",
     defaultTab: "itinerary",
-    subNavOrder: ["itinerary", "expenses", "chat", "group", "packing", "notes", "meals"],
+    subNavOrder: ["itinerary", "expenses", "chat", "group", "packing", "notes", "supplies"],
     primaryTabs: ["itinerary", "chat", "expenses", "group"],
     chatDefault: "muted",
   },
