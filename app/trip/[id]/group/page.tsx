@@ -24,6 +24,12 @@ export interface GroupPageProps {
   familiesWithMembers: FamilyWithMembers[];
   otherAppUsers: FriendWithProfile[];
   otherFamilies: FamilyWithMembers[];
+  // Map of family_member_id → linked_user_id for every family_member_id
+  // currently on the roster. Used by the client to dedupe a family-member
+  // row against a friend/app-user row for the same person, even when the
+  // underlying family isn't in this user's own/friend scope (e.g. a co-host
+  // added someone from a family the current viewer can't read).
+  rosterLinkedUserIds: Record<string, string>;
   userId: string;
   isHost: boolean;
 }
@@ -121,6 +127,26 @@ export default async function GroupServerPage({ params }: { params: { id: string
     }
   }
 
+  // ── Roster family_member → linked_user_id map ──
+  // Needed so the client can dedupe a friend/app-user row against a
+  // family-member row for the same person — even when the family isn't in
+  // this viewer's own/friend scope (e.g. a co-host added them from a family
+  // we can't read directly). The DB trigger is the authoritative guard;
+  // this just keeps the UI honest before any insert is attempted.
+  const rosterFamilyMemberIds = (members || [])
+    .map((m: any) => m.family_member_id)
+    .filter(Boolean) as string[];
+  const rosterLinkedUserIds: Record<string, string> = {};
+  if (rosterFamilyMemberIds.length > 0) {
+    const { data: rosterFMs } = await supabase
+      .from("family_members")
+      .select("id, linked_user_id")
+      .in("id", rosterFamilyMemberIds);
+    (rosterFMs || []).forEach((fm: any) => {
+      if (fm.linked_user_id) rosterLinkedUserIds[fm.id] = fm.linked_user_id;
+    });
+  }
+
   // ── Discovery: other app users (NOT current user, NOT a friend) ──
   // Note: this exposes all public user_profiles rows to every logged-in user.
   // That's fine for the current hobby-project scope; flag if RLS is ever tightened.
@@ -182,6 +208,7 @@ export default async function GroupServerPage({ params }: { params: { id: string
       familiesWithMembers={familiesWithMembers}
       otherAppUsers={otherAppUsers}
       otherFamilies={otherFamilies}
+      rosterLinkedUserIds={rosterLinkedUserIds}
       userId={user.id}
       isHost={isHost}
     />

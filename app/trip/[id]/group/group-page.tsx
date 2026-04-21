@@ -29,7 +29,7 @@ export const StatusChip = ({ status }: { status: string }) => {
   );
 };
 
-export default function GroupPage({ trip, members: initialMembers, friends, familiesWithMembers, otherAppUsers, otherFamilies, userId, isHost }: GroupPageProps) {
+export default function GroupPage({ trip, members: initialMembers, friends, familiesWithMembers, otherAppUsers, otherFamilies, rosterLinkedUserIds, userId, isHost }: GroupPageProps) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;
@@ -60,6 +60,17 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
   // Basic email shape check — same regex as the server route.
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 
+  // The `prevent_duplicate_trip_member` trigger raises exceptions whose
+  // message contains "already on the trip". Detect that specifically so we
+  // can show a friendly toast; anything else falls through to a generic
+  // "couldn't add" message. We don't pattern-match on Postgres error codes
+  // because Supabase surfaces these as generic 500/409 with the message
+  // on `.message`.
+  const isDuplicateTripMemberError = (err: any): boolean => {
+    const msg: string = err?.message || err?.error_description || "";
+    return msg.toLowerCase().includes("already on the trip");
+  };
+
   // POST to /api/send-invite. Best-effort — surfaces the error but never blocks
   // the DB row that was already created (host can re-send later).
   const triggerInviteEmail = useCallback(async (email: string, name: string) => {
@@ -81,8 +92,41 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
     }
   }, [trip.id]);
 
-  // Sets for quick lookups
-  const memberUserIds = useMemo(() => new Set(members.map((m) => m.user_id).filter(Boolean)), [members]);
+  // Sets for quick lookups.
+  //
+  // `memberUserIds` intentionally includes BOTH:
+  //   1. user_id set directly on a trip_member (added as a friend/app-user), AND
+  //   2. linked_user_id reached *through* family_member_id (added as family).
+  //
+  // Without (2), a spouse added via "Add Family" shows up again in the Friends
+  // list as un-added, letting the host double-book her into the trip.
+  const familyMemberIdToLinkedUserId = useMemo(() => {
+    const map = new Map<string, string>();
+    // (a) Every family_member we can see through our own/friend scope.
+    familiesWithMembers.forEach((fam) => {
+      fam.family_members.forEach((fm) => {
+        if (fm.linked_user_id) map.set(fm.id, fm.linked_user_id);
+      });
+    });
+    // (b) Anything on the roster the server pre-resolved for us — covers
+    // family_member rows added by another host whose family we can't read.
+    Object.entries(rosterLinkedUserIds).forEach(([fmId, uid]) => {
+      map.set(fmId, uid);
+    });
+    return map;
+  }, [familiesWithMembers, rosterLinkedUserIds]);
+
+  const memberUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    members.forEach((m) => {
+      if (m.user_id) ids.add(m.user_id);
+      if (m.family_member_id) {
+        const linked = familyMemberIdToLinkedUserId.get(m.family_member_id);
+        if (linked) ids.add(linked);
+      }
+    });
+    return ids;
+  }, [members, familyMemberIdToLinkedUserId]);
   const memberFamilyMemberIds = useMemo(() => new Set(members.map((m) => m.family_member_id).filter(Boolean)), [members]);
 
   // ─── Filtered lists ───
@@ -141,6 +185,11 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
         });
       if (error) {
         console.error("addFriend error:", JSON.stringify(error, null, 2));
+        setToast(
+          isDuplicateTripMemberError(error)
+            ? `${friend.full_name || "That person"} is already on this trip`
+            : "Couldn't add them — try again"
+        );
       } else {
         // Best-effort: email the added app user a magic-link landing on /trip/[id]/invite.
         if (friend.email) {
@@ -189,6 +238,11 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
         });
       if (error) {
         console.error("addFamilyMember error:", JSON.stringify(error, null, 2));
+        setToast(
+          isDuplicateTripMemberError(error)
+            ? `${fm.name} is already on this trip`
+            : `Couldn't add ${fm.name} — try again`
+        );
       } else {
         logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "added", entityType: "member", entityName: fm.name, linkPath: `/trip/${trip.id}/group` });
         setMembers((prev) => [...prev, {
@@ -219,6 +273,10 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
     const toAdd = fam.family_members.filter(
       (fm) => !memberFamilyMemberIds.has(fm.id) && !(fm.linked_user_id && memberUserIds.has(fm.linked_user_id))
     );
+    // Collect per-row failures so we can surface a single toast at the end
+    // instead of spamming one per failed row.
+    const dupNames: string[] = [];
+    const otherFailNames: string[] = [];
     for (const fm of toAdd) {
       try {
         const { error } = await supabase
@@ -233,6 +291,8 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
           });
         if (error) {
           console.error("addWholeFamily error for", fm.name, ":", JSON.stringify(error, null, 2));
+          if (isDuplicateTripMemberError(error)) dupNames.push(fm.name);
+          else otherFailNames.push(fm.name);
         } else {
           setMembers((prev) => [...prev, {
             id: crypto.randomUUID(),
@@ -251,7 +311,20 @@ export default function GroupPage({ trip, members: initialMembers, friends, fami
         }
       } catch (e) {
         console.error("addWholeFamily CAUGHT for", fm.name, ":", e);
+        otherFailNames.push(fm.name);
       }
+    }
+    // Prefer the duplicate message when it's the only thing that failed —
+    // that's the common case (e.g. wife already added as a friend). Mixed
+    // failure modes fall back to the generic message.
+    if (dupNames.length > 0 && otherFailNames.length === 0) {
+      setToast(
+        dupNames.length === 1
+          ? `${dupNames[0]} is already on this trip`
+          : `${dupNames.length} already on this trip — skipped`
+      );
+    } else if (otherFailNames.length > 0) {
+      setToast(`Couldn't add ${otherFailNames.length === 1 ? otherFailNames[0] : `${otherFailNames.length} people`} — try again`);
     }
     setLoading(false);
   }, [supabase, trip.id, userId, memberFamilyMemberIds]);
