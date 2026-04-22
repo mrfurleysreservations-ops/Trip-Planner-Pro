@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { CAR_LOCATIONS } from "@/lib/constants";
 import type { GearBin, GearItem, TripGearBin, TripGearBinInsert } from "@/types/database.types";
@@ -55,32 +56,26 @@ export default function AddGearModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
-  // Track the keyboard's impact on the viewport so the sheet stays above it.
-  // We set `keyboardInset` to how many pixels the on-screen keyboard eats
-  // from the bottom of the layout viewport; the sheet is pinned `bottom:
-  // keyboardInset` so its sticky "Add" footer never hides behind the
-  // keyboard. When the keyboard is closed, inset is 0 and the sheet pins
-  // to the bottom of the screen, covering the trip sub-nav.
-  const [keyboardInset, setKeyboardInset] = useState(0);
+  // Lock body scroll while the sheet is open so the page underneath can't
+  // scroll (user report: the CarViz was scrolling when they tried to swipe
+  // inside the sheet). We also stash the previous overflow so we don't
+  // stomp on anything set elsewhere.
   useEffect(() => {
-    const vv = typeof window !== "undefined" ? window.visualViewport : null;
-    if (!vv) return;
-    const update = () => {
-      // Height the keyboard is covering = layout viewport bottom − visual
-      // viewport bottom. Clamped to >=0 for good measure.
-      const covered = Math.max(
-        0,
-        window.innerHeight - (vv.height + vv.offsetTop)
-      );
-      setKeyboardInset(covered);
-    };
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
+      document.body.style.overflow = prev;
     };
+  }, []);
+
+  // Render into document.body so the sheet escapes any ancestor that might
+  // trap `position: fixed` (transform, filter, contain, etc.) and so
+  // z-indexing competes at the root instead of inside a nested stacking
+  // context. `mounted` gates the portal until after hydration to avoid SSR
+  // mismatches.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
   }, []);
 
   const onTripBinIds = useMemo(
@@ -363,37 +358,35 @@ export default function AddGearModal({
   const hasMatches = filtered.length > 0;
   const newSelectedCount = selected.size;
 
-  return (
-    <>
-      {/* Backdrop — covers the full layout viewport (including the trip
-          sub-nav, which sits at bottom:0 zIndex:100). */}
-      <div
-        onClick={onClose}
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 1000,
-          background: "rgba(0,0,0,0.45)",
-          animation: "fadeIn 0.15s ease-out",
-        }}
-      />
-      {/* Modal — its own fixed-position element pinned to the bottom of the
-          layout viewport. Stays a sibling of the backdrop instead of a flex
-          child, so `alignItems: flex-end` can't fail on any device. When
-          the on-screen keyboard is up, `bottom: keyboardInset` lifts the
-          whole sheet above it so the sticky "Add" footer stays visible. */}
+  if (!mounted) return null;
+
+  // Sub-nav is 56px tall, pinned at bottom:0 zIndex:100. We lift the sheet
+  // 56px off the bottom so it sits ABOVE the sub-nav — the sticky "Add"
+  // footer is no longer hidden behind the tab bar.
+  const NAV_HEIGHT = 56;
+
+  return createPortal(
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        background: "rgba(0,0,0,0.45)",
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        animation: "fadeIn 0.15s ease-out",
+        touchAction: "none",
+      }}
+    >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          position: "fixed",
-          bottom: keyboardInset,
-          left: 0,
-          right: 0,
-          margin: "0 auto",
           width: "100%",
           maxWidth: 480,
-          maxHeight: `calc(min(92vh, 92dvh) - ${keyboardInset}px)`,
-          zIndex: 1001,
+          maxHeight: `calc(92vh - ${NAV_HEIGHT}px)`,
+          marginBottom: NAV_HEIGHT,
           background: "#f6f8f4",
           borderRadius: "20px 20px 0 0",
           boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
@@ -565,7 +558,7 @@ export default function AddGearModal({
         {/* Sticky bottom CTA */}
         <div
           style={{
-            padding: "12px 16px calc(14px + env(safe-area-inset-bottom))",
+            padding: "12px 16px 14px",
             borderTop: `1px solid ${cardBorder}`,
             background: "#fff",
             display: "flex",
@@ -626,6 +619,7 @@ export default function AddGearModal({
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
       `}</style>
-    </>
+    </div>,
+    document.body
   );
 }
