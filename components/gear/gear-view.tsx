@@ -8,6 +8,7 @@ import type {
   TripGearBin,
 } from "@/types/database.types";
 import BinEditModal from "./bin-edit-modal";
+import StandaloneItemEditor from "./standalone-item-editor";
 import AddGearModal from "./add-gear-modal";
 import CarViz, { CarVizLegend } from "./car-viz";
 
@@ -261,8 +262,9 @@ export default function GearView({
     const zone = effectiveZone(row);
     const loc = CAR_LOCATIONS.find((l) => l.value === zone);
     const accent = loc?.color ?? b.color ?? theme.accent;
-    const items = rollupItems(b.id);
-    const kids = childrenByParent.get(b.id)?.length ?? 0;
+    const standalone = b.is_standalone === true;
+    const items = standalone ? 0 : rollupItems(b.id);
+    const kids = standalone ? 0 : childrenByParent.get(b.id)?.length ?? 0;
 
     return (
       <div
@@ -338,9 +340,29 @@ export default function GearView({
                 fontWeight: 700,
                 lineHeight: 1.2,
                 textDecoration: row.loaded ? "none" : "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexWrap: "wrap",
               }}
             >
-              {b.name}
+              <span>{b.name}</span>
+              {standalone && (
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    padding: "1px 6px",
+                    borderRadius: 999,
+                    background: hexToRgba(accent, 0.14),
+                    color: accent,
+                  }}
+                >
+                  Standalone
+                </span>
+              )}
             </div>
             <div
               style={{
@@ -354,11 +376,17 @@ export default function GearView({
               }}
             >
               <span>
-                {items} {items === 1 ? "item" : "items"}
-                {kids > 0 && (
+                {standalone ? (
+                  <>×{b.quantity ?? 1}</>
+                ) : (
                   <>
-                    <span style={{ margin: "0 4px", opacity: 0.5 }}>·</span>
-                    {kids} child {kids === 1 ? "bin" : "bins"}
+                    {items} {items === 1 ? "item" : "items"}
+                    {kids > 0 && (
+                      <>
+                        <span style={{ margin: "0 4px", opacity: 0.5 }}>·</span>
+                        {kids} child {kids === 1 ? "bin" : "bins"}
+                      </>
+                    )}
                   </>
                 )}
               </span>
@@ -771,7 +799,17 @@ export default function GearView({
       </div>
 
       {/* ─── Modals ─── */}
-      {openBinId && (
+      {openBinId && openBin?.is_standalone ? (
+        <StandaloneItemEditor
+          ownerId={userId}
+          bin={openBin}
+          allBins={libraryBins}
+          onBinsChange={setLibraryBins}
+          onClose={() => setOpenBinId(null)}
+          allowDeleteFromLibrary={false}
+          rightAction={rightAction}
+        />
+      ) : openBinId ? (
         <BinEditModal
           ownerId={userId}
           rootBinId={openBinId}
@@ -782,7 +820,7 @@ export default function GearView({
           onClose={() => setOpenBinId(null)}
           rightAction={rightAction}
         />
-      )}
+      ) : null}
 
       {addGearOpen && (
         <AddGearModal

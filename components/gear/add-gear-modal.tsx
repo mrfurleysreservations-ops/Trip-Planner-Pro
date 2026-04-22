@@ -174,6 +174,7 @@ export default function AddGearModal({
   const renderRow = (b: GearBin) => {
     const onTrip = onTripBinIds.has(b.id);
     const isSelected = selected.has(b.id);
+    const standalone = b.is_standalone === true;
     const roll = rollupByBin.get(b.id) ?? { items: 0, bins: 0 };
     const loc = CAR_LOCATIONS.find((l) => l.value === b.default_location);
     const zoneColor = loc?.color ?? accent;
@@ -231,16 +232,50 @@ export default function AddGearModal({
             flexShrink: 0,
           }}
         >
-          {b.icon ?? "📦"}
+          {b.icon ?? (standalone ? "🏕️" : "📦")}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.2 }}>{b.name}</div>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              lineHeight: 1.2,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{b.name}</span>
+            {standalone && (
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  padding: "1px 6px",
+                  borderRadius: 999,
+                  background: hexToRgba(zoneColor, 0.14),
+                  color: zoneColor,
+                }}
+              >
+                Standalone
+              </span>
+            )}
+          </div>
           <div style={{ fontSize: 10, color: muted, marginTop: 3 }}>
-            {roll.items} {roll.items === 1 ? "item" : "items"}
-            {roll.bins > 0 && (
+            {standalone ? (
+              <>×{b.quantity ?? 1}</>
+            ) : (
               <>
-                <span style={{ margin: "0 4px", opacity: 0.5 }}>·</span>
-                {roll.bins} child {roll.bins === 1 ? "bin" : "bins"}
+                {roll.items} {roll.items === 1 ? "item" : "items"}
+                {roll.bins > 0 && (
+                  <>
+                    <span style={{ margin: "0 4px", opacity: 0.5 }}>·</span>
+                    {roll.bins} child {roll.bins === 1 ? "bin" : "bins"}
+                  </>
+                )}
               </>
             )}
           </div>

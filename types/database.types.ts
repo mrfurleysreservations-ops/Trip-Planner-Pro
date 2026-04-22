@@ -429,6 +429,8 @@ export interface Database {
           icon: string | null;
           notes: string | null;
           parent_bin_id: string | null;
+          is_standalone: boolean;
+          quantity: number;
           archived_at: string | null;
           created_at: string;
           updated_at: string;
@@ -443,6 +445,8 @@ export interface Database {
           icon?: string | null;
           notes?: string | null;
           parent_bin_id?: string | null;
+          is_standalone?: boolean;
+          quantity?: number;
           archived_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -457,6 +461,8 @@ export interface Database {
           icon?: string | null;
           notes?: string | null;
           parent_bin_id?: string | null;
+          is_standalone?: boolean;
+          quantity?: number;
           archived_at?: string | null;
           created_at?: string;
           updated_at?: string;

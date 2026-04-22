@@ -5,6 +5,7 @@ import { CAR_LOCATIONS, CarLocation, GEAR_ICONS, THEMES } from "@/lib/constants"
 import type { GearBin, GearBinInsert, GearItem } from "@/types/database.types";
 import TopNav from "@/app/top-nav";
 import BinEditModal from "@/components/gear/bin-edit-modal";
+import StandaloneItemEditor from "@/components/gear/standalone-item-editor";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
@@ -40,11 +41,27 @@ interface NewBinDraft {
   default_location: CarLocation | null;
 }
 
+interface NewStandaloneDraft {
+  name: string;
+  icon: string;
+  color: string;
+  default_location: CarLocation | null;
+  quantity: number;
+}
+
 const emptyDraft = (): NewBinDraft => ({
   name: "",
   icon: "📦",
   color: "#5a9a2f",
   default_location: "trunk",
+});
+
+const emptyStandaloneDraft = (): NewStandaloneDraft => ({
+  name: "",
+  icon: "🏕️",
+  color: "#5a9a2f",
+  default_location: "trunk",
+  quantity: 1,
 });
 
 export default function GearPage({
@@ -64,12 +81,25 @@ export default function GearPage({
   const [openBinId, setOpenBinId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
+  // FAB chooser: after tapping ＋, pick between a regular bin (can hold items
+  // and child bins) or a "standalone item" (tent, cooler, chairs — one row,
+  // one quantity, no children).
+  const [fabChooserOpen, setFabChooserOpen] = useState(false);
+
   // FAB → "New bin" mini-sheet. Creates a TOP-LEVEL bin (parent_bin_id = null)
   // and then opens the shared BinEditModal on the fresh bin so the user can
   // immediately add items or child bins.
   const [newBinOpen, setNewBinOpen] = useState(false);
   const [newBinDraft, setNewBinDraft] = useState<NewBinDraft>(emptyDraft());
   const [savingNewBin, setSavingNewBin] = useState(false);
+
+  // FAB → "Standalone item" mini-sheet. Creates a gear_bins row with
+  // is_standalone=true; tapping the row later opens StandaloneItemEditor.
+  const [newStandaloneOpen, setNewStandaloneOpen] = useState(false);
+  const [newStandaloneDraft, setNewStandaloneDraft] = useState<NewStandaloneDraft>(
+    emptyStandaloneDraft()
+  );
+  const [savingNewStandalone, setSavingNewStandalone] = useState(false);
 
   // ─── Derived data ──────────────────────────────────────────────────────
 
@@ -133,8 +163,15 @@ export default function GearPage({
     return { items: itemTotal, bins: ids.length - 1 };
   };
 
-  // Stats pills.
-  const totalItems = items.length;
+  // Stats pills. Standalone rows have no child gear_items, so their `quantity`
+  // is the "item count" contribution; otherwise it would look like you have
+  // zero chairs in your library.
+  const standaloneQty = useMemo(
+    () =>
+      bins.reduce((sum, b) => (b.is_standalone ? sum + (b.quantity ?? 1) : sum), 0),
+    [bins]
+  );
+  const totalItems = items.length + standaloneQty;
   const locationsUsed = useMemo(() => {
     const set = new Set<string>();
     topLevelBins.forEach((b) => {
@@ -181,7 +218,11 @@ export default function GearPage({
 
   // ─── Actions ───────────────────────────────────────────────────────────
 
+  const openFabChooser = () => setFabChooserOpen(true);
+  const closeFabChooser = () => setFabChooserOpen(false);
+
   const openNewBinSheet = () => {
+    setFabChooserOpen(false);
     setNewBinDraft(emptyDraft());
     setNewBinOpen(true);
   };
@@ -189,6 +230,17 @@ export default function GearPage({
   const closeNewBinSheet = () => {
     setNewBinOpen(false);
     setNewBinDraft(emptyDraft());
+  };
+
+  const openNewStandaloneSheet = () => {
+    setFabChooserOpen(false);
+    setNewStandaloneDraft(emptyStandaloneDraft());
+    setNewStandaloneOpen(true);
+  };
+
+  const closeNewStandaloneSheet = () => {
+    setNewStandaloneOpen(false);
+    setNewStandaloneDraft(emptyStandaloneDraft());
   };
 
   const createNewBin = async () => {
@@ -219,13 +271,43 @@ export default function GearPage({
     }
   };
 
+  const createNewStandalone = async () => {
+    const name = newStandaloneDraft.name.trim();
+    if (!name) return;
+    setSavingNewStandalone(true);
+    const payload: GearBinInsert = {
+      owner_id: userId,
+      name,
+      icon: newStandaloneDraft.icon,
+      color: newStandaloneDraft.color,
+      default_location: newStandaloneDraft.default_location,
+      is_standalone: true,
+      quantity: Math.max(1, newStandaloneDraft.quantity || 1),
+    };
+    const { data, error } = await supabase
+      .from("gear_bins")
+      .insert(payload)
+      .select()
+      .single();
+    setSavingNewStandalone(false);
+    if (!error && data) {
+      const created = data as GearBin;
+      setBins((prev) => [...prev, created]);
+      setNewStandaloneOpen(false);
+      setNewStandaloneDraft(emptyStandaloneDraft());
+      // Open standalone editor on the fresh row so the user can tweak.
+      setOpenBinId(created.id);
+    }
+  };
+
   // ─── Render ────────────────────────────────────────────────────────────
 
   const renderBinRow = (bin: GearBin) => {
-    const counts = rollupCounts(bin.id);
     const loc = CAR_LOCATIONS.find((l) => l.value === bin.default_location);
     const accent = loc?.color ?? bin.color ?? "#5a9a2f";
     const iconBg = hexToRgba(accent, 0.12);
+    const standalone = bin.is_standalone === true;
+    const counts = standalone ? { items: 0, bins: 0 } : rollupCounts(bin.id);
 
     return (
       <div
@@ -266,18 +348,51 @@ export default function GearPage({
             flexShrink: 0,
           }}
         >
-          {bin.icon ?? "📦"}
+          {bin.icon ?? (standalone ? "🏕️" : "📦")}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2, color: th.text }}>
-            {bin.name}
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              lineHeight: 1.2,
+              color: th.text,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{bin.name}</span>
+            {standalone && (
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  padding: "2px 6px",
+                  borderRadius: 999,
+                  background: hexToRgba(accent, 0.14),
+                  color: accent,
+                }}
+              >
+                Standalone
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 11, color: th.muted, marginTop: 3 }}>
-            {counts.items} {counts.items === 1 ? "item" : "items"}
-            {counts.bins > 0 && (
+            {standalone ? (
+              <>×{bin.quantity ?? 1}</>
+            ) : (
               <>
-                <span style={{ margin: "0 5px", opacity: 0.5 }}>·</span>
-                {counts.bins} child {counts.bins === 1 ? "bin" : "bins"}
+                {counts.items} {counts.items === 1 ? "item" : "items"}
+                {counts.bins > 0 && (
+                  <>
+                    <span style={{ margin: "0 5px", opacity: 0.5 }}>·</span>
+                    {counts.bins} child {counts.bins === 1 ? "bin" : "bins"}
+                  </>
+                )}
               </>
             )}
           </div>
@@ -289,7 +404,11 @@ export default function GearPage({
 
   const renderGroup = (loc: typeof CAR_LOCATIONS[number], groupBins: GearBin[]) => {
     if (groupBins.length === 0) return null;
-    const itemCount = groupBins.reduce((sum, b) => sum + rollupCounts(b.id).items, 0);
+    // Standalone rows have no child items; their `quantity` is their item count.
+    const itemCount = groupBins.reduce((sum, b) => {
+      if (b.is_standalone) return sum + (b.quantity ?? 1);
+      return sum + rollupCounts(b.id).items;
+    }, 0);
     return (
       <div key={loc.value} style={{ marginTop: 22 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 10px" }}>
@@ -329,7 +448,10 @@ export default function GearPage({
   const renderUnassignedGroup = () => {
     const list = binsByLocation.unassigned;
     if (list.length === 0) return null;
-    const itemCount = list.reduce((sum, b) => sum + rollupCounts(b.id).items, 0);
+    const itemCount = list.reduce((sum, b) => {
+      if (b.is_standalone) return sum + (b.quantity ?? 1);
+      return sum + rollupCounts(b.id).items;
+    }, 0);
     return (
       <div key="unassigned" style={{ marginTop: 22 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 10px" }}>
@@ -462,7 +584,7 @@ export default function GearPage({
       {/* ─── SCROLLABLE BODY ─── */}
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "16px" }}>
         {topLevelCount === 0 ? (
-          <EmptyState muted={th.muted} border={th.cardBorder} onCreate={openNewBinSheet} />
+          <EmptyState muted={th.muted} border={th.cardBorder} onCreate={openFabChooser} />
         ) : visibleTopLevel.length === 0 ? (
           <div
             className="card-glass"
@@ -483,10 +605,10 @@ export default function GearPage({
         )}
       </div>
 
-      {/* ─── FAB: bottom-right ＋ to create a new top-level bin ─── */}
+      {/* ─── FAB: bottom-right ＋ opens a Bin-vs-Standalone chooser ─── */}
       <button
-        onClick={openNewBinSheet}
-        aria-label="New bin"
+        onClick={openFabChooser}
+        aria-label="Add gear"
         style={{
           position: "fixed",
           bottom: 20,
@@ -513,18 +635,33 @@ export default function GearPage({
         ＋
       </button>
 
-      {/* ─── BinEditModal: tap a row to open the shared editor ─── */}
-      {openBinId && (
-        <BinEditModal
-          ownerId={userId}
-          rootBinId={openBinId}
-          allBins={bins}
-          items={items}
-          onBinsChange={setBins}
-          onItemsChange={setItems}
-          onClose={() => setOpenBinId(null)}
-        />
-      )}
+      {/* ─── Tap a row to edit — fork by is_standalone ─── */}
+      {openBinId && (() => {
+        const openBin = bins.find((b) => b.id === openBinId);
+        if (!openBin) return null;
+        if (openBin.is_standalone) {
+          return (
+            <StandaloneItemEditor
+              ownerId={userId}
+              bin={openBin}
+              allBins={bins}
+              onBinsChange={setBins}
+              onClose={() => setOpenBinId(null)}
+            />
+          );
+        }
+        return (
+          <BinEditModal
+            ownerId={userId}
+            rootBinId={openBinId}
+            allBins={bins}
+            items={items}
+            onBinsChange={setBins}
+            onItemsChange={setItems}
+            onClose={() => setOpenBinId(null)}
+          />
+        );
+      })()}
 
       {/* ─── New-bin bottom sheet (FAB target) ─── */}
       {newBinOpen && (
@@ -749,6 +886,349 @@ export default function GearPage({
         </div>
       )}
 
+      {/* ─── FAB chooser: Bin vs. Standalone item ─── */}
+      {fabChooserOpen && (
+        <div
+          onClick={closeFabChooser}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1000,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            animation: "fadeIn 0.15s ease-out",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 480,
+              borderRadius: "20px 20px 0 0",
+              background: th.bg,
+              boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
+              animation: "slideUp 0.2s ease-out",
+              padding: "18px 20px 24px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "center", margin: "-8px 0 10px" }}>
+              <span
+                style={{
+                  width: 36,
+                  height: 4,
+                  background: th.muted,
+                  borderRadius: 999,
+                  opacity: 0.4,
+                }}
+              />
+            </div>
+            <h3
+              style={{
+                fontFamily: "'Outfit', sans-serif",
+                fontWeight: 800,
+                fontSize: 18,
+                margin: "0 0 4px",
+              }}
+            >
+              What are you adding?
+            </h3>
+            <p style={{ fontSize: 12, color: th.muted, margin: "0 0 14px" }}>
+              A bin holds items and can nest. A standalone item is one thing that goes
+              straight in the car — tent, chairs, cooler, table.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <ChooserRow
+                icon="📦"
+                title="Bin"
+                subtitle="Holds items. Can contain child bins (e.g. Camp Kitchen → Spices)."
+                onClick={openNewBinSheet}
+                accent="#5a9a2f"
+                th={th}
+              />
+              <ChooserRow
+                icon="🏕️"
+                title="Standalone item"
+                subtitle="No items inside — just this thing. Track how many you own."
+                onClick={openNewStandaloneSheet}
+                accent="#4a7bc8"
+                th={th}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+              <button
+                onClick={closeFabChooser}
+                className="btn"
+                style={{ background: "#f0f0f0", color: "#1a1a1a" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── New standalone-item bottom sheet (FAB → Standalone) ─── */}
+      {newStandaloneOpen && (
+        <div
+          onClick={closeNewStandaloneSheet}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1000,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            animation: "fadeIn 0.15s ease-out",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 480,
+              maxHeight: "90vh",
+              overflowY: "auto",
+              borderRadius: "20px 20px 0 0",
+              boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
+              background: th.bg,
+              animation: "slideUp 0.2s ease-out",
+            }}
+          >
+            <div
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 1,
+                padding: "18px 20px 14px",
+                borderBottom: `1px solid ${th.cardBorder}`,
+                background: th.bg,
+                borderRadius: "20px 20px 0 0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <h3
+                style={{
+                  fontFamily: "'Outfit', sans-serif",
+                  fontWeight: 800,
+                  fontSize: 18,
+                  margin: 0,
+                }}
+              >
+                New standalone item
+              </h3>
+              <button
+                onClick={closeNewStandaloneSheet}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: 22,
+                  cursor: "pointer",
+                  color: th.muted,
+                  padding: 4,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div
+              style={{
+                padding: "16px 20px 24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              {/* Name */}
+              <div>
+                <label style={modalLabelStyle(th.muted)}>Name *</label>
+                <input
+                  value={newStandaloneDraft.name}
+                  onChange={(e) =>
+                    setNewStandaloneDraft((d) => ({ ...d, name: e.target.value }))
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newStandaloneDraft.name.trim())
+                      createNewStandalone();
+                  }}
+                  placeholder="Tent, Camp chairs, Folding table…"
+                  className="input-modern"
+                  autoFocus
+                />
+              </div>
+
+              {/* Quantity */}
+              <div>
+                <label style={modalLabelStyle(th.muted)}>Quantity</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={newStandaloneDraft.quantity}
+                  onChange={(e) =>
+                    setNewStandaloneDraft((d) => ({
+                      ...d,
+                      quantity: Math.max(1, parseInt(e.target.value, 10) || 1),
+                    }))
+                  }
+                  className="input-modern"
+                  style={{ width: 100, textAlign: "center" }}
+                />
+                <p style={{ fontSize: 11, color: th.muted, margin: "6px 0 0" }}>
+                  How many copies of this thing you own (e.g. 4 chairs).
+                </p>
+              </div>
+
+              {/* Icon */}
+              <div>
+                <label style={modalLabelStyle(th.muted)}>Icon</label>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(10, 1fr)",
+                    gap: 6,
+                    marginTop: 4,
+                  }}
+                >
+                  {GEAR_ICONS.map((ic) => (
+                    <button
+                      key={ic}
+                      type="button"
+                      onClick={() =>
+                        setNewStandaloneDraft((d) => ({ ...d, icon: ic }))
+                      }
+                      style={{
+                        aspectRatio: "1 / 1",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 20,
+                        borderRadius: 10,
+                        border: `1.5px solid ${
+                          newStandaloneDraft.icon === ic ? "#5a9a2f" : th.cardBorder
+                        }`,
+                        background:
+                          newStandaloneDraft.icon === ic
+                            ? hexToRgba("#5a9a2f", 0.1)
+                            : "#fff",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {ic}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color */}
+              <div>
+                <label style={modalLabelStyle(th.muted)}>Accent color</label>
+                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                  {COLOR_SWATCHES.map((sw) => (
+                    <button
+                      key={sw}
+                      type="button"
+                      onClick={() =>
+                        setNewStandaloneDraft((d) => ({ ...d, color: sw }))
+                      }
+                      aria-label={`Color ${sw}`}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        background: sw,
+                        border:
+                          newStandaloneDraft.color === sw
+                            ? "3px solid #1a1a1a"
+                            : `2px solid ${th.cardBorder}`,
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <label style={modalLabelStyle(th.muted)}>Car location</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                  {CAR_LOCATIONS.map((l) => (
+                    <button
+                      key={l.value}
+                      type="button"
+                      onClick={() =>
+                        setNewStandaloneDraft((d) => ({
+                          ...d,
+                          default_location: l.value,
+                        }))
+                      }
+                      style={{
+                        padding: "7px 14px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        borderRadius: 999,
+                        border: `1.5px solid ${
+                          newStandaloneDraft.default_location === l.value
+                            ? l.color
+                            : th.cardBorder
+                        }`,
+                        background:
+                          newStandaloneDraft.default_location === l.value
+                            ? l.color
+                            : "#fff",
+                        color:
+                          newStandaloneDraft.default_location === l.value
+                            ? "#fff"
+                            : th.muted,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  justifyContent: "flex-end",
+                  marginTop: 4,
+                }}
+              >
+                <button
+                  onClick={closeNewStandaloneSheet}
+                  className="btn"
+                  style={{ background: "#f0f0f0", color: "#1a1a1a" }}
+                  disabled={savingNewStandalone}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createNewStandalone}
+                  className="btn"
+                  style={{ background: "#5a9a2f" }}
+                  disabled={
+                    savingNewStandalone || !newStandaloneDraft.name.trim()
+                  }
+                >
+                  {savingNewStandalone ? "Saving…" : "Create"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -787,6 +1267,64 @@ function StatPill({
   );
 }
 
+function ChooserRow({
+  icon,
+  title,
+  subtitle,
+  onClick,
+  accent,
+  th,
+}: {
+  icon: string;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+  accent: string;
+  th: { bg: string; text: string; muted: string; cardBorder: string; card: string; accent: string };
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "12px 14px",
+        background: "#fff",
+        border: `1px solid ${th.cardBorder}`,
+        borderLeft: `3px solid ${accent}`,
+        borderRadius: 12,
+        cursor: "pointer",
+        textAlign: "left",
+        width: "100%",
+        fontFamily: "'DM Sans', sans-serif",
+        color: th.text,
+      }}
+    >
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 10,
+          background: "rgba(0,0,0,0.03)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 20,
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2 }}>{title}</div>
+        <div style={{ fontSize: 11, color: th.muted, marginTop: 3 }}>{subtitle}</div>
+      </div>
+      <span style={{ color: th.muted, fontSize: 16 }}>›</span>
+    </button>
+  );
+}
+
 function EmptyState({
   onCreate,
   muted,
@@ -812,15 +1350,15 @@ function EmptyState({
         Your gear library is empty.
       </h2>
       <p style={{ color: muted, fontSize: 13, margin: "0 auto 18px", maxWidth: 360 }}>
-        Build your first bin to start packing smart trips. Tap the ＋ in the bottom-right to
-        get started.
+        Build your first bin or add a standalone item (like a tent or cooler). Tap the ＋
+        in the bottom-right to get started.
       </p>
       <button
         onClick={onCreate}
         className="btn"
         style={{ background: "#5a9a2f", boxShadow: "0 2px 8px rgba(90,154,47,0.25)" }}
       >
-        ＋ Create your first bin
+        ＋ Add gear
       </button>
     </div>
   );
