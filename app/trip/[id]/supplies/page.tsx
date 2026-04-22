@@ -52,48 +52,50 @@ export default async function SuppliesServerPage({
       return (a.sort_order ?? 0) - (b.sort_order ?? 0);
     });
 
-  // Supplies is trip-scoped; run it in parallel with nothing here since the
-  // meal_items / participants queries below depend on the derived mealIds.
-  const { data: suppliesData } = await supabase
-    .from("supply_items")
-    .select("*")
-    .eq("trip_id", id)
-    .order("sort_order")
-    .order("created_at");
-  const supplies = (suppliesData ?? []) as SupplyItem[];
-
+  // ─── Tier 1 ────────────────────────────────────────────────────────
+  // mealIds comes from the shared `events` list (already resolved via
+  // getTripData), so supplies / meal_items / participants all have their
+  // inputs at this point and can run in one parallel batch.
   const mealIds = meals.map((m) => m.id);
 
-  let mealItems: MealItem[] = [];
-  let participants: EventParticipant[] = [];
-  if (mealIds.length > 0) {
-    const [miRes, partsRes] = await Promise.all([
-      supabase
-        .from("meal_items")
-        .select("*")
-        .in("event_id", mealIds)
-        .order("sort_order")
-        .order("created_at"),
-      supabase
-        .from("event_participants")
-        .select("*")
-        .in("event_id", mealIds),
-    ]);
-    mealItems = (miRes.data ?? []) as MealItem[];
-    participants = (partsRes.data ?? []) as EventParticipant[];
-  }
-
-  // Grocery checkoffs — only for meal_items that exist in the fetched set.
-  let checkoffs: GroceryCheckoff[] = [];
-  if (mealItems.length > 0) {
-    const mealItemIds = mealItems.map((mi) => mi.id);
-    const { data } = await supabase
-      .from("grocery_checkoffs")
+  const [suppliesRes, mealItemsRes, participantsRes] = await Promise.all([
+    supabase
+      .from("supply_items")
       .select("*")
-      .eq("user_id", userId)
-      .in("meal_item_id", mealItemIds);
-    checkoffs = (data ?? []) as GroceryCheckoff[];
-  }
+      .eq("trip_id", id)
+      .order("sort_order")
+      .order("created_at"),
+    mealIds.length > 0
+      ? supabase
+          .from("meal_items")
+          .select("*")
+          .in("event_id", mealIds)
+          .order("sort_order")
+          .order("created_at")
+      : Promise.resolve({ data: [] as MealItem[] }),
+    mealIds.length > 0
+      ? supabase
+          .from("event_participants")
+          .select("*")
+          .in("event_id", mealIds)
+      : Promise.resolve({ data: [] as EventParticipant[] }),
+  ]);
+
+  const supplies = (suppliesRes.data ?? []) as SupplyItem[];
+  const mealItems = (mealItemsRes.data ?? []) as MealItem[];
+  const participants = (participantsRes.data ?? []) as EventParticipant[];
+
+  // ─── Tier 2 ────────────────────────────────────────────────────────
+  // Grocery checkoffs need meal_item ids resolved by Tier 1.
+  const mealItemIds = mealItems.map((mi) => mi.id);
+  const { data: checkoffsData } = mealItemIds.length > 0
+    ? await supabase
+        .from("grocery_checkoffs")
+        .select("*")
+        .eq("user_id", userId)
+        .in("meal_item_id", mealItemIds)
+    : { data: [] as GroceryCheckoff[] };
+  const checkoffs = (checkoffsData ?? []) as GroceryCheckoff[];
 
   // URL view param: default to 'meals'. Never trust raw input.
   const rawView = (searchParams?.view ?? "meals").toLowerCase();

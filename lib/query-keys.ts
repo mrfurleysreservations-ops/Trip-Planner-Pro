@@ -48,6 +48,8 @@ export const tripKeys = {
     ["trip", tripId, "packing-assignments"] as const,
   gearLibrary: (tripId: string) =>
     ["trip", tripId, "gear-library"] as const,
+  packingWeather: (tripId: string) =>
+    ["trip", tripId, "packing-weather"] as const,
 
   // Notes tab
   notes: (tripId: string) => ["trip", tripId, "notes"] as const,

@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment, TripWeatherForecast, GearBin, GearItem, TripGearBin } from "@/types/database.types";
-import { geocodeLocation, fetchForecast, bucketDailyByTOD, type ForecastMap, type ForecastCell } from "@/lib/weather";
+import type { ForecastMap, ForecastCell } from "@/lib/weather";
 import { getTripData } from "@/lib/trip-data";
 import PackingPage from "./packing-page";
 
@@ -48,185 +48,147 @@ export default async function PackingServerPage({ params }: { params: { id: stri
   const { id } = params;
 
   // Shared trip context — deduped with the layout's call via React cache().
-  // Packing still has 15+ tab-specific queries below. Parallelizing those is
-  // deferred to Phase 4 — this phase only removes the shared fetches.
   const { trip, events, userId, isHost } = await getTripData(id);
 
-  // Fetch user profile (for packing preferences, clothing styles, gender)
-  const { data: userProfile } = await supabase.from("user_profiles").select("*").eq("id", userId).single();
+  const eventIds = events.map((e) => e.id);
 
-  // Fetch user's family members (for the family-only person tabs)
-  const { data: families } = await supabase.from("families").select("*").eq("owner_id", userId);
-  const familyIds = (families ?? []).map(f => f.id);
-  let familyMembers: FamilyMember[] = [];
-  if (familyIds.length > 0) {
-    const { data } = await supabase.from("family_members").select("*").in("family_id", familyIds);
-    familyMembers = (data ?? []) as FamilyMember[];
-  }
+  // ─── Tier 1 ────────────────────────────────────────────────────────
+  // Every query below has its inputs ready from `getTripData` (or is static
+  // on userId / trip id). They don't depend on each other, so they all land
+  // in one parallel batch — nine round-trips collapsed to one. Host-only
+  // gear queries are folded into the same batch via conditional Promise
+  // resolves so the tiering stays clean regardless of role.
+  const [
+    userProfileRes,
+    familiesRes,
+    participantsRes,
+    packingItemsRes,
+    packingOutfitsRes,
+    outfitGroupsRes,
+    packingBagsRes,
+    packingItemAssignmentsRes,
+    weatherRowsRes,
+    libBinsRes,
+    tripGearBinsRes,
+  ] = await Promise.all([
+    supabase.from("user_profiles").select("*").eq("id", userId).single(),
+    supabase.from("families").select("*").eq("owner_id", userId),
+    eventIds.length > 0
+      ? supabase.from("event_participants").select("*").in("event_id", eventIds)
+      : Promise.resolve({ data: [] as EventParticipant[] }),
+    supabase.from("packing_items").select("*").eq("trip_id", id).order("sort_order"),
+    supabase.from("packing_outfits").select("*").eq("trip_id", id),
+    supabase.from("outfit_groups").select("*").eq("trip_id", id).order("date").order("sort_order"),
+    supabase.from("packing_bags").select("*").eq("user_id", userId).order("sort_order"),
+    supabase.from("packing_item_assignments").select("*").eq("trip_id", id),
+    supabase.from("trip_weather_forecast").select("*").eq("trip_id", id),
+    isHost
+      ? supabase
+          .from("gear_bins")
+          .select("*")
+          .eq("owner_id", userId)
+          .is("archived_at", null)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [] as GearBin[] }),
+    isHost
+      ? supabase.from("trip_gear_bins").select("*").eq("trip_id", id)
+      : Promise.resolve({ data: [] as TripGearBin[] }),
+  ]);
 
-  // Fetch event participants
-  const eventIds = events.map(e => e.id);
-  let participants: EventParticipant[] = [];
-  if (eventIds.length > 0) {
-    const { data } = await supabase.from("event_participants").select("*").in("event_id", eventIds);
-    participants = (data ?? []) as EventParticipant[];
-  }
+  const userProfile = userProfileRes.data as UserProfile | null;
+  const families = (familiesRes.data ?? []) as { id: string }[];
+  const participants = (participantsRes.data ?? []) as EventParticipant[];
+  const packingItems = (packingItemsRes.data ?? []) as PackingItem[];
+  const packingOutfits = (packingOutfitsRes.data ?? []) as PackingOutfit[];
+  const outfitGroups = (outfitGroupsRes.data ?? []) as OutfitGroup[];
+  const packingBags = (packingBagsRes.data ?? []) as PackingBag[];
+  const packingItemAssignments = (packingItemAssignmentsRes.data ?? []) as PackingItemAssignment[];
+  const cachedWeatherRows = (weatherRowsRes.data ?? []) as TripWeatherForecast[];
+  const libraryBins = (libBinsRes.data ?? []) as GearBin[];
+  const tripGearBins = (tripGearBinsRes.data ?? []) as TripGearBin[];
 
-  // Fetch packing items (RLS ensures only family-scoped items returned)
-  const { data: packingItems } = await supabase.from("packing_items").select("*").eq("trip_id", id).order("sort_order");
+  // ─── Tier 2 ────────────────────────────────────────────────────────
+  // Each of these needs ids materialized by Tier 1. Short-circuit with
+  // Promise.resolve when the parent collection is empty — `.in("col", [])`
+  // can throw on some Supabase versions and is a wasted round-trip either
+  // way — so the result shape stays consistent.
+  const familyIds = families.map((f) => f.id);
+  const outfitIds = packingOutfits.map((o) => o.id);
+  const groupIds = outfitGroups.map((g) => g.id);
+  const bagIds = packingBags.map((b) => b.id);
+  const libBinIds = libraryBins.map((b) => b.id);
 
-  // Fetch packing outfits (RLS ensures only family-scoped)
-  const { data: packingOutfits } = await supabase.from("packing_outfits").select("*").eq("trip_id", id);
+  const [
+    familyMembersRes,
+    outfitPackingItemsRes,
+    outfitGroupEventsRes,
+    packingBagSectionsRes,
+    gearItemsRes,
+  ] = await Promise.all([
+    familyIds.length > 0
+      ? supabase.from("family_members").select("*").in("family_id", familyIds)
+      : Promise.resolve({ data: [] as FamilyMember[] }),
+    outfitIds.length > 0
+      ? supabase.from("outfit_packing_items").select("*").in("outfit_id", outfitIds)
+      : Promise.resolve({ data: [] as OutfitPackingItem[] }),
+    groupIds.length > 0
+      ? supabase.from("outfit_group_events").select("*").in("outfit_group_id", groupIds)
+      : Promise.resolve({ data: [] as OutfitGroupEvent[] }),
+    bagIds.length > 0
+      ? supabase.from("packing_bag_sections").select("*").in("bag_id", bagIds).order("sort_order")
+      : Promise.resolve({ data: [] as PackingBagSection[] }),
+    isHost && libBinIds.length > 0
+      ? supabase
+          .from("gear_items")
+          .select("*")
+          .in("bin_id", libBinIds)
+          .order("sort_order", { ascending: true })
+      : Promise.resolve({ data: [] as GearItem[] }),
+  ]);
 
-  // Fetch outfit-packing-item junctions
-  const outfitIds = (packingOutfits ?? []).map(o => o.id);
-  let outfitPackingItems: OutfitPackingItem[] = [];
-  if (outfitIds.length > 0) {
-    const { data } = await supabase.from("outfit_packing_items").select("*").in("outfit_id", outfitIds);
-    outfitPackingItems = (data ?? []) as OutfitPackingItem[];
-  }
+  const familyMembers = (familyMembersRes.data ?? []) as FamilyMember[];
+  const outfitPackingItems = (outfitPackingItemsRes.data ?? []) as OutfitPackingItem[];
+  const outfitGroupEvents = (outfitGroupEventsRes.data ?? []) as OutfitGroupEvent[];
+  const packingBagSections = (packingBagSectionsRes.data ?? []) as PackingBagSection[];
+  const libraryItems = (gearItemsRes.data ?? []) as GearItem[];
 
-  // Fetch outfit groups and their event mappings
-  const { data: outfitGroups } = await supabase.from("outfit_groups").select("*").eq("trip_id", id).order("date").order("sort_order");
-  const groupIds = (outfitGroups ?? []).map(g => g.id);
-  let outfitGroupEvents: OutfitGroupEvent[] = [];
-  if (groupIds.length > 0) {
-    const { data } = await supabase.from("outfit_group_events").select("*").in("outfit_group_id", groupIds);
-    outfitGroupEvents = (data ?? []) as OutfitGroupEvent[];
-  }
-
-  // Fetch user's packing bags (persist across trips — belong to user, not trip)
-  const { data: packingBags } = await supabase.from("packing_bags").select("*").eq("user_id", userId).order("sort_order");
-
-  // Fetch sections for the user's bags
-  const bagIds = (packingBags ?? []).map(b => b.id);
-  let packingBagSections: PackingBagSection[] = [];
-  if (bagIds.length > 0) {
-    const { data } = await supabase.from("packing_bag_sections").select("*").in("bag_id", bagIds).order("sort_order");
-    packingBagSections = (data ?? []) as PackingBagSection[];
-  }
-
-  // Fetch containers for those sections
-  const sectionIds = packingBagSections.map(s => s.id);
-  let packingBagContainers: PackingBagContainer[] = [];
-  if (sectionIds.length > 0) {
-    const { data } = await supabase.from("packing_bag_containers").select("*").in("section_id", sectionIds).order("sort_order");
-    packingBagContainers = (data ?? []) as PackingBagContainer[];
-  }
-
-  // Fetch item assignments for this trip
-  const { data: packingItemAssignments } = await supabase.from("packing_item_assignments").select("*").eq("trip_id", id);
-
-  // ─── Gear Phase 2: trip gear bins + host's library + vehicle name ────────
-  // Gear is host-only in Phase 2, so we only fetch when the caller is the trip
-  // owner. Non-hosts get empty arrays and the client hides the Gear pill.
-  let libraryBins: GearBin[] = [];
-  let libraryItems: GearItem[] = [];
-  let tripGearBins: TripGearBin[] = [];
-  let primaryVehicleName: string | null = null;
-
-  if (isHost) {
-    const [libBinsRes, joinRes] = await Promise.all([
-      supabase
-        .from("gear_bins")
+  // ─── Tier 3 ────────────────────────────────────────────────────────
+  // Containers hang off section ids resolved by Tier 2 — single query, no
+  // Promise.all needed.
+  const sectionIds = packingBagSections.map((s) => s.id);
+  const { data: packingBagContainersData } = sectionIds.length > 0
+    ? await supabase
+        .from("packing_bag_containers")
         .select("*")
-        .eq("owner_id", userId)
-        .is("archived_at", null)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("trip_gear_bins")
-        .select("*")
-        .eq("trip_id", id),
-    ]);
+        .in("section_id", sectionIds)
+        .order("sort_order")
+    : { data: [] as PackingBagContainer[] };
+  const packingBagContainers = (packingBagContainersData ?? []) as PackingBagContainer[];
 
-    libraryBins = (libBinsRes.data ?? []) as GearBin[];
-    tripGearBins = (joinRes.data ?? []) as TripGearBin[];
+  // Weather forecast: render with cached rows on first paint. The client
+  // refreshes (and the host upserts) via `/api/trip/[id]/weather/refresh`
+  // behind a long-staleTime useQuery, so geocoding + the external forecast
+  // API no longer block SSR.
+  const weatherForecast: ForecastMap = rowsToForecastMap(cachedWeatherRows);
 
-    const libBinIds = libraryBins.map((b) => b.id);
-    if (libBinIds.length > 0) {
-      const { data: gearItemsData } = await supabase
-        .from("gear_items")
-        .select("*")
-        .in("bin_id", libBinIds)
-        .order("sort_order", { ascending: true });
-      libraryItems = (gearItemsData ?? []) as GearItem[];
-    }
-
-    primaryVehicleName =
-      (userProfile as UserProfile | null)?.primary_vehicle_name ?? null;
-  }
-
-  // ─── Weather: read cached rows; if missing or stale, refetch + upsert ───
-  let weatherForecast: ForecastMap = {};
-  if (trip.location && trip.start_date && trip.end_date) {
-    const { data: cachedRows } = await supabase
-      .from("trip_weather_forecast")
-      .select("*")
-      .eq("trip_id", id);
-    const rows = (cachedRows ?? []) as TripWeatherForecast[];
-
-    const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
-    const isStale = rows.length === 0 || rows.some(r => new Date(r.fetched_at).getTime() < sixHoursAgo);
-
-    if (isStale && isHost) {
-      // Only the host can write to the cache (per RLS), but any member's read uses cached rows.
-      const geo = await geocodeLocation(trip.location);
-      if (geo) {
-        const dailies = await fetchForecast(geo.lat, geo.lon, trip.start_date, trip.end_date, geo.timezone);
-        if (dailies.length > 0) {
-          // Clear existing rows for this trip, then upsert new ones
-          await supabase.from("trip_weather_forecast").delete().eq("trip_id", id);
-          const upserts: any[] = [];
-          for (const daily of dailies) {
-            const byTOD = bucketDailyByTOD(daily);
-            for (const tod of ["morning", "afternoon", "evening", "night"] as const) {
-              const cell = byTOD[tod];
-              upserts.push({
-                trip_id: id,
-                forecast_date: daily.date,
-                time_of_day: tod,
-                temperature_high_f: cell.temperatureHighF,
-                temperature_low_f: cell.temperatureLowF,
-                weather_code: cell.weatherCode,
-                precipitation_probability: cell.precipitationProbability,
-                weather_bucket: cell.bucket,
-              });
-            }
-          }
-          if (upserts.length > 0) {
-            await supabase.from("trip_weather_forecast").insert(upserts);
-          }
-          // Re-read after upsert so the in-memory map matches DB
-          const { data: freshRows } = await supabase
-            .from("trip_weather_forecast")
-            .select("*")
-            .eq("trip_id", id);
-          weatherForecast = rowsToForecastMap((freshRows ?? []) as TripWeatherForecast[]);
-        } else {
-          weatherForecast = rowsToForecastMap(rows);
-        }
-      } else {
-        weatherForecast = rowsToForecastMap(rows);
-      }
-    } else {
-      weatherForecast = rowsToForecastMap(rows);
-    }
-  }
+  const primaryVehicleName = isHost
+    ? (userProfile?.primary_vehicle_name ?? null)
+    : null;
 
   return (
     <PackingPage
       participants={participants}
-      packingItems={(packingItems ?? []) as PackingItem[]}
-      packingOutfits={(packingOutfits ?? []) as PackingOutfit[]}
+      packingItems={packingItems}
+      packingOutfits={packingOutfits}
       outfitPackingItems={outfitPackingItems}
-      outfitGroups={(outfitGroups ?? []) as OutfitGroup[]}
+      outfitGroups={outfitGroups}
       outfitGroupEvents={outfitGroupEvents}
       userProfile={userProfile as UserProfile}
       familyMembers={familyMembers}
-      packingBags={(packingBags ?? []) as PackingBag[]}
+      packingBags={packingBags}
       packingBagSections={packingBagSections}
       packingBagContainers={packingBagContainers}
-      packingItemAssignments={(packingItemAssignments ?? []) as PackingItemAssignment[]}
+      packingItemAssignments={packingItemAssignments}
       weatherForecast={weatherForecast}
       libraryBins={libraryBins}
       libraryItems={libraryItems}

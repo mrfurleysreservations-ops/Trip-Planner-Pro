@@ -40,13 +40,15 @@ export default async function ExpensesServerPage({
     .map((m) => m.family_member_id)
     .filter(Boolean) as string[];
 
-  // Expenses and family_members can run in parallel — both are trip-specific
-  // and independent of each other. payers/splits still need the expense ids
-  // so they land in a second parallel batch below.
+  // ─── Tier 1 ────────────────────────────────────────────────────────
+  // Expenses + payers/splits collapse into a single nested-select round-trip
+  // (Supabase evaluates RLS per base table, so the same row-visibility rules
+  // still apply). family_members runs in parallel — it only needs the ids
+  // already present in `members` from getTripData.
   const [expensesRes, familyMembersRes] = await Promise.all([
     supabase
       .from("trip_expenses")
-      .select("*")
+      .select("*, expense_payers(*), expense_splits(*)")
       .eq("trip_id", id)
       .order("created_at", { ascending: false }),
     familyMemberIds.length > 0
@@ -54,29 +56,25 @@ export default async function ExpensesServerPage({
       : Promise.resolve({ data: [] as FamilyMember[] }),
   ]);
 
-  const allExpenses = (expensesRes.data ?? []) as TripExpense[];
+  // Fan the nested results back out into three flat arrays server-side so
+  // the client's ExpensesPageProps shape (expenses: ExpenseWithRelations[])
+  // remains unchanged — no client-side migration needed.
+  const expensesRaw = (expensesRes.data ?? []) as (TripExpense & {
+    expense_payers: ExpensePayer[] | null;
+    expense_splits: ExpenseSplit[] | null;
+  })[];
+
+  const expensesWithRelations: ExpenseWithRelations[] = expensesRaw.map((e) => {
+    const { expense_payers, expense_splits, ...rest } = e;
+    return {
+      ...(rest as TripExpense),
+      payers: (expense_payers ?? []) as ExpensePayer[],
+      splits: (expense_splits ?? []) as ExpenseSplit[],
+    };
+  });
+
   const familyMembersData = (familyMembersRes.data ?? []) as FamilyMember[];
-
   const familyGroups = buildFamilyGroups(members, familyMembersData);
-
-  const expenseIds = allExpenses.map((e) => e.id);
-  let allPayers: ExpensePayer[] = [];
-  let allSplits: ExpenseSplit[] = [];
-
-  if (expenseIds.length > 0) {
-    const [payersRes, splitsRes] = await Promise.all([
-      supabase.from("expense_payers").select("*").in("expense_id", expenseIds),
-      supabase.from("expense_splits").select("*").in("expense_id", expenseIds),
-    ]);
-    allPayers = (payersRes.data ?? []) as ExpensePayer[];
-    allSplits = (splitsRes.data ?? []) as ExpenseSplit[];
-  }
-
-  const expensesWithRelations: ExpenseWithRelations[] = allExpenses.map((e) => ({
-    ...e,
-    payers: allPayers.filter((p) => p.expense_id === e.id),
-    splits: allSplits.filter((s) => s.expense_id === e.id),
-  }));
 
   return (
     <ExpensesPage

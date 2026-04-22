@@ -401,7 +401,7 @@ export default function PackingPage({
   userProfile, familyMembers,
   packingBags: initialPackingBags, packingBagSections: initialPackingBagSections,
   packingBagContainers: initialPackingBagContainers, packingItemAssignments: initialPackingItemAssignments,
-  weatherForecast,
+  weatherForecast: initialWeatherForecast,
   libraryBins, libraryItems, tripGearBins, primaryVehicleName,
 }: PackingPageProps) {
   const { trip, members, events, userId, isHost } = useTripData();
@@ -632,6 +632,33 @@ export default function PackingPage({
     staleTime: 30_000,
   });
   const setOfGroupEvents = makeSetter<OutfitGroupEvent>(ofGroupEventsKey);
+
+  // ─── Weather forecast (Phase 4 client migration) ───
+  // Geocoding + the Open-Meteo forecast fetch used to block SSR here; they
+  // now live behind `/api/trip/[id]/weather/refresh`. Non-hosts skip the
+  // refresh entirely (the route 403s them per RLS) and rely on whatever
+  // the host last wrote — the cached rows arrive as `initialWeatherForecast`
+  // on first paint either way.
+  const hasCachedWeather = Object.keys(initialWeatherForecast).length > 0;
+  const { data: weatherForecast = {} as ForecastMap } = useQuery<ForecastMap>({
+    queryKey: tripKeys.packingWeather(trip.id),
+    queryFn: async () => {
+      const res = await fetch(`/api/trip/${trip.id}/weather/refresh`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("weather refresh failed");
+      return (await res.json()) as ForecastMap;
+    },
+    // Only seed initialData when cached rows exist — otherwise we'd trick
+    // the query into thinking the empty map was already "fresh", and the
+    // 6h staleTime would block the first refresh for 6 hours on brand-new
+    // trips. With `undefined`, enabled-true triggers a fetch on mount.
+    initialData: hasCachedWeather ? initialWeatherForecast : undefined,
+    staleTime: 6 * 60 * 60 * 1000, // matches the old 6h cache-staleness check
+    enabled:
+      isHost && !!trip.location && !!trip.start_date && !!trip.end_date,
+  });
+
   const [groupingSelectedId, setGroupingSelectedId] = useState<string | null>(null);
   const [groupingMergeSource, setGroupingMergeSource] = useState<string | null>(null);
   const [groupingActiveDay, setGroupingActiveDay] = useState(0);
