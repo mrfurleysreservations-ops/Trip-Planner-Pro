@@ -1,8 +1,10 @@
 "use client";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { TRIP_TYPES, THEMES, BOOKING_TYPES } from "@/lib/constants";
+import { tripKeys } from "@/lib/query-keys";
 import { generateDays, formatDate } from "@/lib/utils";
 
 import { usePlacesAutocomplete } from "@/lib/use-places-autocomplete";
@@ -603,8 +605,28 @@ export default function TripPage({
 
   const [trip, setTrip] = useState<Trip>(initialTrip);
 
-  // ─── Bookings state ───
-  const [bookings, setBookings] = useState<TripBooking[]>(initialBookings);
+  // ─── Bookings state (TanStack Query) ───
+  const queryClient = useQueryClient();
+  const { data: bookings = [] } = useQuery({
+    queryKey: tripKeys.bookings(id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trip_bookings").select("*").eq("trip_id", id).order("created_at");
+      if (error) throw error;
+      return (data ?? []) as TripBooking[];
+    },
+    initialData: initialBookings,
+    staleTime: 30_000,
+  });
+  // Local cache-setter wrapper so existing patch sites keep working.
+  const setBookings = (updater: TripBooking[] | ((prev: TripBooking[]) => TripBooking[])) => {
+    queryClient.setQueryData<TripBooking[]>(tripKeys.bookings(id), (prev) => {
+      const current = prev ?? [];
+      return typeof updater === "function"
+        ? (updater as (prev: TripBooking[]) => TripBooking[])(current)
+        : updater;
+    });
+  };
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
   const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
@@ -639,20 +661,33 @@ export default function TripPage({
   }, [bookings]);
 
   // Booking CRUD
-  const handleDeleteBooking = useCallback(async (bookingId: string) => {
-    const booking = bookings.find((b) => b.id === bookingId);
-    await supabase.from("trip_bookings").delete().eq("id", bookingId);
-    setBookings((prev) => prev.filter((b) => b.id !== bookingId));
-    setConfirmDeleteBookingId(null);
-    setExpandedBookingId(null);
-    if (booking) {
-      logActivity(supabase, {
-        tripId: id, userId, userName, action: "deleted", entityType: "booking",
-        entityName: booking.provider_name || bookingLabel(booking.booking_type),
-        linkPath: `/trip/${id}`,
-      });
-    }
-  }, [bookings, supabase, id, userId, userName]);
+  const deleteBookingMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      const { error } = await supabase.from("trip_bookings").delete().eq("id", bookingId);
+      if (error) throw error;
+      return bookingId;
+    },
+    onSuccess: (bookingId) => {
+      const booking = bookings.find((b) => b.id === bookingId);
+      setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+      setConfirmDeleteBookingId(null);
+      setExpandedBookingId(null);
+      if (booking) {
+        logActivity(supabase, {
+          tripId: id, userId, userName, action: "deleted", entityType: "booking",
+          entityName: booking.provider_name || bookingLabel(booking.booking_type),
+          linkPath: `/trip/${id}`,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: tripKeys.bookings(id) });
+    },
+    onError: (error) => {
+      console.error("deleteBooking error:", error);
+    },
+  });
+  const handleDeleteBooking = useCallback((bookingId: string) => {
+    deleteBookingMutation.mutate(bookingId);
+  }, [deleteBookingMutation]);
 
   const handleBookingAdded = useCallback((booking: TripBooking) => {
     setBookings((prev) => [...prev, booking]);
@@ -663,7 +698,8 @@ export default function TripPage({
       entityId: booking.id,
       linkPath: `/trip/${id}`,
     });
-  }, [supabase, id, userId, userName]);
+    queryClient.invalidateQueries({ queryKey: tripKeys.bookings(id) });
+  }, [supabase, id, userId, userName, queryClient]);
 
   const handleBookingEdited = useCallback((updated: TripBooking) => {
     setBookings((prev) => prev.map((b) => b.id === updated.id ? updated : b));
@@ -674,7 +710,8 @@ export default function TripPage({
       entityId: updated.id,
       linkPath: `/trip/${id}`,
     });
-  }, [supabase, id, userId, userName]);
+    queryClient.invalidateQueries({ queryKey: tripKeys.bookings(id) });
+  }, [supabase, id, userId, userName, queryClient]);
 
   const toggleTypeCollapse = useCallback((type: string) => {
     setCollapsedTypes((prev) => ({ ...prev, [type]: !prev[type] }));

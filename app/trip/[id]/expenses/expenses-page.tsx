@@ -1,11 +1,13 @@
 "use client";
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES, EXPENSE_CATEGORIES, SPLIT_TYPES } from "@/lib/constants";
+import { tripKeys } from "@/lib/query-keys";
 import { logActivity } from "@/lib/trip-activity";
 import { computeFamilyBalances } from "@/lib/expense-balance";
-import type { TripMember, ExpensePayer, ExpenseSplit } from "@/types/database.types";
+import type { TripMember, ExpensePayer, ExpenseSplit, TripExpense } from "@/types/database.types";
 import type { ExpensesPageProps, ExpenseWithRelations, FamilyGroup } from "./page";
 import TripSubNav from "../trip-sub-nav";
 import { useTripData } from "../trip-data-context";
@@ -122,7 +124,49 @@ export default function ExpensesPageComponent({
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;
 
-  const [expenses, setExpenses] = useState<ExpenseWithRelations[]>(initialExpenses);
+  const queryClient = useQueryClient();
+
+  // Expenses + their payers + splits, all joined client-side. The server
+  // composes the same shape in page.tsx, so initialData hydrates the cache
+  // on first render.
+  const { data: expenses = [] } = useQuery({
+    queryKey: tripKeys.expenses(trip.id),
+    queryFn: async () => {
+      const { data: expData, error: expErr } = await supabase
+        .from("trip_expenses")
+        .select("*")
+        .eq("trip_id", trip.id)
+        .order("created_at", { ascending: false });
+      if (expErr) throw expErr;
+      const allExpenses = (expData ?? []) as TripExpense[];
+      if (allExpenses.length === 0) return [] as ExpenseWithRelations[];
+      const expenseIds = allExpenses.map((e) => e.id);
+      const [payersRes, splitsRes] = await Promise.all([
+        supabase.from("expense_payers").select("*").in("expense_id", expenseIds),
+        supabase.from("expense_splits").select("*").in("expense_id", expenseIds),
+      ]);
+      if (payersRes.error) throw payersRes.error;
+      if (splitsRes.error) throw splitsRes.error;
+      const allPayers = (payersRes.data ?? []) as ExpensePayer[];
+      const allSplits = (splitsRes.data ?? []) as ExpenseSplit[];
+      return allExpenses.map((e) => ({
+        ...e,
+        payers: allPayers.filter((p) => p.expense_id === e.id),
+        splits: allSplits.filter((s) => s.expense_id === e.id),
+      })) as ExpenseWithRelations[];
+    },
+    initialData: initialExpenses,
+    staleTime: 30_000,
+  });
+
+  const invalidateExpenses = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tripKeys.expenses(trip.id) }),
+    [queryClient, trip.id],
+  );
+  const invalidateEventExpenseTotals = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tripKeys.eventExpenseTotals(trip.id) }),
+    [queryClient, trip.id],
+  );
   const [activeView, setActiveView] = useState<"expenses" | "summary">("expenses");
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -298,131 +342,141 @@ export default function ExpensesPageComponent({
   }, [addAmount, addSplitType, addSelectedFamilies, familyGroups, addCustomAmounts]);
 
   // ─── Save expense ───
-  const saveExpense = useCallback(async () => {
+  const saveExpenseMutation = useMutation({
+    mutationFn: async () => {
+      const total = parseFloat(addAmount);
+      // 1. Insert expense
+      const { data: expData, error: expErr } = await supabase
+        .from("trip_expenses")
+        .insert({
+          trip_id: trip.id,
+          created_by: userId,
+          title: addTitle.trim(),
+          total_amount: total,
+          category: addCategory,
+          event_id: addEventId || null,
+          supply_id: addSupplyId || null,
+          expense_date: addDate || null,
+          notes: addNotes.trim() || null,
+          split_type: addSplitType,
+        })
+        .select()
+        .single();
+      if (expErr || !expData) throw expErr ?? new Error("Expense insert failed");
+
+      const expenseId = expData.id;
+
+      // 2. Insert payers
+      const payerRows: { expense_id: string; trip_member_id: string; amount_paid: number }[] = [];
+      for (const [memberId, amount] of addPayers) {
+        if (amount > 0) {
+          payerRows.push({ expense_id: expenseId, trip_member_id: memberId, amount_paid: amount });
+        }
+      }
+      if (payerRows.length > 0) {
+        const { error: payerErr } = await supabase.from("expense_payers").insert(payerRows);
+        if (payerErr) console.error("Payer insert error:", JSON.stringify(payerErr, null, 2));
+      }
+
+      // 3. Insert splits
+      const splitRows: { expense_id: string; family_id: string; family_label: string; member_count: number; amount_owed: number }[] = [];
+      for (const sp of splitPreview) {
+        splitRows.push({
+          expense_id: expenseId,
+          family_id: sp.familyId,
+          family_label: sp.label,
+          member_count: sp.memberCount,
+          amount_owed: sp.amount,
+        });
+      }
+      if (splitRows.length > 0) {
+        const { error: splitErr } = await supabase.from("expense_splits").insert(splitRows);
+        if (splitErr) console.error("Split insert error:", JSON.stringify(splitErr, null, 2));
+      }
+
+      return { expData, hasEventId: !!addEventId };
+    },
+    onSuccess: ({ expData, hasEventId }) => {
+      logActivity(supabase, {
+        tripId: trip.id, userId, userName: currentUserName,
+        action: "added", entityType: "expense", entityName: expData.title,
+        linkPath: `/trip/${trip.id}/expenses`,
+      });
+      invalidateExpenses();
+      // Event totals aggregate trip_expenses.total_amount by event_id.
+      if (hasEventId) invalidateEventExpenseTotals();
+      setShowAddModal(false);
+      resetAddForm();
+    },
+    onError: (error) => {
+      console.error("Expense insert error:", JSON.stringify(error, null, 2));
+    },
+    onSettled: () => setLoading(false),
+  });
+
+  const saveExpense = useCallback(() => {
     if (loading) return;
     const total = parseFloat(addAmount);
     if (!addTitle.trim() || isNaN(total) || total <= 0) return;
     setLoading(true);
-
-    // 1. Insert expense
-    const { data: expData, error: expErr } = await supabase
-      .from("trip_expenses")
-      .insert({
-        trip_id: trip.id,
-        created_by: userId,
-        title: addTitle.trim(),
-        total_amount: total,
-        category: addCategory,
-        event_id: addEventId || null,
-        supply_id: addSupplyId || null,
-        expense_date: addDate || null,
-        notes: addNotes.trim() || null,
-        split_type: addSplitType,
-      })
-      .select()
-      .single();
-
-    if (expErr || !expData) {
-      console.error("Expense insert error:", JSON.stringify(expErr, null, 2));
-      setLoading(false);
-      return;
-    }
-
-    const expenseId = expData.id;
-
-    // 2. Insert payers
-    const payerRows: { expense_id: string; trip_member_id: string; amount_paid: number }[] = [];
-    for (const [memberId, amount] of addPayers) {
-      if (amount > 0) {
-        payerRows.push({ expense_id: expenseId, trip_member_id: memberId, amount_paid: amount });
-      }
-    }
-    if (payerRows.length > 0) {
-      const { error: payerErr } = await supabase.from("expense_payers").insert(payerRows);
-      if (payerErr) console.error("Payer insert error:", JSON.stringify(payerErr, null, 2));
-    }
-
-    // 3. Insert splits
-    const splitRows: { expense_id: string; family_id: string; family_label: string; member_count: number; amount_owed: number }[] = [];
-    for (const sp of splitPreview) {
-      splitRows.push({
-        expense_id: expenseId,
-        family_id: sp.familyId,
-        family_label: sp.label,
-        member_count: sp.memberCount,
-        amount_owed: sp.amount,
-      });
-    }
-    if (splitRows.length > 0) {
-      const { error: splitErr } = await supabase.from("expense_splits").insert(splitRows);
-      if (splitErr) console.error("Split insert error:", JSON.stringify(splitErr, null, 2));
-    }
-
-    // 4. Log activity
-    logActivity(supabase, {
-      tripId: trip.id, userId, userName: currentUserName,
-      action: "added", entityType: "expense", entityName: addTitle.trim(),
-      linkPath: `/trip/${trip.id}/expenses`,
-    });
-
-    // 5. Build local object and update state
-    const localExpense: ExpenseWithRelations = {
-      ...expData,
-      payers: payerRows.map((p) => ({
-        id: crypto.randomUUID(),
-        expense_id: expenseId,
-        trip_member_id: p.trip_member_id,
-        amount_paid: p.amount_paid,
-        created_at: new Date().toISOString(),
-      })),
-      splits: splitRows.map((s) => ({
-        id: crypto.randomUUID(),
-        expense_id: expenseId,
-        family_id: s.family_id,
-        family_label: s.family_label,
-        member_count: s.member_count,
-        amount_owed: s.amount_owed,
-        is_settled: false,
-        settled_at: null,
-        created_at: new Date().toISOString(),
-      })),
-    };
-
-    setExpenses((prev) => [localExpense, ...prev]);
-    setShowAddModal(false);
-    resetAddForm();
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, addTitle, addAmount, addCategory, addEventId, addDate, addNotes, addSplitType, addPayers, splitPreview, loading, resetAddForm]);
+    saveExpenseMutation.mutate();
+  }, [loading, addTitle, addAmount, saveExpenseMutation]);
 
   // ─── Delete expense ───
-  const deleteExpense = useCallback(async (id: string) => {
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("trip_expenses").delete().eq("id", id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: (id) => {
+      const exp = expenses.find((e) => e.id === id);
+      setExpandedId(null);
+      setConfirmDeleteId(null);
+      if (exp) {
+        logActivity(supabase, {
+          tripId: trip.id, userId, userName: currentUserName,
+          action: "deleted", entityType: "expense", entityName: exp.title,
+          linkPath: `/trip/${trip.id}/expenses`,
+        });
+      }
+      invalidateExpenses();
+      // If the deleted row was tied to an event, its slice of the totals
+      // disappears. Safe to invalidate unconditionally — cheap refetch.
+      if (exp?.event_id) invalidateEventExpenseTotals();
+    },
+    onError: (error) => {
+      console.error("deleteExpense error:", JSON.stringify(error, null, 2));
+    },
+    onSettled: () => setLoading(false),
+  });
+
+  const deleteExpense = useCallback((id: string) => {
     setLoading(true);
-    const exp = expenses.find((e) => e.id === id);
-    await supabase.from("trip_expenses").delete().eq("id", id);
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
-    setExpandedId(null);
-    setConfirmDeleteId(null);
-    if (exp) {
-      logActivity(supabase, {
-        tripId: trip.id, userId, userName: currentUserName,
-        action: "deleted", entityType: "expense", entityName: exp.title,
-        linkPath: `/trip/${trip.id}/expenses`,
-      });
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, expenses]);
+    deleteExpenseMutation.mutate(id);
+  }, [deleteExpenseMutation]);
 
   // ─── Mark split settled ───
-  const markSettled = useCallback(async (splitId: string, expenseId: string) => {
-    await supabase.from("expense_splits").update({ is_settled: true, settled_at: new Date().toISOString() }).eq("id", splitId);
-    setExpenses((prev) => prev.map((e) => {
-      if (e.id !== expenseId) return e;
-      return {
-        ...e,
-        splits: e.splits.map((s) => s.id === splitId ? { ...s, is_settled: true, settled_at: new Date().toISOString() } : s),
-      };
-    }));
-  }, [supabase]);
+  const markSettledMutation = useMutation({
+    mutationFn: async (args: { splitId: string; expenseId: string }) => {
+      const { error } = await supabase
+        .from("expense_splits")
+        .update({ is_settled: true, settled_at: new Date().toISOString() })
+        .eq("id", args.splitId);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: () => {
+      invalidateExpenses();
+    },
+    onError: (error) => {
+      console.error("markSettled error:", JSON.stringify(error, null, 2));
+    },
+  });
+
+  const markSettled = useCallback((splitId: string, expenseId: string) => {
+    markSettledMutation.mutate({ splitId, expenseId });
+  }, [markSettledMutation]);
 
   // ─── Styles ───
   const pillStyle = (active: boolean): React.CSSProperties => ({

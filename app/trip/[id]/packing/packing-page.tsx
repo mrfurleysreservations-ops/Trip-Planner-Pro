@@ -1,8 +1,10 @@
 "use client";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES, EVENT_TYPES, DRESS_CODES, TIME_SLOTS, PACKING_CATEGORIES, DRESS_CODE_SUGGESTIONS, getDressCodeEssentials, getDailyEssentials } from "@/lib/constants";
+import { tripKeys } from "@/lib/query-keys";
 import { logActivity } from "@/lib/trip-activity";
 import type { ItineraryEvent, EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment } from "@/types/database.types";
 import type { PackingPageProps } from "./page";
@@ -422,6 +424,19 @@ export default function PackingPage({
   const currentMember = members.find(m => m.user_id === userId);
   const [activeMemberId, setActiveMemberId] = useState<string>(currentMember?.id || myFamilyTripMembers[0]?.id || "");
 
+  // ─── Query client + cache-backed state helpers ───
+  const queryClient = useQueryClient();
+  function makeSetter<T>(key: readonly unknown[]) {
+    return (updater: T[] | ((prev: T[]) => T[])) => {
+      queryClient.setQueryData<T[]>(key as any, (prev) => {
+        const current = prev ?? [];
+        return typeof updater === "function"
+          ? (updater as (prev: T[]) => T[])(current)
+          : updater;
+      });
+    };
+  }
+
   // ─── Packing preferences ───
   const packingPrefs = useMemo(() => {
     const raw = userProfile?.packing_preferences;
@@ -449,9 +464,49 @@ export default function PackingPage({
   const [currentEventIdx, setCurrentEventIdx] = useState(0);
   const [showInspoPanel, setShowInspoPanel] = useState(false);
   const autoGroupingRef = useRef(false); // Guard against concurrent autoGroupEvents calls
-  const [items, setItems] = useState<PackingItem[]>(initialPackingItems);
-  const [outfits, setOutfits] = useState<PackingOutfit[]>(initialPackingOutfits);
-  const [junctions, setJunctions] = useState<OutfitPackingItem[]>(initialOutfitPackingItems);
+  const { data: items = [] } = useQuery({
+    queryKey: tripKeys.packingItems(trip.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("packing_items").select("*").eq("trip_id", trip.id).order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as PackingItem[];
+    },
+    initialData: initialPackingItems,
+    staleTime: 30_000,
+  });
+  const setItems = makeSetter<PackingItem>(tripKeys.packingItems(trip.id));
+  const { data: outfits = [] } = useQuery({
+    queryKey: tripKeys.packingOutfits(trip.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("packing_outfits").select("*").eq("trip_id", trip.id);
+      if (error) throw error;
+      return (data ?? []) as PackingOutfit[];
+    },
+    initialData: initialPackingOutfits,
+    staleTime: 30_000,
+  });
+  const setOutfits = makeSetter<PackingOutfit>(tripKeys.packingOutfits(trip.id));
+  // Junctions (outfit_packing_items) don't have a dedicated factory key — scope
+  // under the outfits key with a sub-tuple so they invalidate together.
+  const junctionsKey = [...tripKeys.packingOutfits(trip.id), "junctions"] as const;
+  const { data: junctions = [] } = useQuery({
+    queryKey: junctionsKey,
+    queryFn: async () => {
+      const { data: outfitsData } = await supabase
+        .from("packing_outfits").select("id").eq("trip_id", trip.id);
+      const ids = (outfitsData ?? []).map((o: { id: string }) => o.id);
+      if (ids.length === 0) return [] as OutfitPackingItem[];
+      const { data, error } = await supabase
+        .from("outfit_packing_items").select("*").in("outfit_id", ids);
+      if (error) throw error;
+      return (data ?? []) as OutfitPackingItem[];
+    },
+    initialData: initialOutfitPackingItems,
+    staleTime: 30_000,
+  });
+  const setJunctions = makeSetter<OutfitPackingItem>(junctionsKey);
   const [addingItem, setAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [newItemCategory, setNewItemCategory] = useState("other");
@@ -474,10 +529,65 @@ export default function PackingPage({
   const [quickPackAdded, setQuickPackAdded] = useState(false);
 
   // ─── Bag hierarchy state ───
-  const [bags, setBags] = useState<PackingBag[]>(initialPackingBags);
-  const [bagSections, setBagSections] = useState<PackingBagSection[]>(initialPackingBagSections);
-  const [bagContainers, setBagContainers] = useState<PackingBagContainer[]>(initialPackingBagContainers);
-  const [itemAssignments, setItemAssignments] = useState<PackingItemAssignment[]>(initialPackingItemAssignments);
+  const { data: bags = [] } = useQuery({
+    queryKey: tripKeys.packingBagSections(trip.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("packing_bags").select("*").eq("user_id", userId).order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as PackingBag[];
+    },
+    initialData: initialPackingBags,
+    staleTime: 30_000,
+  });
+  const setBags = makeSetter<PackingBag>(tripKeys.packingBagSections(trip.id));
+  const bagSectionsKey = [...tripKeys.packingBagSections(trip.id), "sections"] as const;
+  const { data: bagSections = [] } = useQuery({
+    queryKey: bagSectionsKey,
+    queryFn: async () => {
+      const { data: bagsData } = await supabase
+        .from("packing_bags").select("id").eq("user_id", userId);
+      const ids = (bagsData ?? []).map((b: { id: string }) => b.id);
+      if (ids.length === 0) return [] as PackingBagSection[];
+      const { data, error } = await supabase
+        .from("packing_bag_sections").select("*").in("bag_id", ids).order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as PackingBagSection[];
+    },
+    initialData: initialPackingBagSections,
+    staleTime: 30_000,
+  });
+  const setBagSections = makeSetter<PackingBagSection>(bagSectionsKey);
+  const { data: bagContainers = [] } = useQuery({
+    queryKey: tripKeys.packingContainers(trip.id),
+    queryFn: async () => {
+      const { data: sectionsData } = await supabase
+        .from("packing_bag_sections")
+        .select("id, bag_id, packing_bags!inner(user_id)")
+        .eq("packing_bags.user_id", userId);
+      const ids = (sectionsData ?? []).map((s: { id: string }) => s.id);
+      if (ids.length === 0) return [] as PackingBagContainer[];
+      const { data, error } = await supabase
+        .from("packing_bag_containers").select("*").in("section_id", ids).order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as PackingBagContainer[];
+    },
+    initialData: initialPackingBagContainers,
+    staleTime: 30_000,
+  });
+  const setBagContainers = makeSetter<PackingBagContainer>(tripKeys.packingContainers(trip.id));
+  const { data: itemAssignments = [] } = useQuery({
+    queryKey: tripKeys.packingAssignments(trip.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("packing_item_assignments").select("*").eq("trip_id", trip.id);
+      if (error) throw error;
+      return (data ?? []) as PackingItemAssignment[];
+    },
+    initialData: initialPackingItemAssignments,
+    staleTime: 30_000,
+  });
+  const setItemAssignments = makeSetter<PackingItemAssignment>(tripKeys.packingAssignments(trip.id));
   const [editingBags, setEditingBags] = useState(false);
   const [newBagName, setNewBagName] = useState("");
   const [addingSectionToBag, setAddingSectionToBag] = useState<string | null>(null);
@@ -487,8 +597,41 @@ export default function PackingPage({
   const bagSetupRef = useRef<HTMLDivElement>(null);
 
   // ─── Outfit Group state ───
-  const [ofGroups, setOfGroups] = useState<OutfitGroup[]>(initialOutfitGroups);
-  const [ofGroupEvents, setOfGroupEvents] = useState<OutfitGroupEvent[]>(initialOutfitGroupEvents);
+  const { data: ofGroups = [] } = useQuery({
+    queryKey: tripKeys.packingOutfitGroups(trip.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("outfit_groups")
+        .select("*")
+        .eq("trip_id", trip.id)
+        .order("date")
+        .order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as OutfitGroup[];
+    },
+    initialData: initialOutfitGroups,
+    staleTime: 30_000,
+  });
+  const setOfGroups = makeSetter<OutfitGroup>(tripKeys.packingOutfitGroups(trip.id));
+  // outfit_group_events junction lives under the outfit-groups key with a
+  // sub-tuple so invalidating outfit groups clears its junctions too.
+  const ofGroupEventsKey = [...tripKeys.packingOutfitGroups(trip.id), "events"] as const;
+  const { data: ofGroupEvents = [] } = useQuery({
+    queryKey: ofGroupEventsKey,
+    queryFn: async () => {
+      const { data: groupsData } = await supabase
+        .from("outfit_groups").select("id").eq("trip_id", trip.id);
+      const ids = (groupsData ?? []).map((g: { id: string }) => g.id);
+      if (ids.length === 0) return [] as OutfitGroupEvent[];
+      const { data, error } = await supabase
+        .from("outfit_group_events").select("*").in("outfit_group_id", ids);
+      if (error) throw error;
+      return (data ?? []) as OutfitGroupEvent[];
+    },
+    initialData: initialOutfitGroupEvents,
+    staleTime: 30_000,
+  });
+  const setOfGroupEvents = makeSetter<OutfitGroupEvent>(ofGroupEventsKey);
   const [groupingSelectedId, setGroupingSelectedId] = useState<string | null>(null);
   const [groupingMergeSource, setGroupingMergeSource] = useState<string | null>(null);
   const [groupingActiveDay, setGroupingActiveDay] = useState(0);

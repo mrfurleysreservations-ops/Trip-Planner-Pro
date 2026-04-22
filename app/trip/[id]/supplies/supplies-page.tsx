@@ -1,7 +1,9 @@
 "use client";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { tripKeys } from "@/lib/query-keys";
 import {
   THEMES,
   GROCERY_SECTIONS,
@@ -147,15 +149,108 @@ export default function SuppliesPage({
     [members],
   );
 
-  // ─── State (mirrors server-fetched props, mutated via Supabase calls) ───
+  // ─── State (React Query-backed reads; mutations below use useMutation) ───
 
+  const queryClient = useQueryClient();
   const [view, setView] = useState<"meals" | "grocery" | "supplies">(initialView);
-  const [meals, setMeals] = useState<ItineraryEvent[]>(initialMeals);
-  const [mealItems, setMealItems] = useState<MealItem[]>(initialMealItems);
-  const [participants, setParticipants] = useState<EventParticipant[]>(initialParticipants);
-  const [supplies, setSupplies] = useState<SupplyItem[]>(initialSupplies);
-  const [checkoffs, setCheckoffs] = useState<GroceryCheckoff[]>(initialCheckoffs);
   const [loading, setLoading] = useState(false);
+
+  // Meals are a derived slice of the shared trip events context. We keep
+  // them in local state so that mutations can append immediately (for UX —
+  // e.g. opening the newly-created meal's detail modal) while also calling
+  // router.refresh() so other tabs reading the shared context see the
+  // update. When the server re-hydrates, initialMeals changes and we sync.
+  const [meals, setMeals] = useState<ItineraryEvent[]>(initialMeals);
+  useEffect(() => {
+    setMeals(initialMeals);
+  }, [initialMeals]);
+
+  // Meals, mealItems, participants, supplies, checkoffs are all fetched
+  // server-side and passed as initial props. Client-side React Query keeps
+  // the data fresh via invalidation after mutations.
+  const { data: mealItems = [] } = useQuery({
+    queryKey: tripKeys.mealItems(trip.id),
+    queryFn: async () => {
+      const mealIds = meals.map((m) => m.id);
+      if (mealIds.length === 0) return [] as MealItem[];
+      const { data, error } = await supabase
+        .from("meal_items")
+        .select("*")
+        .in("event_id", mealIds)
+        .order("sort_order")
+        .order("created_at");
+      if (error) throw error;
+      return (data ?? []) as MealItem[];
+    },
+    initialData: initialMealItems,
+    staleTime: 30_000,
+  });
+
+  const { data: participants = [] } = useQuery({
+    queryKey: tripKeys.mealParticipants(trip.id),
+    queryFn: async () => {
+      const mealIds = meals.map((m) => m.id);
+      if (mealIds.length === 0) return [] as EventParticipant[];
+      const { data, error } = await supabase
+        .from("event_participants")
+        .select("*")
+        .in("event_id", mealIds);
+      if (error) throw error;
+      return (data ?? []) as EventParticipant[];
+    },
+    initialData: initialParticipants,
+    staleTime: 30_000,
+  });
+
+  const { data: supplies = [] } = useQuery({
+    queryKey: tripKeys.supplies(trip.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("supply_items")
+        .select("*")
+        .eq("trip_id", trip.id)
+        .order("sort_order")
+        .order("created_at");
+      if (error) throw error;
+      return (data ?? []) as SupplyItem[];
+    },
+    initialData: initialSupplies,
+    staleTime: 30_000,
+  });
+
+  const { data: checkoffs = [] } = useQuery({
+    queryKey: tripKeys.groceryCheckoffs(trip.id),
+    queryFn: async () => {
+      const mealItemIds = mealItems.map((mi) => mi.id);
+      if (mealItemIds.length === 0) return [] as GroceryCheckoff[];
+      const { data, error } = await supabase
+        .from("grocery_checkoffs")
+        .select("*")
+        .eq("user_id", userId)
+        .in("meal_item_id", mealItemIds);
+      if (error) throw error;
+      return (data ?? []) as GroceryCheckoff[];
+    },
+    initialData: initialCheckoffs,
+    staleTime: 30_000,
+  });
+
+  const invalidateMealItems = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tripKeys.mealItems(trip.id) }),
+    [queryClient, trip.id],
+  );
+  const invalidateMealParticipants = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tripKeys.mealParticipants(trip.id) }),
+    [queryClient, trip.id],
+  );
+  const invalidateSupplies = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tripKeys.supplies(trip.id) }),
+    [queryClient, trip.id],
+  );
+  const invalidateGroceryCheckoffs = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tripKeys.groceryCheckoffs(trip.id) }),
+    [queryClient, trip.id],
+  );
 
   // Modals
   const [openMealId, setOpenMealId] = useState<string | null>(focusMealId);
@@ -339,7 +434,9 @@ export default function SuppliesPage({
   // ─── Derived: counter chip on Grocery view header ───
   const claimedMealsCount = claimedMealIds.size;
 
-  // ─── Mutations: meals ───
+  // ─── Mutations: meals (itinerary_events — shared context, so these
+  // mutations call router.refresh() to re-hydrate the server context,
+  // AND invalidate the meal_participants query cache) ───
 
   const createMeal = useCallback(
     async (draft: {
@@ -382,15 +479,9 @@ export default function SuppliesPage({
         return null;
       }
       const newMeal = data as ItineraryEvent;
+      // Immediate local append so the caller can open the meal's detail modal
+      // without waiting for router.refresh() to re-hydrate the shared events.
       setMeals((prev) => [...prev, newMeal]);
-      // The DB trigger auto-creates event_participants. Pull them.
-      const { data: parts } = await supabase
-        .from("event_participants")
-        .select("*")
-        .eq("event_id", newMeal.id);
-      if (parts) {
-        setParticipants((prev) => [...prev, ...(parts as EventParticipant[])]);
-      }
       // Mark note as finalized if we came from one
       if (draft.fromNoteId) {
         await supabase
@@ -402,6 +493,7 @@ export default function SuppliesPage({
             updated_at: new Date().toISOString(),
           })
           .eq("id", draft.fromNoteId);
+        queryClient.invalidateQueries({ queryKey: tripKeys.notes(trip.id) });
       }
       logActivity(supabase, {
         tripId: trip.id,
@@ -413,58 +505,93 @@ export default function SuppliesPage({
         entityId: newMeal.id,
         linkPath: `/trip/${trip.id}/supplies?view=meals&meal=${newMeal.id}`,
       });
+      // DB trigger auto-created event_participants — refresh the query cache.
+      invalidateMealParticipants();
+      // Shared context (events) needs refresh for any tab reading them.
+      router.refresh();
       setLoading(false);
       return newMeal;
     },
-    [supabase, trip.id, userId, currentUserName, currentMember],
+    [supabase, trip.id, userId, currentUserName, currentMember, queryClient, invalidateMealParticipants, router],
   );
 
+  const toggleMealClaimMutation = useMutation({
+    mutationFn: async (args: { mealId: string; nextClaimedBy: string | null }) => {
+      const { error } = await supabase
+        .from("itinerary_events")
+        .update({ claimed_by: args.nextClaimedBy, updated_at: new Date().toISOString() })
+        .eq("id", args.mealId);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: (args) => {
+      // Local patch so the UI updates without waiting for router.refresh().
+      setMeals((prev) =>
+        prev.map((m) =>
+          m.id === args.mealId ? { ...m, claimed_by: args.nextClaimedBy } : m,
+        ),
+      );
+      router.refresh(); // shared events context
+    },
+    onError: (error) => {
+      console.error("toggleMealClaim error:", JSON.stringify(error, null, 2));
+    },
+    onSettled: () => setLoading(false),
+  });
+
   const toggleMealClaimSelf = useCallback(
-    async (mealId: string) => {
+    (mealId: string) => {
       if (!currentMember) return;
       const meal = meals.find((m) => m.id === mealId);
       if (!meal) return;
       const currentlyMine = meal.claimed_by === currentMember.id;
       const nextClaimedBy = currentlyMine ? null : currentMember.id;
       setLoading(true);
-      const { error } = await supabase
-        .from("itinerary_events")
-        .update({ claimed_by: nextClaimedBy, updated_at: new Date().toISOString() })
-        .eq("id", mealId);
-      if (!error) {
-        setMeals((prev) =>
-          prev.map((m) =>
-            m.id === mealId ? { ...m, claimed_by: nextClaimedBy } : m,
-          ),
-        );
-      } else {
-        console.error("toggleMealClaim error:", JSON.stringify(error, null, 2));
-      }
-      setLoading(false);
+      toggleMealClaimMutation.mutate({ mealId, nextClaimedBy });
     },
-    [supabase, meals, currentMember],
+    [meals, currentMember, toggleMealClaimMutation],
   );
 
   const setMealClaimTo = useCallback(
-    async (mealId: string, memberId: string | null) => {
+    (mealId: string, memberId: string | null) => {
       setLoading(true);
-      const { error } = await supabase
-        .from("itinerary_events")
-        .update({ claimed_by: memberId, updated_at: new Date().toISOString() })
-        .eq("id", mealId);
-      if (!error) {
-        setMeals((prev) =>
-          prev.map((m) => (m.id === mealId ? { ...m, claimed_by: memberId } : m)),
-        );
-      } else {
-        console.error("setMealClaim error:", JSON.stringify(error, null, 2));
-      }
-      setLoading(false);
+      toggleMealClaimMutation.mutate({ mealId, nextClaimedBy: memberId });
     },
-    [supabase],
+    [toggleMealClaimMutation],
   );
 
   // ─── Mutations: meal_items ───
+
+  const addMealItemMutation = useMutation({
+    mutationFn: async (args: { eventId: string; draft: {
+      itemName: string;
+      quantityPerPerson: number;
+      unit: string;
+      grocerySection: string;
+      notes: string;
+    } }) => {
+      const existingCount = (itemsByMeal.get(args.eventId) ?? []).length;
+      const { data, error } = await supabase
+        .from("meal_items")
+        .insert({
+          event_id: args.eventId,
+          item_name: args.draft.itemName.trim(),
+          quantity_per_person: args.draft.quantityPerPerson,
+          unit: args.draft.unit || "each",
+          grocery_section: args.draft.grocerySection || "other",
+          notes: args.draft.notes.trim() || null,
+          sort_order: existingCount,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as MealItem;
+    },
+    onSuccess: () => invalidateMealItems(),
+    onError: (error) => {
+      console.error("addMealItem error:", JSON.stringify(error, null, 2));
+    },
+  });
 
   const addMealItem = useCallback(
     async (eventId: string, draft: {
@@ -475,111 +602,110 @@ export default function SuppliesPage({
       notes: string;
     }) => {
       if (!draft.itemName.trim()) return null;
-      const existingCount = (itemsByMeal.get(eventId) ?? []).length;
-      const { data, error } = await supabase
-        .from("meal_items")
-        .insert({
-          event_id: eventId,
-          item_name: draft.itemName.trim(),
-          quantity_per_person: draft.quantityPerPerson,
-          unit: draft.unit || "each",
-          grocery_section: draft.grocerySection || "other",
-          notes: draft.notes.trim() || null,
-          sort_order: existingCount,
-        })
-        .select()
-        .single();
-      if (error) {
-        console.error("addMealItem error:", JSON.stringify(error, null, 2));
+      try {
+        return await addMealItemMutation.mutateAsync({ eventId, draft });
+      } catch {
         return null;
       }
-      const row = data as MealItem;
-      setMealItems((prev) => [...prev, row]);
-      return row;
     },
-    [supabase, itemsByMeal],
+    [addMealItemMutation],
   );
+
+  const updateMealItemMutation = useMutation({
+    mutationFn: async (args: { id: string; patch: Partial<MealItem> }) => {
+      const { error } = await supabase
+        .from("meal_items")
+        .update({ ...args.patch, updated_at: new Date().toISOString() })
+        .eq("id", args.id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateMealItems(),
+    onError: (error) => {
+      console.error("updateMealItem error:", JSON.stringify(error, null, 2));
+    },
+  });
 
   const updateMealItem = useCallback(
     async (id: string, patch: Partial<MealItem>) => {
-      const { error } = await supabase
-        .from("meal_items")
-        .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq("id", id);
-      if (!error) {
-        setMealItems((prev) =>
-          prev.map((it) => (it.id === id ? { ...it, ...patch } : it)),
-        );
-      } else {
-        console.error("updateMealItem error:", JSON.stringify(error, null, 2));
+      try {
+        await updateMealItemMutation.mutateAsync({ id, patch });
+      } catch {
+        // error already logged in onError
       }
     },
-    [supabase],
+    [updateMealItemMutation],
   );
+
+  const deleteMealItemMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("meal_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateMealItems();
+      // Grocery checkoffs for this meal_item are cascade-deleted by the FK
+      // — invalidate so the UI reflects it.
+      invalidateGroceryCheckoffs();
+    },
+    onError: (error) => {
+      console.error("deleteMealItem error:", JSON.stringify(error, null, 2));
+    },
+  });
 
   const deleteMealItem = useCallback(
     async (id: string) => {
-      const { error } = await supabase.from("meal_items").delete().eq("id", id);
-      if (!error) {
-        setMealItems((prev) => prev.filter((it) => it.id !== id));
-      } else {
-        console.error("deleteMealItem error:", JSON.stringify(error, null, 2));
+      try {
+        await deleteMealItemMutation.mutateAsync(id);
+      } catch {
+        // error already logged in onError
       }
     },
-    [supabase],
+    [deleteMealItemMutation],
   );
 
   // ─── Mutations: grocery_checkoffs (per-user) ───
 
-  const toggleGroceryRow = useCallback(
-    async (mealItemIds: string[]) => {
-      if (mealItemIds.length === 0) return;
-      // If ANY of the component meal_item ids are currently checked → uncheck all.
-      // Otherwise check all.
-      const anyChecked = mealItemIds.some((id) => checkedMealItemIds.has(id));
-      if (anyChecked) {
+  const toggleGroceryMutation = useMutation({
+    mutationFn: async (args: { mealItemIds: string[]; anyChecked: boolean }) => {
+      if (args.anyChecked) {
         const { error } = await supabase
           .from("grocery_checkoffs")
           .delete()
           .eq("user_id", userId)
-          .in("meal_item_id", mealItemIds);
-        if (!error) {
-          const ids = new Set(mealItemIds);
-          setCheckoffs((prev) => prev.filter((c) => !ids.has(c.meal_item_id)));
-        }
+          .in("meal_item_id", args.mealItemIds);
+        if (error) throw error;
       } else {
-        const rows = mealItemIds.map((mid) => ({
+        const rows = args.mealItemIds.map((mid) => ({
           meal_item_id: mid,
           user_id: userId,
         }));
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("grocery_checkoffs")
           .upsert(rows, { onConflict: "meal_item_id,user_id" })
           .select();
-        if (!error && data) {
-          setCheckoffs((prev) => {
-            const existing = new Set(
-              prev
-                .filter((c) => c.user_id === userId)
-                .map((c) => c.meal_item_id),
-            );
-            const toAdd = (data as GroceryCheckoff[]).filter(
-              (c) => !existing.has(c.meal_item_id),
-            );
-            return [...prev, ...toAdd];
-          });
-        } else if (error) {
-          console.error("toggleGrocery error:", JSON.stringify(error, null, 2));
-        }
+        if (error) throw error;
       }
     },
-    [supabase, userId, checkedMealItemIds],
+    onSuccess: () => invalidateGroceryCheckoffs(),
+    onError: (error) => {
+      console.error("toggleGrocery error:", JSON.stringify(error, null, 2));
+    },
+  });
+
+  const toggleGroceryRow = useCallback(
+    (mealItemIds: string[]) => {
+      if (mealItemIds.length === 0) return;
+      // If ANY of the component meal_item ids are currently checked → uncheck all.
+      const anyChecked = mealItemIds.some((id) => checkedMealItemIds.has(id));
+      toggleGroceryMutation.mutate({ mealItemIds, anyChecked });
+    },
+    [checkedMealItemIds, toggleGroceryMutation],
   );
 
   // ─── Mutations: supplies ───
 
-  const createSupply = useCallback(
-    async (draft: {
+  const createSupplyMutation = useMutation({
+    mutationFn: async (draft: {
       name: string;
       quantity: number;
       category: SupplyCategory;
@@ -588,7 +714,6 @@ export default function SuppliesPage({
       notes: string;
       sourceNoteId?: string | null;
     }) => {
-      if (!draft.name.trim()) return null;
       const { data, error } = await supabase
         .from("supply_items")
         .insert({
@@ -604,13 +729,8 @@ export default function SuppliesPage({
         })
         .select()
         .single();
-      if (error) {
-        console.error("createSupply error:", JSON.stringify(error, null, 2));
-        alert(`Couldn't save supply: ${error.message}`);
-        return null;
-      }
+      if (error) throw error;
       const row = data as SupplyItem;
-      setSupplies((prev) => [...prev, row]);
       // Finalize the source note if one was provided.
       if (draft.sourceNoteId) {
         await supabase
@@ -623,6 +743,13 @@ export default function SuppliesPage({
           })
           .eq("id", draft.sourceNoteId);
       }
+      return { row, sourceNoteId: draft.sourceNoteId ?? null };
+    },
+    onSuccess: ({ row, sourceNoteId }) => {
+      invalidateSupplies();
+      if (sourceNoteId) {
+        queryClient.invalidateQueries({ queryKey: tripKeys.notes(trip.id) });
+      }
       logActivity(supabase, {
         tripId: trip.id,
         userId,
@@ -633,39 +760,82 @@ export default function SuppliesPage({
         entityId: row.id,
         linkPath: `/trip/${trip.id}/supplies?view=supplies&supply=${row.id}`,
       });
-      return row;
     },
-    [supabase, trip.id, userId, currentUserName, supplies.length],
+    onError: (error: Error) => {
+      console.error("createSupply error:", JSON.stringify(error, null, 2));
+      alert(`Couldn't save supply: ${error.message}`);
+    },
+  });
+
+  const createSupply = useCallback(
+    async (draft: {
+      name: string;
+      quantity: number;
+      category: SupplyCategory;
+      status: SupplyStatus;
+      claimedBy: string | null;
+      notes: string;
+      sourceNoteId?: string | null;
+    }) => {
+      if (!draft.name.trim()) return null;
+      try {
+        const { row } = await createSupplyMutation.mutateAsync(draft);
+        return row;
+      } catch {
+        return null;
+      }
+    },
+    [createSupplyMutation],
   );
+
+  const updateSupplyMutation = useMutation({
+    mutationFn: async (args: { id: string; patch: Partial<SupplyItem> }) => {
+      const { error } = await supabase
+        .from("supply_items")
+        .update({ ...args.patch, updated_at: new Date().toISOString() })
+        .eq("id", args.id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateSupplies(),
+    onError: (error) => {
+      console.error("updateSupply error:", JSON.stringify(error, null, 2));
+    },
+  });
 
   const updateSupply = useCallback(
     async (id: string, patch: Partial<SupplyItem>) => {
-      const { error } = await supabase
-        .from("supply_items")
-        .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq("id", id);
-      if (!error) {
-        setSupplies((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, ...patch } : s)),
-        );
-      } else {
-        console.error("updateSupply error:", JSON.stringify(error, null, 2));
+      try {
+        await updateSupplyMutation.mutateAsync({ id, patch });
+      } catch {
+        // error already logged
       }
     },
-    [supabase],
+    [updateSupplyMutation],
   );
+
+  const deleteSupplyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("supply_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateSupplies();
+      setOpenSupplyId(null);
+    },
+    onError: (error) => {
+      console.error("deleteSupply error:", JSON.stringify(error, null, 2));
+    },
+  });
 
   const deleteSupply = useCallback(
     async (id: string) => {
-      const { error } = await supabase.from("supply_items").delete().eq("id", id);
-      if (!error) {
-        setSupplies((prev) => prev.filter((s) => s.id !== id));
-        setOpenSupplyId(null);
-      } else {
-        console.error("deleteSupply error:", JSON.stringify(error, null, 2));
+      try {
+        await deleteSupplyMutation.mutateAsync(id);
+      } catch {
+        // error already logged
       }
     },
-    [supabase],
+    [deleteSupplyMutation],
   );
 
   // ─── Currently-open modal data ───

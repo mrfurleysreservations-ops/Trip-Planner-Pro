@@ -1,8 +1,10 @@
 "use client";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES, EVENT_TYPES, DRESS_CODES, TIME_SLOTS } from "@/lib/constants";
+import { tripKeys } from "@/lib/query-keys";
 import { logActivity } from "@/lib/trip-activity";
 import type { ItineraryEvent, EventParticipant } from "@/types/database.types";
 import type { ItineraryPageProps } from "./page";
@@ -103,15 +105,72 @@ function OptionalBadge() {
 export default function ItineraryPage({
   participants: initialParticipants,
   openEventId, fromNote, fromNoteTitle, fromNoteDescription, fromNoteLink, fromNoteDate, fromNoteStartTime, fromNoteEndTime,
-  eventExpenseTotals,
+  eventExpenseTotals: initialEventExpenseTotals,
 }: ItineraryPageProps) {
   const { trip, members, events: initialEvents, userId, isHost } = useTripData();
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;
 
+  const queryClient = useQueryClient();
+
+  // Events come from the shared trip context (Phase 2). We keep a local
+  // mirror for immediate UX updates (e.g. appending a newly-created event
+  // so it appears before router.refresh() re-hydrates the context). Sync
+  // from initialEvents whenever the server re-runs.
   const [events, setEvents] = useState<ItineraryEvent[]>(initialEvents);
-  const [participants, setParticipants] = useState<EventParticipant[]>(initialParticipants);
+  useEffect(() => {
+    setEvents(initialEvents);
+  }, [initialEvents]);
+
+  const invalidateEventParticipants = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tripKeys.eventParticipants(trip.id) }),
+    [queryClient, trip.id],
+  );
+  const invalidateEventExpenseTotals = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tripKeys.eventExpenseTotals(trip.id) }),
+    [queryClient, trip.id],
+  );
+
+  const { data: participants = [] } = useQuery({
+    queryKey: tripKeys.eventParticipants(trip.id),
+    queryFn: async () => {
+      const eventIds = events.map((e) => e.id);
+      if (eventIds.length === 0) return [] as EventParticipant[];
+      const { data, error } = await supabase
+        .from("event_participants")
+        .select("*")
+        .in("event_id", eventIds);
+      if (error) throw error;
+      return (data ?? []) as EventParticipant[];
+    },
+    initialData: initialParticipants,
+    staleTime: 30_000,
+  });
+
+  // Expense totals keyed by event_id. Server-side aggregation is replicated
+  // in the queryFn so the cache and initialData stay consistent.
+  const { data: eventExpenseTotals = {} } = useQuery({
+    queryKey: tripKeys.eventExpenseTotals(trip.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trip_expenses")
+        .select("event_id, total_amount")
+        .eq("trip_id", trip.id)
+        .not("event_id", "is", null);
+      if (error) throw error;
+      const totals: Record<string, number> = {};
+      (data ?? []).forEach((e: { event_id: string | null; total_amount: number }) => {
+        if (e.event_id) {
+          totals[e.event_id] = (totals[e.event_id] || 0) + Number(e.total_amount);
+        }
+      });
+      return totals;
+    },
+    initialData: initialEventExpenseTotals,
+    staleTime: 30_000,
+  });
+
   const [loading, setLoading] = useState(false);
 
   // Expanded event detail
@@ -303,55 +362,59 @@ export default function ItineraryPage({
     setExpandedId(openEventId);
   }, [openEventId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addEvent = useCallback(async () => {
-    if (!addDate || !addTitle.trim()) return;
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("itinerary_events")
-      .insert({
-        trip_id: trip.id,
-        created_by: userId,
-        date: addDate,
-        time_slot: addStartTime ? timeToSlot(addStartTime) : addTimeSlot,
-        start_time: addStartTime || null,
-        end_time: addEndTime || null,
-        title: addTitle.trim(),
-        description: addDescription.trim() || null,
-        location: addLocation.trim() || null,
-        event_type: addEventType,
-        dress_code: addDressCode || null,
-        reservation_number: addReservation.trim() || null,
-        confirmation_code: addConfirmation.trim() || null,
-        cost_per_person: addCost ? parseFloat(addCost) : null,
-        external_link: addLink.trim() || null,
-        is_optional: addIsOptional,
-        sort_order: 0,
-      })
-      .select()
-      .single();
-    if (error) {
-      console.error("addEvent error:", JSON.stringify(error, null, 2));
-    } else if (data) {
-      const newEvent = data as ItineraryEvent;
+  const addEventMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase
+        .from("itinerary_events")
+        .insert({
+          trip_id: trip.id,
+          created_by: userId,
+          date: addDate,
+          time_slot: addStartTime ? timeToSlot(addStartTime) : addTimeSlot,
+          start_time: addStartTime || null,
+          end_time: addEndTime || null,
+          title: addTitle.trim(),
+          description: addDescription.trim() || null,
+          location: addLocation.trim() || null,
+          event_type: addEventType,
+          dress_code: addDressCode || null,
+          reservation_number: addReservation.trim() || null,
+          confirmation_code: addConfirmation.trim() || null,
+          cost_per_person: addCost ? parseFloat(addCost) : null,
+          external_link: addLink.trim() || null,
+          is_optional: addIsOptional,
+          sort_order: 0,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as ItineraryEvent;
+    },
+    onSuccess: (newEvent) => {
+      // Immediate local append for UX — shared context re-hydrates via router.refresh().
       setEvents((prev) => [...prev, newEvent]);
-      // The DB trigger auto-creates participants — fetch them
-      const { data: newParts } = await supabase
-        .from("event_participants")
-        .select("*")
-        .eq("event_id", newEvent.id);
-      if (newParts) {
-        setParticipants((prev) => [...prev, ...(newParts as EventParticipant[])]);
-      }
+      // DB trigger auto-created event_participants — invalidate the query.
+      invalidateEventParticipants();
       logActivity(supabase, {
         tripId: trip.id, userId, userName: currentUserName,
         action: "created", entityType: "itinerary_event",
-        entityName: addTitle.trim(), entityId: newEvent.id,
+        entityName: newEvent.title, entityId: newEvent.id,
         linkPath: `/trip/${trip.id}/itinerary?event=${newEvent.id}${newEvent.date ? `&date=${newEvent.date}` : ""}`,
       });
+      router.refresh();
       resetAddForm();
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, addDate, addTimeSlot, addTitle, addDescription, addLocation, addEventType, addDressCode, addReservation, addConfirmation, addCost, addLink, addIsOptional, addStartTime, addEndTime, resetAddForm]);
+    },
+    onError: (error) => {
+      console.error("addEvent error:", JSON.stringify(error, null, 2));
+    },
+    onSettled: () => setLoading(false),
+  });
+
+  const addEvent = useCallback(() => {
+    if (!addDate || !addTitle.trim()) return;
+    setLoading(true);
+    addEventMutation.mutate();
+  }, [addDate, addTitle, addEventMutation]);
 
   const startEdit = useCallback((e: ItineraryEvent) => {
     setEditingId(e.id);
@@ -375,65 +438,29 @@ export default function ItineraryPage({
     setEditingId(null);
   }, []);
 
-  const saveEdit = useCallback(async () => {
-    if (!editingId || !editTitle.trim()) return;
-    setLoading(true);
-    const wasUnplaced = !events.find((x) => x.id === editingId)?.date;
-    const newDate = editDate || null;
-    const validDressCode = editDressCode && DRESS_CODES.find((d) => d.value === editDressCode) ? editDressCode : null;
-    const validEventType = EVENT_TYPES.find((t) => t.value === editEventType) ? editEventType : "activity";
-    const { error } = await supabase
-      .from("itinerary_events")
-      .update({
-        title: editTitle.trim(),
-        description: editDescription.trim() || null,
-        location: editLocation.trim() || null,
-        event_type: validEventType,
-        dress_code: validDressCode,
-        reservation_number: editReservation.trim() || null,
-        confirmation_code: editConfirmation.trim() || null,
-        cost_per_person: editCost ? parseFloat(editCost) : null,
-        external_link: editLink.trim() || null,
-        is_optional: editIsOptional,
-        start_time: editStartTime || null,
-        end_time: editEndTime || null,
-        date: newDate,
-        time_slot: editStartTime ? timeToSlot(editStartTime) : undefined,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", editingId);
-    if (error) {
-      console.error("saveEdit error:", JSON.stringify(error, null, 2));
-      alert("Failed to save: " + error.message);
-      setLoading(false);
-      return;
-    } else {
-      const newSlot = editStartTime ? timeToSlot(editStartTime) : undefined;
+  const saveEditMutation = useMutation({
+    mutationFn: async (args: {
+      editingId: string;
+      patch: Partial<ItineraryEvent>;
+      wasUnplaced: boolean;
+      newDate: string | null;
+    }) => {
+      const { error } = await supabase
+        .from("itinerary_events")
+        .update({ ...args.patch, updated_at: new Date().toISOString() })
+        .eq("id", args.editingId);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: (args) => {
       setEvents((prev) => prev.map((ev) =>
-        ev.id === editingId
-          ? {
-              ...ev,
-              title: editTitle.trim(),
-              description: editDescription.trim() || null,
-              location: editLocation.trim() || null,
-              event_type: validEventType,
-              dress_code: validDressCode,
-              reservation_number: editReservation.trim() || null,
-              confirmation_code: editConfirmation.trim() || null,
-              cost_per_person: editCost ? parseFloat(editCost) : null,
-              external_link: editLink.trim() || null,
-              is_optional: editIsOptional,
-              start_time: editStartTime || null,
-              end_time: editEndTime || null,
-              date: newDate,
-              time_slot: newSlot || ev.time_slot,
-              updated_at: new Date().toISOString(),
-            }
+        ev.id === args.editingId
+          ? { ...ev, ...args.patch, updated_at: new Date().toISOString() } as ItineraryEvent
           : ev
       ));
       // If event was just placed from staging, check if staging is now empty
-      if (wasUnplaced && newDate) {
-        const remainingUnplaced = events.filter((e) => !e.date && e.id !== editingId).length;
+      if (args.wasUnplaced && args.newDate) {
+        const remainingUnplaced = events.filter((e) => !e.date && e.id !== args.editingId).length;
         if (remainingUnplaced === 0) {
           setStagingFlash(true);
           setTimeout(() => setStagingFlash(false), 2000);
@@ -441,26 +468,63 @@ export default function ItineraryPage({
       }
       logActivity(supabase, {
         tripId: trip.id, userId, userName: currentUserName,
-        action: wasUnplaced && newDate ? "placed" : "edited", entityType: "itinerary_event",
-        entityName: editTitle.trim(), entityId: editingId,
-        linkPath: `/trip/${trip.id}/itinerary?event=${editingId}${newDate ? `&date=${newDate}` : ""}`,
+        action: args.wasUnplaced && args.newDate ? "placed" : "edited", entityType: "itinerary_event",
+        entityName: String(args.patch.title ?? ""), entityId: args.editingId,
+        linkPath: `/trip/${trip.id}/itinerary?event=${args.editingId}${args.newDate ? `&date=${args.newDate}` : ""}`,
       });
+      router.refresh(); // shared events context
       cancelEdit();
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, editingId, editTitle, editDescription, editLocation, editEventType, editDressCode, editReservation, editConfirmation, editCost, editLink, editIsOptional, editStartTime, editEndTime, editDate, cancelEdit, events]);
+    },
+    onError: (error: Error) => {
+      console.error("saveEdit error:", JSON.stringify(error, null, 2));
+      alert("Failed to save: " + error.message);
+    },
+    onSettled: () => setLoading(false),
+  });
 
-  const deleteEvent = useCallback(async (eventId: string) => {
+  const saveEdit = useCallback(() => {
+    if (!editingId || !editTitle.trim()) return;
     setLoading(true);
-    const deletedEvent = events.find((e) => e.id === eventId);
-    const { error } = await supabase.from("itinerary_events").delete().eq("id", eventId);
-    if (error) {
-      console.error("deleteEvent error:", JSON.stringify(error, null, 2));
-    } else {
+    const wasUnplaced = !events.find((x) => x.id === editingId)?.date;
+    const newDate = editDate || null;
+    const validDressCode = editDressCode && DRESS_CODES.find((d) => d.value === editDressCode) ? editDressCode : null;
+    const validEventType = EVENT_TYPES.find((t) => t.value === editEventType) ? editEventType : "activity";
+    const newSlot = editStartTime ? timeToSlot(editStartTime) : undefined;
+    const patch: Partial<ItineraryEvent> = {
+      title: editTitle.trim(),
+      description: editDescription.trim() || null,
+      location: editLocation.trim() || null,
+      event_type: validEventType,
+      dress_code: validDressCode,
+      reservation_number: editReservation.trim() || null,
+      confirmation_code: editConfirmation.trim() || null,
+      cost_per_person: editCost ? parseFloat(editCost) : null,
+      external_link: editLink.trim() || null,
+      is_optional: editIsOptional,
+      start_time: editStartTime || null,
+      end_time: editEndTime || null,
+      date: newDate,
+      ...(newSlot ? { time_slot: newSlot } : {}),
+    };
+    saveEditMutation.mutate({ editingId, patch, wasUnplaced, newDate });
+  }, [editingId, editTitle, editDescription, editLocation, editEventType, editDressCode, editReservation, editConfirmation, editCost, editLink, editIsOptional, editStartTime, editEndTime, editDate, events, saveEditMutation]);
+
+  const deleteEventMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const { error } = await supabase.from("itinerary_events").delete().eq("id", eventId);
+      if (error) throw error;
+      return eventId;
+    },
+    onSuccess: (eventId) => {
+      const deletedEvent = events.find((e) => e.id === eventId);
+      // Immediate local drop for UX — shared context re-hydrates via router.refresh().
       setEvents((prev) => prev.filter((e) => e.id !== eventId));
-      setParticipants((prev) => prev.filter((p) => p.event_id !== eventId));
       setConfirmDeleteId(null);
       setExpandedId(null);
+      // Participants cascade-delete in DB; invalidate to drop them from the cache.
+      invalidateEventParticipants();
+      // Expense event_id FKs may null out (SET NULL) — invalidate totals to be safe.
+      invalidateEventExpenseTotals();
       if (deletedEvent) {
         logActivity(supabase, {
           tripId: trip.id, userId, userName: currentUserName,
@@ -469,11 +533,50 @@ export default function ItineraryPage({
           linkPath: `/trip/${trip.id}/itinerary${deletedEvent.date ? `?date=${deletedEvent.date}` : ""}`,
         });
       }
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, events]);
+      router.refresh(); // shared events context
+    },
+    onError: (error) => {
+      console.error("deleteEvent error:", JSON.stringify(error, null, 2));
+    },
+    onSettled: () => setLoading(false),
+  });
 
-  const toggleParticipation = useCallback(async (eventId: string) => {
+  const deleteEvent = useCallback((eventId: string) => {
+    setLoading(true);
+    deleteEventMutation.mutate(eventId);
+  }, [deleteEventMutation]);
+
+  const toggleParticipationMutation = useMutation({
+    mutationFn: async (args: { participantId: string; newStatus: "attending" | "skipping" }) => {
+      const { error } = await supabase
+        .from("event_participants")
+        .update({ status: args.newStatus })
+        .eq("id", args.participantId);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: (args, variables) => {
+      // Find the event via participantId's event_id to log activity.
+      const existing = participants.find((p) => p.id === variables.participantId);
+      const ev = existing ? events.find((e) => e.id === existing.event_id) : null;
+      if (ev) {
+        logActivity(supabase, {
+          tripId: trip.id, userId, userName: currentUserName,
+          action: args.newStatus === "attending" ? "opted into" : "opted out of",
+          entityType: "itinerary_event",
+          entityName: ev.title, entityId: ev.id,
+          linkPath: `/trip/${trip.id}/itinerary?event=${ev.id}${ev.date ? `&date=${ev.date}` : ""}`,
+        });
+      }
+      invalidateEventParticipants();
+    },
+    onError: (error) => {
+      console.error("toggleParticipation error:", JSON.stringify(error, null, 2));
+    },
+    onSettled: () => setLoading(false),
+  });
+
+  const toggleParticipation = useCallback((eventId: string) => {
     if (!currentMember) return;
     const existing = participants.find(
       (p) => p.event_id === eventId && p.trip_member_id === currentMember.id
@@ -481,29 +584,8 @@ export default function ItineraryPage({
     if (!existing) return;
     const newStatus = existing.status === "attending" ? "skipping" : "attending";
     setLoading(true);
-    const { error } = await supabase
-      .from("event_participants")
-      .update({ status: newStatus })
-      .eq("id", existing.id);
-    if (error) {
-      console.error("toggleParticipation error:", JSON.stringify(error, null, 2));
-    } else {
-      setParticipants((prev) =>
-        prev.map((p) => (p.id === existing.id ? { ...p, status: newStatus } : p))
-      );
-      const ev = events.find((e) => e.id === eventId);
-      if (ev) {
-        logActivity(supabase, {
-          tripId: trip.id, userId, userName: currentUserName,
-          action: newStatus === "attending" ? "opted into" : "opted out of",
-          entityType: "itinerary_event",
-          entityName: ev.title, entityId: eventId,
-          linkPath: `/trip/${trip.id}/itinerary?event=${eventId}${ev.date ? `&date=${ev.date}` : ""}`,
-        });
-      }
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, currentMember, participants, events]);
+    toggleParticipationMutation.mutate({ participantId: existing.id, newStatus });
+  }, [currentMember, participants, toggleParticipationMutation]);
 
   const canEditEvent = useCallback((ev: ItineraryEvent) => {
     return isHost || ev.created_by === userId;
@@ -894,95 +976,104 @@ export default function ItineraryPage({
     return { ready, staging };
   }, [importRows, importMapping, parseImportDate, parseImportTime]);
 
-  const executeImport = useCallback(async () => {
+  const executeImportMutation = useMutation({
+    mutationFn: async () => {
+      const { ready, staging } = buildImportPreview;
+
+      const toInsertRow = (ev: ParsedImportEvent) => ({
+        trip_id: trip.id,
+        created_by: userId,
+        date: ev.date,
+        time_slot: ev.time_slot,
+        start_time: ev.start_time,
+        end_time: ev.end_time,
+        title: ev.title,
+        description: ev.description,
+        location: ev.location,
+        event_type: ev.event_type,
+        dress_code: ev.dress_code,
+        is_optional: false,
+        sort_order: 0,
+      });
+
+      let allNewEvents: ItineraryEvent[] = [];
+      let stagingFailed = false;
+      let placedError: string | null = null;
+
+      // Batch 1: Insert placed events (always have a date — safe even without the ALTER TABLE migration)
+      if (ready.length > 0) {
+        const { data, error } = await supabase
+          .from("itinerary_events")
+          .insert(ready.map(toInsertRow))
+          .select();
+        if (error) {
+          placedError = error.message;
+        } else {
+          allNewEvents = [...allNewEvents, ...(data || []) as ItineraryEvent[]];
+        }
+      }
+      if (placedError) {
+        throw new Error(placedError);
+      }
+
+      // Batch 2: Insert staging events (date = null — requires the ALTER TABLE migration)
+      if (staging.length > 0) {
+        const { data, error } = await supabase
+          .from("itinerary_events")
+          .insert(staging.map(toInsertRow))
+          .select();
+        if (error) {
+          // If the nullable migration hasn't been run, this batch fails.
+          // The placed events still succeeded above — tell the user.
+          console.error("Staging insert failed (date nullable migration may not have been run):", error.message);
+          stagingFailed = true;
+        } else {
+          allNewEvents = [...allNewEvents, ...(data || []) as ItineraryEvent[]];
+        }
+      }
+
+      return { allNewEvents, stagingFailed, stagingAttempted: staging.length };
+    },
+    onSuccess: ({ allNewEvents, stagingFailed, stagingAttempted }) => {
+      // Immediate local append for UX — shared context re-hydrates via router.refresh().
+      setEvents((prev) => [...prev, ...allNewEvents]);
+      // DB trigger auto-created event_participants — invalidate to refetch them.
+      invalidateEventParticipants();
+
+      const placedCount = allNewEvents.filter((e) => e.date).length;
+      const stagingCount = allNewEvents.filter((e) => !e.date).length;
+      logActivity(supabase, {
+        tripId: trip.id, userId, userName: currentUserName,
+        action: "imported", entityType: "itinerary_event",
+        entityName: `${allNewEvents.length} events (${placedCount} placed, ${stagingCount} in staging)`,
+        entityId: allNewEvents[0]?.id || "",
+        linkPath: `/trip/${trip.id}/itinerary`,
+      });
+
+      if (stagingFailed) {
+        setImportSuccess(
+          `${placedCount} event${placedCount !== 1 ? "s" : ""} imported into your itinerary. ` +
+          `${stagingAttempted} events without dates couldn't be saved — run the database migration (ALTER TABLE itinerary_events ALTER COLUMN date DROP NOT NULL) to enable the staging area.`
+        );
+      } else {
+        setImportSuccess(`${allNewEvents.length} events imported!${stagingCount > 0 ? ` ${stagingCount} need a date.` : ""}`);
+      }
+      router.refresh(); // shared events context
+    },
+    onError: (error: Error) => {
+      setImportError("Import failed: " + error.message);
+    },
+    onSettled: () => setImportLoading(false),
+  });
+
+  const executeImport = useCallback(() => {
     const { ready, staging } = buildImportPreview;
     const total = ready.length + staging.length;
     if (total === 0) return;
     setImportLoading(true);
     setImportError("");
-
-    const toInsertRow = (ev: ParsedImportEvent) => ({
-      trip_id: trip.id,
-      created_by: userId,
-      date: ev.date,
-      time_slot: ev.time_slot,
-      start_time: ev.start_time,
-      end_time: ev.end_time,
-      title: ev.title,
-      description: ev.description,
-      location: ev.location,
-      event_type: ev.event_type,
-      dress_code: ev.dress_code,
-      is_optional: false,
-      sort_order: 0,
-    });
-
-    let allNewEvents: ItineraryEvent[] = [];
-    let stagingFailed = false;
-
-    // Batch 1: Insert placed events (always have a date — safe even without the ALTER TABLE migration)
-    if (ready.length > 0) {
-      const { data, error } = await supabase
-        .from("itinerary_events")
-        .insert(ready.map(toInsertRow))
-        .select();
-      if (error) {
-        setImportError("Import failed: " + error.message);
-        setImportLoading(false);
-        return;
-      }
-      allNewEvents = [...allNewEvents, ...(data || []) as ItineraryEvent[]];
-    }
-
-    // Batch 2: Insert staging events (date = null — requires the ALTER TABLE migration)
-    if (staging.length > 0) {
-      const { data, error } = await supabase
-        .from("itinerary_events")
-        .insert(staging.map(toInsertRow))
-        .select();
-      if (error) {
-        // If the nullable migration hasn't been run, this batch fails.
-        // The placed events still succeeded above — tell the user.
-        console.error("Staging insert failed (date nullable migration may not have been run):", error.message);
-        stagingFailed = true;
-      } else {
-        allNewEvents = [...allNewEvents, ...(data || []) as ItineraryEvent[]];
-      }
-    }
-
-    setEvents((prev) => [...prev, ...allNewEvents]);
-
-    // Fetch auto-created participants for all new events
-    if (allNewEvents.length > 0) {
-      const { data: newParts } = await supabase
-        .from("event_participants")
-        .select("*")
-        .in("event_id", allNewEvents.map((e) => e.id));
-      if (newParts) {
-        setParticipants((prev) => [...prev, ...(newParts as EventParticipant[])]);
-      }
-    }
-
-    const placedCount = allNewEvents.filter((e) => e.date).length;
-    const stagingCount = allNewEvents.filter((e) => !e.date).length;
-    logActivity(supabase, {
-      tripId: trip.id, userId, userName: currentUserName,
-      action: "imported", entityType: "itinerary_event",
-      entityName: `${allNewEvents.length} events (${placedCount} placed, ${stagingCount} in staging)`,
-      entityId: allNewEvents[0]?.id || "",
-      linkPath: `/trip/${trip.id}/itinerary`,
-    });
-
-    if (stagingFailed) {
-      setImportSuccess(
-        `${placedCount} event${placedCount !== 1 ? "s" : ""} imported into your itinerary. ` +
-        `${staging.length} events without dates couldn't be saved — run the database migration (ALTER TABLE itinerary_events ALTER COLUMN date DROP NOT NULL) to enable the staging area.`
-      );
-    } else {
-      setImportSuccess(`${allNewEvents.length} events imported!${stagingCount > 0 ? ` ${stagingCount} need a date.` : ""}`);
-    }
-    setImportLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, buildImportPreview]);
+    executeImportMutation.mutate();
+  }, [buildImportPreview, executeImportMutation]);
 
   // ─── Form field renderer ───
 

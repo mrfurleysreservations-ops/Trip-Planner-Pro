@@ -1,8 +1,10 @@
 "use client";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { THEMES, ROLE_PREFERENCES, type ThemeConfig } from "@/lib/constants";
+import { tripKeys } from "@/lib/query-keys";
 import { type ChatNotificationLevel } from "@/lib/chat-unread";
 import type { TripMessage } from "@/types/database.types";
 import type { ChatMember, ViewerChatSettings } from "./page";
@@ -106,7 +108,38 @@ export default function ChatPage({
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;
 
-  const [messages, setMessages] = useState<TripMessage[]>(initialMessages);
+  const queryClient = useQueryClient();
+
+  // Messages cache. staleTime: Infinity because the realtime subscription is
+  // the source of truth — we never want an incidental refetch to clobber the
+  // realtime-patched array. Writes flow through setQueryData below.
+  const messagesKey = tripKeys.chatMessages(trip.id);
+  const { data: messages = [] } = useQuery({
+    queryKey: messagesKey,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trip_messages")
+        .select("*")
+        .eq("trip_id", trip.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return ((data ?? []) as TripMessage[]).slice().reverse();
+    },
+    initialData: initialMessages,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+
+  const patchMessages = useCallback(
+    (updater: (prev: TripMessage[]) => TripMessage[]) => {
+      queryClient.setQueryData<TripMessage[]>(messagesKey, (prev) =>
+        updater(prev ?? [])
+      );
+    },
+    [queryClient, messagesKey],
+  );
+
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -158,7 +191,7 @@ export default function ChatPage({
         },
         (payload) => {
           const row = payload.new as TripMessage;
-          setMessages((prev) => {
+          patchMessages((prev) => {
             if (prev.some((m) => m.id === row.id)) return prev;
             return [...prev, row];
           });
@@ -176,7 +209,7 @@ export default function ChatPage({
         },
         (payload) => {
           const row = payload.new as TripMessage;
-          setMessages((prev) => prev.map((m) => (m.id === row.id ? row : m)));
+          patchMessages((prev) => prev.map((m) => (m.id === row.id ? row : m)));
         }
       )
       .subscribe();
@@ -184,7 +217,7 @@ export default function ChatPage({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, trip.id, bumpLastRead]);
+  }, [supabase, trip.id, bumpLastRead, patchMessages]);
 
   // ─── Track window focus for unread bookkeeping ───
   useEffect(() => {
@@ -265,38 +298,41 @@ export default function ChatPage({
   }, [messages, userId]);
 
   // ─── Send message ───
-  const sendMessage = useCallback(async () => {
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const { data, error } = await supabase
+        .from("trip_messages")
+        .insert({
+          trip_id: trip.id,
+          sender_id: userId,
+          content,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as TripMessage;
+    },
+    onSuccess: (row) => {
+      // Optimistically append — realtime will dedupe via id.
+      patchMessages((prev) => {
+        if (prev.some((m) => m.id === row.id)) return prev;
+        return [...prev, row];
+      });
+      setDraft("");
+    },
+    onError: (error) => {
+      console.error("Send message error:", error);
+    },
+    onSettled: () => setSending(false),
+  });
+
+  const sendMessage = useCallback(() => {
     const content = draft.trim();
     if (!content || sending) return;
     if (content.length > MAX_LEN) return;
     setSending(true);
-
-    const { data, error } = await supabase
-      .from("trip_messages")
-      .insert({
-        trip_id: trip.id,
-        sender_id: userId,
-        content,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Send message error:", error);
-      setSending(false);
-      return;
-    }
-
-    // Optimistically append — realtime will dedupe via id.
-    if (data) {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === data.id)) return prev;
-        return [...prev, data as TripMessage];
-      });
-    }
-    setDraft("");
-    setSending(false);
-  }, [draft, sending, supabase, trip.id, userId]);
+    sendMessageMutation.mutate(content);
+  }, [draft, sending, sendMessageMutation]);
 
   // ─── Update notification level ───
   // Writes `trip_members.chat_notification_level` for the viewer on this
@@ -308,37 +344,52 @@ export default function ChatPage({
     : null;
   const roleChatDefault = roleMeta?.chatDefault ?? null;
 
+  const changeNotificationLevelMutation = useMutation({
+    mutationFn: async (args: { memberId: string; nextLevel: ChatNotificationLevel }) => {
+      const { error } = await supabase
+        .from("trip_members")
+        .update({
+          chat_notification_level: args.nextLevel,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", args.memberId);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: () => {
+      setSettingsOpen(false);
+    },
+    onError: (error, _args, ctx) => {
+      console.error("chat: failed to update notification level", error);
+      // Roll back the optimistic flip using the context captured in onMutate.
+      if (ctx && typeof ctx === "object" && "prevLevel" in ctx) {
+        setNotificationLevel((ctx as { prevLevel: ChatNotificationLevel }).prevLevel);
+      }
+    },
+    onMutate: (args) => {
+      const prevLevel = notificationLevel;
+      setNotificationLevel(args.nextLevel);
+      return { prevLevel };
+    },
+    onSettled: () => setSavingLevel(false),
+  });
+
   const handleChangeNotificationLevel = useCallback(
-    async (nextLevel: ChatNotificationLevel) => {
+    (nextLevel: ChatNotificationLevel) => {
       if (!viewerSettings || savingLevel) return;
       if (nextLevel === notificationLevel) {
         setSettingsOpen(false);
         return;
       }
-      const prevLevel = notificationLevel;
-      setNotificationLevel(nextLevel);
       setSavingLevel(true);
-      const { error } = await supabase
-        .from("trip_members")
-        .update({
-          chat_notification_level: nextLevel,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", viewerSettings.memberId);
-      setSavingLevel(false);
-      if (error) {
-        console.error("chat: failed to update notification level", error);
-        setNotificationLevel(prevLevel);
-        return;
-      }
-      setSettingsOpen(false);
+      changeNotificationLevelMutation.mutate({ memberId: viewerSettings.memberId, nextLevel });
     },
-    [notificationLevel, savingLevel, supabase, viewerSettings]
+    [notificationLevel, savingLevel, viewerSettings, changeNotificationLevelMutation]
   );
 
   // ─── Delete own message (soft delete) ───
-  const deleteMessage = useCallback(
-    async (id: string) => {
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (id: string) => {
       const { data, error } = await supabase
         .from("trip_messages")
         .update({ deleted_at: new Date().toISOString() })
@@ -346,17 +397,23 @@ export default function ChatPage({
         .eq("sender_id", userId)
         .select()
         .single();
-
-      if (error) {
-        console.error("Delete message error:", error);
-        return;
-      }
-      if (data) {
-        setMessages((prev) => prev.map((m) => (m.id === data.id ? (data as TripMessage) : m)));
-      }
+      if (error) throw error;
+      return data as TripMessage;
+    },
+    onSuccess: (row) => {
+      patchMessages((prev) => prev.map((m) => (m.id === row.id ? row : m)));
       setConfirmDeleteId(null);
     },
-    [supabase, userId]
+    onError: (error) => {
+      console.error("Delete message error:", error);
+    },
+  });
+
+  const deleteMessage = useCallback(
+    (id: string) => {
+      deleteMessageMutation.mutate(id);
+    },
+    [deleteMessageMutation]
   );
 
   // ─── Render helpers ───

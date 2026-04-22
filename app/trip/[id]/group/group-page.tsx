@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES, ROLE_PREFERENCES } from "@/lib/constants";
@@ -170,10 +171,8 @@ export default function GroupPage({ friends, familiesWithMembers, otherAppUsers,
 
   // ─── Actions ───
 
-  const addFriend = useCallback(async (friend: FriendWithProfile) => {
-    if (memberUserIds.has(friend.user_id)) return;
-    setLoading(true);
-    try {
+  const addFriendMutation = useMutation({
+    mutationFn: async (friend: FriendWithProfile) => {
       const { error } = await supabase
         .from("trip_members")
         .insert({
@@ -185,151 +184,181 @@ export default function GroupPage({ friends, familiesWithMembers, otherAppUsers,
           status: "pending",
           invited_by: userId,
         });
-      if (error) {
-        console.error("addFriend error:", JSON.stringify(error, null, 2));
-        setToast(
-          isDuplicateTripMemberError(error)
-            ? `${friend.full_name || "That person"} is already on this trip`
-            : "Couldn't add them — try again"
-        );
-      } else {
-        // Best-effort: email the added app user a magic-link landing on /trip/[id]/invite.
-        if (friend.email) {
-          triggerInviteEmail(friend.email, friend.full_name || "Friend").catch(() => {});
-        }
-        logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "added", entityType: "member", entityName: friend.full_name || "Friend", linkPath: `/trip/${trip.id}/group` });
-        // Build a local placeholder — avoids .select() triggering SELECT RLS recursion
-        setMembers((prev) => [...prev, {
-          id: crypto.randomUUID(),
-          trip_id: trip.id,
-          user_id: friend.user_id,
-          family_member_id: null,
-          name: friend.full_name || "Friend",
-          email: friend.email || null,
-          role: "member",
-          status: "pending",
-          invited_by: userId,
-          invite_token: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        } as TripMember]);
+      if (error) throw error;
+      return friend;
+    },
+    onSuccess: (friend) => {
+      // Best-effort: email the added app user a magic-link landing on /trip/[id]/invite.
+      if (friend.email) {
+        triggerInviteEmail(friend.email, friend.full_name || "Friend").catch(() => {});
       }
-    } catch (e) {
-      console.error("addFriend CAUGHT:", e);
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, memberUserIds]);
+      logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "added", entityType: "member", entityName: friend.full_name || "Friend", linkPath: `/trip/${trip.id}/group` });
+      // Immediate local append for UX — shared context re-hydrates via router.refresh().
+      // Placeholder row avoids .select() triggering SELECT RLS recursion.
+      setMembers((prev) => [...prev, {
+        id: crypto.randomUUID(),
+        trip_id: trip.id,
+        user_id: friend.user_id,
+        family_member_id: null,
+        name: friend.full_name || "Friend",
+        email: friend.email || null,
+        role: "member",
+        status: "pending",
+        invited_by: userId,
+        invite_token: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as TripMember]);
+      router.refresh(); // shared members context
+    },
+    onError: (error: any) => {
+      console.error("addFriend error:", JSON.stringify(error, null, 2));
+      setToast(
+        isDuplicateTripMemberError(error)
+          ? `That person is already on this trip`
+          : "Couldn't add them — try again"
+      );
+    },
+    onSettled: () => setLoading(false),
+  });
 
-  const addFamilyMember = useCallback(async (fm: FamilyMember, isOwnFamily: boolean) => {
-    // Skip if already on roster by family_member_id OR by linked user account
-    if (memberFamilyMemberIds.has(fm.id)) return;
-    if (fm.linked_user_id && memberUserIds.has(fm.linked_user_id)) return;
-    // Own family → auto-accepted (no invite needed), friend's family → pending
-    const memberStatus = isOwnFamily ? "accepted" : "pending";
+  const addFriend = useCallback((friend: FriendWithProfile) => {
+    if (memberUserIds.has(friend.user_id)) return;
     setLoading(true);
-    try {
+    addFriendMutation.mutate(friend);
+  }, [memberUserIds, addFriendMutation]);
+
+  const addFamilyMemberMutation = useMutation({
+    mutationFn: async (args: { fm: FamilyMember; isOwnFamily: boolean }) => {
+      // Own family → auto-accepted (no invite needed), friend's family → pending
+      const memberStatus = args.isOwnFamily ? "accepted" : "pending";
       const { error } = await supabase
         .from("trip_members")
         .insert({
           trip_id: trip.id,
-          family_member_id: fm.id,
-          name: fm.name,
+          family_member_id: args.fm.id,
+          name: args.fm.name,
           role: "member",
           status: memberStatus,
           invited_by: userId,
         });
-      if (error) {
-        console.error("addFamilyMember error:", JSON.stringify(error, null, 2));
-        setToast(
-          isDuplicateTripMemberError(error)
-            ? `${fm.name} is already on this trip`
-            : `Couldn't add ${fm.name} — try again`
-        );
-      } else {
-        logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "added", entityType: "member", entityName: fm.name, linkPath: `/trip/${trip.id}/group` });
-        setMembers((prev) => [...prev, {
-          id: crypto.randomUUID(),
-          trip_id: trip.id,
-          user_id: null,
-          family_member_id: fm.id,
-          name: fm.name,
-          email: null,
-          role: "member",
-          status: memberStatus,
-          invited_by: userId,
-          invite_token: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        } as TripMember]);
-      }
-    } catch (e) {
-      console.error("addFamilyMember CAUGHT:", e);
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, memberFamilyMemberIds]);
-
-  const addWholeFamily = useCallback(async (fam: FamilyWithMembers) => {
-    setLoading(true);
-    // Own family → auto-accepted (no invite needed), friend's family → pending
-    const memberStatus = fam.is_own ? "accepted" : "pending";
-    const toAdd = fam.family_members.filter(
-      (fm) => !memberFamilyMemberIds.has(fm.id) && !(fm.linked_user_id && memberUserIds.has(fm.linked_user_id))
-    );
-    // Collect per-row failures so we can surface a single toast at the end
-    // instead of spamming one per failed row.
-    const dupNames: string[] = [];
-    const otherFailNames: string[] = [];
-    for (const fm of toAdd) {
-      try {
-        const { error } = await supabase
-          .from("trip_members")
-          .insert({
-            trip_id: trip.id,
-            family_member_id: fm.id,
-            name: fm.name,
-            role: "member",
-            status: memberStatus,
-            invited_by: userId,
-          });
-        if (error) {
-          console.error("addWholeFamily error for", fm.name, ":", JSON.stringify(error, null, 2));
-          if (isDuplicateTripMemberError(error)) dupNames.push(fm.name);
-          else otherFailNames.push(fm.name);
-        } else {
-          setMembers((prev) => [...prev, {
-            id: crypto.randomUUID(),
-            trip_id: trip.id,
-            user_id: null,
-            family_member_id: fm.id,
-            name: fm.name,
-            email: null,
-            role: "member",
-            status: memberStatus,
-            invited_by: userId,
-            invite_token: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          } as TripMember]);
-        }
-      } catch (e) {
-        console.error("addWholeFamily CAUGHT for", fm.name, ":", e);
-        otherFailNames.push(fm.name);
-      }
-    }
-    // Prefer the duplicate message when it's the only thing that failed —
-    // that's the common case (e.g. wife already added as a friend). Mixed
-    // failure modes fall back to the generic message.
-    if (dupNames.length > 0 && otherFailNames.length === 0) {
+      if (error) throw error;
+      return { fm: args.fm, memberStatus };
+    },
+    onSuccess: ({ fm, memberStatus }) => {
+      logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "added", entityType: "member", entityName: fm.name, linkPath: `/trip/${trip.id}/group` });
+      // Immediate local append for UX — shared context re-hydrates via router.refresh().
+      setMembers((prev) => [...prev, {
+        id: crypto.randomUUID(),
+        trip_id: trip.id,
+        user_id: null,
+        family_member_id: fm.id,
+        name: fm.name,
+        email: null,
+        role: "member",
+        status: memberStatus,
+        invited_by: userId,
+        invite_token: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as TripMember]);
+      router.refresh(); // shared members context
+    },
+    onError: (error: any, variables) => {
+      console.error("addFamilyMember error:", JSON.stringify(error, null, 2));
       setToast(
-        dupNames.length === 1
-          ? `${dupNames[0]} is already on this trip`
-          : `${dupNames.length} already on this trip — skipped`
+        isDuplicateTripMemberError(error)
+          ? `${variables.fm.name} is already on this trip`
+          : `Couldn't add ${variables.fm.name} — try again`
       );
-    } else if (otherFailNames.length > 0) {
-      setToast(`Couldn't add ${otherFailNames.length === 1 ? otherFailNames[0] : `${otherFailNames.length} people`} — try again`);
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, memberFamilyMemberIds]);
+    },
+    onSettled: () => setLoading(false),
+  });
+
+  const addFamilyMember = useCallback((fm: FamilyMember, isOwnFamily: boolean) => {
+    // Skip if already on roster by family_member_id OR by linked user account
+    if (memberFamilyMemberIds.has(fm.id)) return;
+    if (fm.linked_user_id && memberUserIds.has(fm.linked_user_id)) return;
+    setLoading(true);
+    addFamilyMemberMutation.mutate({ fm, isOwnFamily });
+  }, [memberFamilyMemberIds, memberUserIds, addFamilyMemberMutation]);
+
+  const addWholeFamilyMutation = useMutation({
+    mutationFn: async (fam: FamilyWithMembers) => {
+      // Own family → auto-accepted (no invite needed), friend's family → pending
+      const memberStatus = fam.is_own ? "accepted" : "pending";
+      const toAdd = fam.family_members.filter(
+        (fm) => !memberFamilyMemberIds.has(fm.id) && !(fm.linked_user_id && memberUserIds.has(fm.linked_user_id))
+      );
+      // Collect per-row failures + successes so we can both patch local state
+      // and surface a single toast at the end.
+      const dupNames: string[] = [];
+      const otherFailNames: string[] = [];
+      const addedMembers: TripMember[] = [];
+      for (const fm of toAdd) {
+        try {
+          const { error } = await supabase
+            .from("trip_members")
+            .insert({
+              trip_id: trip.id,
+              family_member_id: fm.id,
+              name: fm.name,
+              role: "member",
+              status: memberStatus,
+              invited_by: userId,
+            });
+          if (error) {
+            console.error("addWholeFamily error for", fm.name, ":", JSON.stringify(error, null, 2));
+            if (isDuplicateTripMemberError(error)) dupNames.push(fm.name);
+            else otherFailNames.push(fm.name);
+          } else {
+            addedMembers.push({
+              id: crypto.randomUUID(),
+              trip_id: trip.id,
+              user_id: null,
+              family_member_id: fm.id,
+              name: fm.name,
+              email: null,
+              role: "member",
+              status: memberStatus,
+              invited_by: userId,
+              invite_token: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            } as TripMember);
+          }
+        } catch (e) {
+          console.error("addWholeFamily CAUGHT for", fm.name, ":", e);
+          otherFailNames.push(fm.name);
+        }
+      }
+      return { dupNames, otherFailNames, addedMembers };
+    },
+    onSuccess: ({ dupNames, otherFailNames, addedMembers }) => {
+      if (addedMembers.length > 0) {
+        setMembers((prev) => [...prev, ...addedMembers]);
+        router.refresh(); // shared members context
+      }
+      // Prefer the duplicate message when it's the only thing that failed —
+      // that's the common case (e.g. wife already added as a friend). Mixed
+      // failure modes fall back to the generic message.
+      if (dupNames.length > 0 && otherFailNames.length === 0) {
+        setToast(
+          dupNames.length === 1
+            ? `${dupNames[0]} is already on this trip`
+            : `${dupNames.length} already on this trip — skipped`
+        );
+      } else if (otherFailNames.length > 0) {
+        setToast(`Couldn't add ${otherFailNames.length === 1 ? otherFailNames[0] : `${otherFailNames.length} people`} — try again`);
+      }
+    },
+    onSettled: () => setLoading(false),
+  });
+
+  const addWholeFamily = useCallback((fam: FamilyWithMembers) => {
+    setLoading(true);
+    addWholeFamilyMutation.mutate(fam);
+  }, [addWholeFamilyMutation]);
 
   // Shared per-invite helper: DB insert + email trigger + optimistic member row.
   // Called from BOTH the single-invite form and the bulk-invite modal so the
@@ -385,7 +414,34 @@ export default function GroupPage({ friends, familiesWithMembers, otherAppUsers,
     [supabase, trip.id, userId, triggerInviteEmail]
   );
 
-  const sendExternalInvite = useCallback(async () => {
+  const sendExternalInviteMutation = useMutation({
+    mutationFn: async (args: { name: string; email: string }) => {
+      const res = await insertExternalMember(args.name, args.email);
+      if (!res.ok) throw new Error(res.error);
+      return { name: args.name, member: res.member, mailOk: res.mailOk, mailError: res.mailError };
+    },
+    onSuccess: ({ name, member, mailOk, mailError }) => {
+      logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "added", entityType: "member", entityName: name, detail: "External invite", linkPath: `/trip/${trip.id}/group` });
+      // Immediate local append for UX — shared context re-hydrates via router.refresh().
+      setMembers((prev) => [...prev, member]);
+      router.refresh(); // shared members context
+      if (mailOk) {
+        setInviteName("");
+        setInviteEmail("");
+        setInviteError(null);
+      } else {
+        setInviteError(
+          `Saved ${name} to the roster, but the invite email didn't send${mailError ? `: ${mailError}` : ""}. Re-send from the members list.`
+        );
+      }
+    },
+    onError: (error: Error) => {
+      setInviteError(error.message);
+    },
+    onSettled: () => setLoading(false),
+  });
+
+  const sendExternalInvite = useCallback(() => {
     const name = inviteName.trim();
     const email = inviteEmail.trim();
     setInviteError(null);
@@ -404,27 +460,8 @@ export default function GroupPage({ friends, familiesWithMembers, otherAppUsers,
     }
 
     setLoading(true);
-    const res = await insertExternalMember(name, email);
-    if (!res.ok) {
-      setInviteError(res.error);
-      setLoading(false);
-      return;
-    }
-
-    logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "added", entityType: "member", entityName: name, detail: "External invite", linkPath: `/trip/${trip.id}/group` });
-    setMembers((prev) => [...prev, res.member]);
-
-    if (res.mailOk) {
-      setInviteName("");
-      setInviteEmail("");
-      setInviteError(null);
-    } else {
-      setInviteError(
-        `Saved ${name} to the roster, but the invite email didn't send${res.mailError ? `: ${res.mailError}` : ""}. Re-send from the members list.`
-      );
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, inviteName, inviteEmail, currentUserName, insertExternalMember]);
+    sendExternalInviteMutation.mutate({ name, email });
+  }, [inviteName, inviteEmail, sendExternalInviteMutation]);
 
   // Adapter for BulkInviteModal's insertMember prop. Mirrors single-invite
   // behavior: DB insert failure → row failure; email failure → row still
@@ -455,6 +492,7 @@ export default function GroupPage({ friends, familiesWithMembers, otherAppUsers,
   const handleBulkSuccess = useCallback(
     (addedMembers: TripMember[]) => {
       if (addedMembers.length === 0) return;
+      // Immediate local append for UX — shared context re-hydrates via router.refresh().
       setMembers((prev) => [...prev, ...addedMembers]);
       setBulkSentCount((c) => c + addedMembers.length);
       // One aggregate activity entry per batch (not per member) — spec.
@@ -468,8 +506,9 @@ export default function GroupPage({ friends, familiesWithMembers, otherAppUsers,
         detail: "Bulk invite",
         linkPath: `/trip/${trip.id}/group`,
       });
+      router.refresh(); // shared members context
     },
-    [supabase, trip.id, userId, currentUserName]
+    [supabase, trip.id, userId, currentUserName, router]
   );
 
   const handleBulkClose = useCallback(() => {
@@ -480,16 +519,31 @@ export default function GroupPage({ friends, familiesWithMembers, otherAppUsers,
     setBulkSentCount(0);
   }, [bulkSentCount]);
 
-  const removeMember = useCallback(async (memberId: string) => {
+  const removeMemberMutation = useMutation({
+    mutationFn: async (memberId: string) => {
+      const { error } = await supabase.from("trip_members").delete().eq("id", memberId);
+      if (error) throw error;
+      return memberId;
+    },
+    onSuccess: (memberId) => {
+      const removedMember = members.find((m) => m.id === memberId);
+      // Immediate local drop for UX — shared context re-hydrates via router.refresh().
+      setMembers((prev) => prev.filter((m) => m.id !== memberId));
+      if (removedMember) {
+        logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "removed", entityType: "member", entityName: removedMember.name, linkPath: `/trip/${trip.id}/group` });
+      }
+      router.refresh(); // shared members context
+    },
+    onError: (error) => {
+      console.error("removeMember error:", JSON.stringify(error, null, 2));
+    },
+    onSettled: () => setLoading(false),
+  });
+
+  const removeMember = useCallback((memberId: string) => {
     setLoading(true);
-    const removedMember = members.find((m) => m.id === memberId);
-    await supabase.from("trip_members").delete().eq("id", memberId);
-    setMembers((prev) => prev.filter((m) => m.id !== memberId));
-    if (removedMember) {
-      logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "removed", entityType: "member", entityName: removedMember.name, linkPath: `/trip/${trip.id}/group` });
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, members]);
+    removeMemberMutation.mutate(memberId);
+  }, [removeMemberMutation]);
 
   const isFriendAdded = (friendUserId: string) => memberUserIds.has(friendUserId);
 

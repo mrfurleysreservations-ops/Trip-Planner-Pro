@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ingredient qty — variants</title>
+<style>
+  :root {
+    --accent: #4a7c59;
+    --accent-soft: #4a7c591a;
+    --accent-softer: #4a7c5914;
+    --accent-line: #4a7c5940;
+    --border: #e0dacd;
+    --text: #1a1a1a;
+    --muted: #888;
+    --bg: #f6f1ec;
+    --card: #fff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px 20px 80px;
+    line-height: 1.4;
+  }
+  h1 {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+  }
+  .lede {
+    font-size: 14px;
+    color: #555;
+    max-width: 720px;
+    margin: 0 0 24px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .variant {
+    background: var(--card);
+    border: 1px solid #e8e8e8;
+    border-radius: 16px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+  }
+  .variant-title {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 2px;
+  }
+  .variant-subtitle {
+    font-size: 13px;
+    color: #555;
+    margin: 0 0 16px;
+  }
+  .callout {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #444;
+    background: #fbf8f3;
+    border-left: 3px solid var(--accent);
+    padding: 10px 12px;
+    border-radius: 0 8px 8px 0;
+    margin-top: 14px;
+  }
+  .mock-bar {
+    border: 1px solid #eee;
+    background: #fafaf7;
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  label.lbl {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+    display: block;
+  }
+  input.inp, select.sel {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    background: #fff;
+    color: var(--text);
+  }
+  select.sel {
+    padding-right: 28px;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23999' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+  .row { display: flex; gap: 6px; }
+  .btn-add {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-weight: 700;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--accent-softer);
+    color: var(--accent);
+    border: 1px solid var(--accent-line);
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    align-self: flex-start;
+  }
+  .chip strong { font-weight: 800; }
+  .seg {
+    display: inline-flex;
+    padding: 2px;
+    background: #efeae1;
+    border-radius: 999px;
+    gap: 0;
+    margin-bottom: 4px;
+  }
+  .seg button {
+    border: none;
+    background: transparent;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #777;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .seg button.on {
+    background: #fff;
+    color: var(--accent);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    font-weight: 700;
+  }
+  .hint {
+    font-size: 11.5px;
+    color: #999;
+    line-height: 1.4;
+  }
+  .inline-suffix {
+    position: relative;
+  }
+  .inline-suffix input {
+    padding-right: 70px;
+  }
+  .inline-suffix .suffix {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 700;
+    background: var(--accent-softer);
+    padding: 3px 7px;
+    border-radius: 6px;
+    pointer-events: none;
+  }
+  .bad {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #fde7e1;
+    color: #c75a2a;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 6px;
+  }
+  .good {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #dfeee3;
+    color: #2e6a42;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 6px;
+  }
+  .today {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 28px;
+    max-width: 420px;
+  }
+  .today-label {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Ingredient quantity — UX variants</h1>
+<p class="lede">
+  Today the add-ingredient bar says "Qty/person" tersely and gives no live feedback. Joe typed <strong>12 eggs</strong>
+  thinking "12 total for the group" — 4 people attending, so grocery list showed <strong>48 eggs</strong>. Three fixes below.
+  All three keep per-person as the stored data model (so totals re-scale when headcount changes).
+</p>
+
+<div class="today">
+  <div class="today-label">What's there today (the bug)</div>
+  <div class="mock-bar">
+    <div class="row">
+      <input class="inp" value="Eggs" style="flex:2;">
+      <input class="inp" value="12" style="width: 52px; text-align:center;">
+      <select class="sel" style="width: 72px;"><option>each</option></select>
+    </div>
+    <div class="row">
+      <select class="sel" style="flex:1;"><option>Produce</option></select>
+      <button class="btn-add">Add</button>
+    </div>
+  </div>
+  <span class="bad">Result: 48 eggs on grocery list (silently multiplied × 4 attending)</span>
+</div>
+
+<div class="grid">
+
+  <!-- ============ VARIANT A ============ -->
+  <div class="variant">
+    <div class="variant-title">Variant A — live preview</div>
+    <div class="variant-subtitle">Smallest change. Keep per-person input, add an explicit "/ person" badge inside the
+      qty input, and a preview chip that shows what the grocery list will actually get.</div>
+
+    <div class="mock-bar">
+      <div class="row">
+        <input class="inp" value="Eggs" style="flex:2;">
+        <div class="inline-suffix" style="width: 120px;">
+          <input class="inp" value="2" style="text-align:center;">
+          <span class="suffix">/ person</span>
+        </div>
+        <select class="sel" style="width: 72px;"><option>each</option></select>
+      </div>
+      <div class="row">
+        <select class="sel" style="flex:1;"><option>Produce</option></select>
+        <button class="btn-add">Add</button>
+      </div>
+      <span class="chip">📊 <span>= <strong>8 eggs</strong> on grocery list · 4 attending</span></span>
+    </div>
+
+    <div class="callout">
+      <strong>Pros:</strong> tiny visual change, no behavior change, preview makes the per-person math obvious
+      without the user having to read a label. <br>
+      <strong>Cons:</strong> user still has to do the mental division ("if I need 8, I enter 2").
+    </div>
+  </div>
+
+  <!-- ============ VARIANT B ============ -->
+  <div class="variant">
+    <div class="variant-title">Variant B — segmented toggle</div>
+    <div class="variant-subtitle">Let the user pick how they think. Toggle between <em>Per person</em> and <em>Total for group</em>.
+      We convert to per-person at save time so the data model doesn't change.</div>
+
+    <div class="mock-bar">
+      <div class="seg">
+        <button class="on">Per person</button>
+        <button>Total for group</button>
+      </div>
+      <div class="row">
+        <input class="inp" value="Eggs" style="flex:2;">
+        <input class="inp" value="2" style="width: 52px; text-align:center;">
+        <select class="sel" style="width: 72px;"><option>each</option></select>
+      </div>
+      <div class="row">
+        <select class="sel" style="flex:1;"><option>Produce</option></select>
+        <button class="btn-add">Add</button>
+      </div>
+      <span class="chip">📊 <span>= <strong>8 eggs</strong> on grocery list · 4 attending</span></span>
+    </div>
+
+    <div style="margin-top:14px; opacity:0.8;">
+      <div class="mock-bar">
+        <div class="seg">
+          <button>Per person</button>
+          <button class="on">Total for group</button>
+        </div>
+        <div class="row">
+          <input class="inp" value="Eggs" style="flex:2;">
+          <input class="inp" value="8" style="width: 52px; text-align:center;">
+          <select class="sel" style="width: 72px;"><option>each</option></select>
+        </div>
+        <span class="chip">↓ saves as <strong>2 / person</strong> (8 ÷ 4 attending)</span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Pros:</strong> matches however the user is thinking. Two-line recipes say "1 stick of butter" (total); bulk
+      meals say "2 eggs each" (per-person). Toggle lets them type either. <br>
+      <strong>Cons:</strong> extra control, small UI complexity bump. If headcount is 0 ("unplaced" meal), total mode
+      can't convert — needs guardrail.
+    </div>
+  </div>
+
+  <!-- ============ VARIANT C ============ -->
+  <div class="variant">
+    <div class="variant-title">Variant C — total-first (simplest mental model)</div>
+    <div class="variant-subtitle">Drop per-person entry entirely. User types the total needed. We divide by headcount
+      at save time. If headcount changes later, we re-scale — with a warning so nobody is surprised.</div>
+
+    <div class="mock-bar">
+      <div class="row">
+        <input class="inp" value="Eggs" style="flex:2;">
+        <div class="inline-suffix" style="width: 130px;">
+          <input class="inp" value="8" style="text-align:center;">
+          <span class="suffix">total</span>
+        </div>
+        <select class="sel" style="width: 72px;"><option>each</option></select>
+      </div>
+      <div class="row">
+        <select class="sel" style="flex:1;"><option>Produce</option></select>
+        <button class="btn-add">Add</button>
+      </div>
+      <span class="hint">Goes on grocery list as-is. If more people join later, we'll scale up proportionally
+        and show a nudge.</span>
+    </div>
+
+    <div class="callout">
+      <strong>Pros:</strong> matches how most people shop ("I need 8 eggs for this breakfast"). Zero math. <br>
+      <strong>Cons:</strong> "scale on headcount change" is invisible magic. If Joe invites two more people after
+      entering 8 eggs, grocery list becomes 12 — which may or may not match his intent. Needs an explicit
+      "fixed total" vs "scales with attendance" switch to be honest about behavior.
+    </div>
+  </div>
+
+</div>
+
+<div style="max-width: 800px; margin: 40px auto 0; background:#fff; border:1px solid #e8e8e8; border-radius:14px; padding:18px;">
+  <div class="today-label">My recommendation</div>
+  <p style="margin:0 0 10px; font-size:13.5px;"><strong>Variant B.</strong> The live preview is the key fix from A, the
+    toggle gives people the right mental model without changing the stored data, and it costs one tiny segmented
+    control on each form (add bar + edit modal). Variant A is fine if you want the absolute minimum change.</p>
+  <p style="margin:0; font-size:12.5px; color:#555;">
+    Either way, the same picker component gets reused in the edit-ingredient modal (issue #3), so the "am I entering
+    per-person or total?" question is answered in both places consistently.
+  </p>
+</div>
+
+</body>
+</html>

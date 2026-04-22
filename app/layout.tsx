@@ -1,6 +1,7 @@
 import Script from "next/script";
 import "./globals.css";
 import AppShell from "./components/app-shell";
+import Providers from "./providers";
 
 export const metadata = {
   title: "Trip Planner Pro",
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             strategy="lazyOnload"
           />
         )}
-        <AppShell>{children}</AppShell>
+        <Providers>
+          <AppShell>{children}</AppShell>
+        </Providers>
       </body>
     </html>
   );

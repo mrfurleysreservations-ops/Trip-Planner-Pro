@@ -1,8 +1,10 @@
 "use client";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES, NOTE_CONVERT_OPTIONS } from "@/lib/constants";
+import { tripKeys } from "@/lib/query-keys";
 import { logActivity } from "@/lib/trip-activity";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
@@ -52,7 +54,31 @@ export default function NotesPage({ notes: initialNotes, openNoteId }: NotesPage
   // Current viewer's role — drives sub-nav ordering. See lib/role-density.ts.
   const currentUserRole = members.find((m) => m.user_id === userId)?.role_preference ?? null;
 
-  const [notes, setNotes] = useState<TripNote[]>(initialNotes);
+  const queryClient = useQueryClient();
+
+  // ─── Notes query — hydrated from server props, refetched on staleness /
+  // invalidation. Replaces the old useState+setNotes patching pattern. ───
+  const { data: notes = [] } = useQuery({
+    queryKey: tripKeys.notes(trip.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trip_notes")
+        .select("*")
+        .eq("trip_id", trip.id)
+        .order("sort_order")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as TripNote[];
+    },
+    initialData: initialNotes,
+    staleTime: 30_000,
+  });
+
+  const invalidateNotes = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tripKeys.notes(trip.id) }),
+    [queryClient, trip.id],
+  );
+
   const [filter, setFilter] = useState<FilterTab>("all");
   const [scopeFilter, setScopeFilter] = useState<"all" | "group" | "personal">("all");
   const [loading, setLoading] = useState(false);
@@ -143,36 +169,45 @@ export default function NotesPage({ notes: initialNotes, openNoteId }: NotesPage
 
   // ─── Actions ───
 
-  const addNote = useCallback(async () => {
-    if (!addTitle.trim()) return;
-    setLoading(true);
-    const minSort = notes.length > 0 ? Math.min(...notes.map((n) => n.sort_order)) - 1 : 0;
-    const { data, error } = await supabase
-      .from("trip_notes")
-      .insert({
-        trip_id: trip.id,
-        created_by: userId,
-        title: addTitle.trim(),
-        body: addBody.trim() || null,
-        link_url: addLink.trim() || null,
-        status: "idea",
-        scope: addScope,
-        sort_order: minSort,
-      })
-      .select()
-      .single();
-    if (error) {
-      console.error("addNote error:", JSON.stringify(error, null, 2));
-    } else if (data) {
-      setNotes((prev) => [data as TripNote, ...prev]);
-      logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "created", entityType: "note", entityName: addTitle.trim(), entityId: (data as TripNote).id, linkPath: `/trip/${trip.id}/notes?note=${(data as TripNote).id}` });
+  const addNoteMutation = useMutation({
+    mutationFn: async () => {
+      const minSort = notes.length > 0 ? Math.min(...notes.map((n) => n.sort_order)) - 1 : 0;
+      const { data, error } = await supabase
+        .from("trip_notes")
+        .insert({
+          trip_id: trip.id,
+          created_by: userId,
+          title: addTitle.trim(),
+          body: addBody.trim() || null,
+          link_url: addLink.trim() || null,
+          status: "idea",
+          scope: addScope,
+          sort_order: minSort,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as TripNote;
+    },
+    onSuccess: (data) => {
+      invalidateNotes();
+      logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "created", entityType: "note", entityName: addTitle.trim(), entityId: data.id, linkPath: `/trip/${trip.id}/notes?note=${data.id}` });
       setAddTitle("");
       setAddBody("");
       setAddLink("");
       setShowAddModal(false);
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, addTitle, addBody, addLink, addScope, notes]);
+    },
+    onError: (error) => {
+      console.error("addNote error:", JSON.stringify(error, null, 2));
+    },
+    onSettled: () => setLoading(false),
+  });
+
+  const addNote = useCallback(() => {
+    if (!addTitle.trim()) return;
+    setLoading(true);
+    addNoteMutation.mutate();
+  }, [addTitle, addNoteMutation]);
 
   const startEdit = useCallback((note: TripNote) => {
     setEditingId(note.id);
@@ -190,37 +225,31 @@ export default function NotesPage({ notes: initialNotes, openNoteId }: NotesPage
     setEditScope("group");
   }, []);
 
-  const saveEdit = useCallback(async () => {
-    if (!editingId || !editTitle.trim()) return;
-    setLoading(true);
-    const previousNote = notes.find((n) => n.id === editingId);
-    const scopeChanged = previousNote ? previousNote.scope !== editScope : false;
-    const { error } = await supabase
-      .from("trip_notes")
-      .update({
-        title: editTitle.trim(),
-        body: editBody.trim() || null,
-        link_url: editLink.trim() || null,
-        scope: editScope,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", editingId);
-    if (error) {
-      console.error("saveEdit error:", JSON.stringify(error, null, 2));
-    } else {
-      setNotes((prev) => prev.map((n) =>
-        n.id === editingId
-          ? { ...n, title: editTitle.trim(), body: editBody.trim() || null, link_url: editLink.trim() || null, scope: editScope, updated_at: new Date().toISOString() }
-          : n
-      ));
-      logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "edited", entityType: "note", entityName: editTitle.trim(), entityId: editingId, linkPath: `/trip/${trip.id}/notes?note=${editingId}` });
-      if (scopeChanged) {
+  const saveEditMutation = useMutation({
+    mutationFn: async (args: { noteId: string; title: string; body: string | null; link: string | null; scope: "group" | "personal"; scopeChanged: boolean }) => {
+      const { error } = await supabase
+        .from("trip_notes")
+        .update({
+          title: args.title,
+          body: args.body,
+          link_url: args.link,
+          scope: args.scope,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", args.noteId);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: (args) => {
+      invalidateNotes();
+      logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "edited", entityType: "note", entityName: args.title, entityId: args.noteId, linkPath: `/trip/${trip.id}/notes?note=${args.noteId}` });
+      if (args.scopeChanged) {
         logActivity(supabase, {
           tripId: trip.id, userId, userName: currentUserName,
           action: "updated", entityType: "note",
-          entityName: `${editTitle.trim()} → ${editScope === "personal" ? "Personal" : "Group"}`,
-          entityId: editingId,
-          linkPath: `/trip/${trip.id}/notes?note=${editingId}`,
+          entityName: `${args.title} → ${args.scope === "personal" ? "Personal" : "Group"}`,
+          entityId: args.noteId,
+          linkPath: `/trip/${trip.id}/notes?note=${args.noteId}`,
         });
       }
       // Stay in modal but exit edit mode
@@ -229,70 +258,110 @@ export default function NotesPage({ notes: initialNotes, openNoteId }: NotesPage
       setEditBody("");
       setEditLink("");
       setEditScope("group");
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, editingId, editTitle, editBody, editLink, editScope, notes]);
+    },
+    onError: (error) => {
+      console.error("saveEdit error:", JSON.stringify(error, null, 2));
+    },
+    onSettled: () => setLoading(false),
+  });
 
-  const deleteNote = useCallback(async (noteId: string) => {
+  const saveEdit = useCallback(() => {
+    if (!editingId || !editTitle.trim()) return;
     setLoading(true);
-    const deletedNote = notes.find((n) => n.id === noteId);
-    const { error } = await supabase.from("trip_notes").delete().eq("id", noteId);
-    if (error) {
-      console.error("deleteNote error:", JSON.stringify(error, null, 2));
-    } else {
-      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    const previousNote = notes.find((n) => n.id === editingId);
+    const scopeChanged = previousNote ? previousNote.scope !== editScope : false;
+    saveEditMutation.mutate({
+      noteId: editingId,
+      title: editTitle.trim(),
+      body: editBody.trim() || null,
+      link: editLink.trim() || null,
+      scope: editScope,
+      scopeChanged,
+    });
+  }, [editingId, editTitle, editBody, editLink, editScope, notes, saveEditMutation]);
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (args: { noteId: string; title: string | null }) => {
+      const { error } = await supabase.from("trip_notes").delete().eq("id", args.noteId);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: (args) => {
+      invalidateNotes();
       setConfirmDeleteId(null);
       setSelectedNoteId(null);
-      if (deletedNote) {
-        logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "deleted", entityType: "note", entityName: deletedNote.title, entityId: noteId, linkPath: `/trip/${trip.id}/notes` });
+      if (args.title) {
+        logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "deleted", entityType: "note", entityName: args.title, entityId: args.noteId, linkPath: `/trip/${trip.id}/notes` });
       }
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, notes]);
+    },
+    onError: (error) => {
+      console.error("deleteNote error:", JSON.stringify(error, null, 2));
+    },
+    onSettled: () => setLoading(false),
+  });
 
-  const finalizeNote = useCallback(async (noteId: string) => {
+  const deleteNote = useCallback((noteId: string) => {
     setLoading(true);
-    const { error } = await supabase
-      .from("trip_notes")
-      .update({ status: "finalized", updated_at: new Date().toISOString() })
-      .eq("id", noteId);
-    if (error) {
-      console.error("finalizeNote error:", JSON.stringify(error, null, 2));
-    } else {
-      const finalizedNote = notes.find((n) => n.id === noteId);
-      setNotes((prev) => prev.map((n) =>
-        n.id === noteId ? { ...n, status: "finalized", updated_at: new Date().toISOString() } : n
-      ));
-      if (finalizedNote) {
-        logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "finalized", entityType: "note", entityName: finalizedNote.title, entityId: noteId, linkPath: `/trip/${trip.id}/notes?note=${noteId}` });
+    const deletedNote = notes.find((n) => n.id === noteId);
+    deleteNoteMutation.mutate({ noteId, title: deletedNote?.title ?? null });
+  }, [notes, deleteNoteMutation]);
+
+  const finalizeNoteMutation = useMutation({
+    mutationFn: async (args: { noteId: string; title: string | null }) => {
+      const { error } = await supabase
+        .from("trip_notes")
+        .update({ status: "finalized", updated_at: new Date().toISOString() })
+        .eq("id", args.noteId);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: (args) => {
+      invalidateNotes();
+      if (args.title) {
+        logActivity(supabase, { tripId: trip.id, userId, userName: currentUserName, action: "finalized", entityType: "note", entityName: args.title, entityId: args.noteId, linkPath: `/trip/${trip.id}/notes?note=${args.noteId}` });
       }
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, notes]);
+    },
+    onError: (error) => {
+      console.error("finalizeNote error:", JSON.stringify(error, null, 2));
+    },
+    onSettled: () => setLoading(false),
+  });
+
+  const finalizeNote = useCallback((noteId: string) => {
+    setLoading(true);
+    const finalizedNote = notes.find((n) => n.id === noteId);
+    finalizeNoteMutation.mutate({ noteId, title: finalizedNote?.title ?? null });
+  }, [notes, finalizeNoteMutation]);
 
   // ─── Convert note to a specific destination ───
-  const convertNote = useCallback(async (noteId: string, convertTo: string) => {
-    setLoading(true);
-    const { error } = await supabase
-      .from("trip_notes")
-      .update({ status: "finalized", converted_to: convertTo, updated_at: new Date().toISOString() })
-      .eq("id", noteId);
-    if (!error) {
-      setNotes((prev) => prev.map((n) =>
-        n.id === noteId ? { ...n, status: "finalized", converted_to: convertTo } : n
-      ));
-      const note = notes.find((n) => n.id === noteId);
-      if (note) {
+  const convertNoteMutation = useMutation({
+    mutationFn: async (args: { noteId: string; convertTo: string; title: string | null }) => {
+      const { error } = await supabase
+        .from("trip_notes")
+        .update({ status: "finalized", converted_to: args.convertTo, updated_at: new Date().toISOString() })
+        .eq("id", args.noteId);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: (args) => {
+      invalidateNotes();
+      if (args.title) {
         logActivity(supabase, {
           tripId: trip.id, userId, userName: currentUserName,
           action: "converted", entityType: "note",
-          entityName: `${note.title} → ${convertTo}`,
-          entityId: noteId, linkPath: `/trip/${trip.id}/notes?note=${noteId}`,
+          entityName: `${args.title} → ${args.convertTo}`,
+          entityId: args.noteId, linkPath: `/trip/${trip.id}/notes?note=${args.noteId}`,
         });
       }
-    }
-    setLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, notes]);
+    },
+    onSettled: () => setLoading(false),
+  });
+
+  const convertNote = useCallback((noteId: string, convertTo: string) => {
+    setLoading(true);
+    const note = notes.find((n) => n.id === noteId);
+    convertNoteMutation.mutate({ noteId, convertTo, title: note?.title ?? null });
+  }, [notes, convertNoteMutation]);
 
   // ─── Trip day list for date picker ───
   const tripDays = useMemo(() => {
@@ -472,29 +541,24 @@ export default function NotesPage({ notes: initialNotes, openNoteId }: NotesPage
     setImportLoading(false);
   }, []);
 
-  const executeImport = useCallback(async (items: ParsedImportNote[]) => {
-    if (items.length === 0) return;
-    setImportLoading(true);
-    setImportError("");
-    const baseSortOrder = notes.length > 0 ? Math.min(...notes.map((n) => n.sort_order)) - items.length : 0;
-    const inserts = items.map((item, i) => ({
-      trip_id: trip.id,
-      created_by: userId,
-      title: item.title,
-      body: item.body,
-      link_url: item.link_url,
-      status: "idea" as const,
-      sort_order: baseSortOrder + i,
-    }));
-    const { data, error } = await supabase.from("trip_notes").insert(inserts).select();
-    if (error) {
-      console.error("import error:", JSON.stringify(error, null, 2));
-      setImportError("Import failed: " + error.message);
-      setImportLoading(false);
-      return;
-    }
-    if (data) {
-      setNotes((prev) => [...(data as TripNote[]), ...prev]);
+  const executeImportMutation = useMutation({
+    mutationFn: async (items: ParsedImportNote[]) => {
+      const baseSortOrder = notes.length > 0 ? Math.min(...notes.map((n) => n.sort_order)) - items.length : 0;
+      const inserts = items.map((item, i) => ({
+        trip_id: trip.id,
+        created_by: userId,
+        title: item.title,
+        body: item.body,
+        link_url: item.link_url,
+        status: "idea" as const,
+        sort_order: baseSortOrder + i,
+      }));
+      const { data, error } = await supabase.from("trip_notes").insert(inserts).select();
+      if (error) throw error;
+      return (data ?? []) as TripNote[];
+    },
+    onSuccess: (data) => {
+      invalidateNotes();
       logActivity(supabase, {
         tripId: trip.id, userId, userName: currentUserName,
         action: "imported", entityType: "note",
@@ -503,9 +567,20 @@ export default function NotesPage({ notes: initialNotes, openNoteId }: NotesPage
       });
       setImportSuccess(`Imported ${data.length} note${data.length === 1 ? "" : "s"} successfully!`);
       setImportStep(3);
-    }
-    setImportLoading(false);
-  }, [supabase, trip.id, userId, currentUserName, notes]);
+    },
+    onError: (error: Error) => {
+      console.error("import error:", JSON.stringify(error, null, 2));
+      setImportError("Import failed: " + error.message);
+    },
+    onSettled: () => setImportLoading(false),
+  });
+
+  const executeImport = useCallback((items: ParsedImportNote[]) => {
+    if (items.length === 0) return;
+    setImportLoading(true);
+    setImportError("");
+    executeImportMutation.mutate(items);
+  }, [executeImportMutation]);
 
   // ─── Helpers ───
   const filterTabStyle = (active: boolean): React.CSSProperties => ({
