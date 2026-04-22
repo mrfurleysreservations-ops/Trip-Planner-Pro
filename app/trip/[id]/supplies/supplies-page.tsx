@@ -1599,29 +1599,62 @@ function Sheet({
   height?: string | number;
   zIndex?: number;
 }) {
+  // Track window.visualViewport so the sheet stays above the on-screen
+  // keyboard on iOS Safari. `vh` / `dvh` do NOT shrink when the iOS keyboard
+  // opens — only the visual viewport does — so without this the footer and
+  // sticky "Add ingredient" bar end up hidden behind the keyboard.
+  //
+  // We size the backdrop to `visualViewport.height` and offset it by
+  // `visualViewport.offsetTop` (iOS sometimes scrolls the page to keep the
+  // focused input visible; this keeps the backdrop aligned to the visible
+  // area rather than the layout viewport). `align-items: flex-end` then
+  // anchors the sheet to the top of the keyboard instead of behind it.
+  const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null);
+
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return;
+    const update = () => setViewport({ height: vv.height, top: vv.offsetTop });
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+
+  const backdropStyle: React.CSSProperties = {
+    position: "fixed",
+    left: 0,
+    right: 0,
+    top: viewport ? viewport.top : 0,
+    // Before the effect runs (or in environments without visualViewport) we
+    // fall back to 100dvh which at least respects Safari's address-bar
+    // collapse even though it can't see the keyboard.
+    height: viewport ? viewport.height : undefined,
+    bottom: viewport ? undefined : 0,
+    zIndex,
+    background: "rgba(0,0,0,0.45)",
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "center",
+    animation: "fadeIn 0.15s ease-out",
+  };
+
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex,
-        background: "rgba(0,0,0,0.45)",
-        display: "flex",
-        alignItems: "flex-end",
-        justifyContent: "center",
-        animation: "fadeIn 0.15s ease-out",
-      }}
-    >
+    <div onClick={onClose} style={backdropStyle}>
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
           maxWidth: 480,
-          // `dvh` tracks the dynamic viewport on iOS Safari so the address-bar
-          // collapse can't push the footer below the visible area. `vh` is the
-          // fallback for browsers that don't support dvh yet.
-          maxHeight: "min(90vh, 90dvh)",
+          // Cap at 90% of whatever the backdrop ended up being. When the
+          // keyboard is open `viewport.height` is the area above the keyboard,
+          // so 90% of that still leaves the footer visible.
+          maxHeight: viewport
+            ? `${Math.floor(viewport.height * 0.9)}px`
+            : "min(90vh, 90dvh)",
           height: height ?? undefined,
           minHeight: 0,
           // `overflow: hidden` keeps the flex children (notably SheetBody's
