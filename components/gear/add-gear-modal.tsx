@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { CAR_LOCATIONS } from "@/lib/constants";
 import type { GearBin, GearItem, TripGearBin, TripGearBinInsert } from "@/types/database.types";
@@ -54,6 +54,26 @@ export default function AddGearModal({
   // on trip" state so the user can distinguish what's already there.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+
+  // Track window.visualViewport so the sheet stays above the on-screen
+  // keyboard and the iOS Safari browser chrome. `vh` / `dvh` do NOT shrink
+  // when the keyboard opens — only the visual viewport does — so without
+  // this the sticky "Add" footer ends up hidden behind the address bar or
+  // keyboard and users can't actually add anything. Same pattern as the
+  // Sheet helper in supplies-page.tsx.
+  const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null);
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return;
+    const update = () => setViewport({ height: vv.height, top: vv.offsetTop });
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
 
   const onTripBinIds = useMemo(
     () => new Set(tripGearBins.map((t) => t.bin_id)),
@@ -340,7 +360,11 @@ export default function AddGearModal({
       onClick={onClose}
       style={{
         position: "fixed",
-        inset: 0,
+        left: 0,
+        right: 0,
+        top: viewport ? viewport.top : 0,
+        height: viewport ? viewport.height : undefined,
+        bottom: viewport ? undefined : 0,
         zIndex: 1000,
         background: "rgba(0,0,0,0.45)",
         display: "flex",
@@ -354,7 +378,12 @@ export default function AddGearModal({
         style={{
           width: "100%",
           maxWidth: 480,
-          maxHeight: "92vh",
+          // Cap at ~92% of the actually-visible viewport. Falls back to
+          // min(92vh, 92dvh) for the first paint before the effect runs.
+          maxHeight: viewport
+            ? `${Math.floor(viewport.height * 0.92)}px`
+            : "min(92vh, 92dvh)",
+          minHeight: 0,
           background: "#f6f8f4",
           borderRadius: "20px 20px 0 0",
           boxShadow: "0 -8px 40px rgba(0,0,0,0.2)",
@@ -526,7 +555,7 @@ export default function AddGearModal({
         {/* Sticky bottom CTA */}
         <div
           style={{
-            padding: "12px 16px 14px",
+            padding: "12px 16px calc(14px + env(safe-area-inset-bottom))",
             borderTop: `1px solid ${cardBorder}`,
             background: "#fff",
             display: "flex",
