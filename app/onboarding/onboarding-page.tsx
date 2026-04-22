@@ -252,6 +252,11 @@ export default function OnboardingPage({
 
       if (Object.keys(update).length > 0) {
         await supabase.from("user_profiles").update(update).eq("id", userId);
+        // Seed the middleware fast-path cookie if this write just completed
+        // onboarding. Colocated with the DB write so the two stay in sync.
+        if (update.onboarding_completed) {
+          document.cookie = "onboarding_completed=true; path=/; max-age=31536000; samesite=lax";
+        }
       }
 
       if (standaloneStep === "people") {
@@ -387,8 +392,11 @@ export default function OnboardingPage({
       // 4. Store email invites as friend_links with "invited" status
       // (simplified — in production this would trigger email sends)
 
-      // Clear skip cookie now that onboarding is complete
+      // Clear skip cookie now that onboarding is complete, and seed the
+      // middleware fast-path cookie so the next navigation doesn't need to
+      // hit user_profiles to confirm.
       document.cookie = "skipped_onboarding=; path=/; max-age=0";
+      document.cookie = "onboarding_completed=true; path=/; max-age=31536000; samesite=lax";
 
       // Invite flow: land on the trip invite page instead of /dashboard when
       // /auth/confirm threaded a `next` param through onboarding.

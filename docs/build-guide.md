@@ -492,3 +492,17 @@ When starting each phase in a new chat:
 4. ✅ Paste the next prompt
 5. ✅ Run the verification prompt at the end of each phase
 6. ✅ Fix any issues before moving to next phase
+
+---
+
+## Performance Rebuild — Complete
+
+Separate from the product phases above, a five-phase performance rebuild ran against the live app. All five are shipped:
+
+- [x] **Perf Phase 1 — Instant Tab Feedback** (`build-prompt-perf-phase-1.md`): trip-level `loading.tsx` skeleton + `<Link prefetch>` in the trip sub-nav.
+- [x] **Perf Phase 2 — Shared Trip Layout** (`build-prompt-perf-phase-2.md`): lifted the trip chrome into a layout so it no longer re-fetches on every sub-tab switch.
+- [x] **Perf Phase 3 — Parallelize Per-Page Queries** (`build-prompt-perf-phase-3.md`): collapsed sequential awaits into `Promise.all` on each tab's server component.
+- [x] **Perf Phase 4 — Waterfall Cleanup & Caching** (`build-prompt-perf-phase-4.md`): trimmed redundant selects and added request-scoped caching where safe.
+- [x] **Perf Phase 5 — Middleware Trim** (`build-prompt-perf-phase-5.md`): public landing short-circuits before Supabase; `onboarding_completed` is cookie-cached so the middleware's second DB round-trip is gone for returning users; matcher excludes static assets.
+
+No Phase 6 is planned. If the app still feels slow, the next investigation is **Supabase Performance Advisor** (missing indexes) or profiling specific slow queries with `EXPLAIN ANALYZE` — not another cross-cutting middleware/layout phase.

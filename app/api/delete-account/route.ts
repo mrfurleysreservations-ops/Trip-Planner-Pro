@@ -35,7 +35,12 @@ export async function POST() {
     // 3. Sign out the current session
     await supabase.auth.signOut();
 
-    return NextResponse.json({ success: true });
+    // Clear per-user onboarding cookies on the way out so the next sign-in
+    // on this device evaluates the gate fresh.
+    const res = NextResponse.json({ success: true });
+    res.cookies.set("onboarding_completed", "", { path: "/", maxAge: 0, sameSite: "lax" });
+    res.cookies.set("skipped_onboarding", "", { path: "/", maxAge: 0, sameSite: "lax" });
+    return res;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });

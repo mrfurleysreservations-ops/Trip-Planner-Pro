@@ -921,6 +921,10 @@ export default function ProfilePage({
           <button
             onClick={async () => {
               await supabase.auth.signOut();
+              // Clear per-user onboarding cookies so another user signing in on
+              // the same device doesn't inherit this user's gate state.
+              document.cookie = "onboarding_completed=; path=/; max-age=0; samesite=lax";
+              document.cookie = "skipped_onboarding=; path=/; max-age=0; samesite=lax";
               router.push("/auth/login");
               router.refresh();
             }}
