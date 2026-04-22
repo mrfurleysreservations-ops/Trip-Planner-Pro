@@ -1,5 +1,6 @@
 "use client";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ThemeConfig } from "@/lib/constants";
 import { moreTabsForRole, primaryTabsForRole } from "@/lib/role-density";
@@ -84,7 +85,6 @@ interface TripSubNavProps {
 
 export default function TripSubNav({ tripId, theme, role }: TripSubNavProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const activeSegment = getActiveSegment(pathname, tripId);
 
   const [moreOpen, setMoreOpen] = useState(false);
@@ -184,9 +184,10 @@ export default function TripSubNav({ tripId, theme, role }: TripSubNavProps) {
           const chatBadgeStyle = showChatBadge ? resolveChatBadgeStyle(chatUnread) : null;
 
           return (
-            <button
+            <Link
               key={tab.key}
-              onClick={() => router.push(`/trip/${tripId}/${tab.segment}`)}
+              href={`/trip/${tripId}/${tab.segment}`}
+              prefetch
               style={primaryButtonStyle(active, theme.accent)}
             >
               <span style={{ fontSize: "18px", lineHeight: 1, position: "relative" }}>
@@ -195,7 +196,7 @@ export default function TripSubNav({ tripId, theme, role }: TripSubNavProps) {
                 {chatBadgeStyle === "muted-dot" && <ChatMutedDot />}
               </span>
               <span style={primaryLabelStyle(active, theme.accent)}>{tab.label}</span>
-            </button>
+            </Link>
           );
         })}
 
@@ -317,12 +318,11 @@ export default function TripSubNav({ tripId, theme, role }: TripSubNavProps) {
               {moreTabs.map((tab) => {
                 const active = activeSegment === tab.segment;
                 return (
-                  <button
+                  <Link
                     key={tab.key}
-                    onClick={() => {
-                      router.push(`/trip/${tripId}/${tab.segment}`);
-                      setMoreOpen(false);
-                    }}
+                    href={`/trip/${tripId}/${tab.segment}`}
+                    prefetch
+                    onClick={() => setMoreOpen(false)}
                     style={{
                       display: "flex",
                       flexDirection: "column",
@@ -335,6 +335,7 @@ export default function TripSubNav({ tripId, theme, role }: TripSubNavProps) {
                       borderRadius: "14px",
                       cursor: "pointer",
                       transition: "all 0.15s ease",
+                      textDecoration: "none",
                     }}
                   >
                     <span style={{ fontSize: "22px", lineHeight: 1 }}>{tab.icon}</span>
@@ -348,7 +349,7 @@ export default function TripSubNav({ tripId, theme, role }: TripSubNavProps) {
                     >
                       {tab.label}
                     </span>
-                  </button>
+                  </Link>
                 );
               })}
             </div>
@@ -378,6 +379,8 @@ function primaryButtonStyle(active: boolean, accent: string): React.CSSPropertie
     minWidth: 0,
     position: "relative",
     transition: "all 0.2s ease",
+    textDecoration: "none",
+    color: "inherit",
   };
 }
 
