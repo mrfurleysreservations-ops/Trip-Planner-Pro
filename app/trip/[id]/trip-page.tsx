@@ -8,10 +8,11 @@ import { generateDays, formatDate } from "@/lib/utils";
 import { usePlacesAutocomplete } from "@/lib/use-places-autocomplete";
 import { useItineraryLocations } from "@/lib/use-itinerary-locations";
 import { logActivity } from "@/lib/trip-activity";
-import type { Trip, TripBooking, TripMember, ItineraryEvent } from "@/types/database.types";
+import type { Trip, TripBooking, ItineraryEvent } from "@/types/database.types";
 import TripSubNav from "./trip-sub-nav";
 import WeatherCard from "./weather-card";
 import RoleHero, { type RoleHeroData } from "./role-hero";
+import { useTripData } from "./trip-data-context";
 
 // Re-export so server `page.tsx` can import RoleHeroData through its client
 // boundary without reaching directly into role-hero.tsx. Keeps the hero
@@ -20,14 +21,10 @@ import RoleHero, { type RoleHeroData } from "./role-hero";
 export type { RoleHeroData };
 
 export interface TripPageProps {
-  trip: Trip;
-  userId: string;
   userName: string;
-  isHost: boolean;
   needsSetup: boolean;
   memberCount: number;
   bookings: TripBooking[];
-  members: TripMember[];
   /** Current viewer's trip_members.role_preference — drives sub-nav order + hero variant. */
   currentUserRole: string | null;
   /** Earliest upcoming itinerary event (date >= today), or null if nothing scheduled. */
@@ -590,19 +587,16 @@ function EditBookingFormHub({ booking, tripId, userId, accent, cardBg, cardBorde
 }
 
 export default function TripPage({
-  trip: initialTrip,
-  userId,
   userName,
-  isHost,
   needsSetup,
   memberCount,
   bookings: initialBookings,
-  members,
   currentUserRole,
   nextEvent,
   upcomingEvents,
   heroData,
 }: TripPageProps) {
+  const { trip: initialTrip, userId, isHost, members } = useTripData();
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const id = initialTrip.id;

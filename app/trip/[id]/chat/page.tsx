@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { normalizeChatLevel, type ChatNotificationLevel } from "@/lib/chat-unread";
-import type { Trip, TripMessage } from "@/types/database.types";
+import type { TripMessage } from "@/types/database.types";
+import { getTripData } from "@/lib/trip-data";
 import ChatPage from "./chat-page";
 
 // Shape passed from server → client. Only the fields the bubbles and
@@ -30,43 +30,43 @@ export default async function ChatServerPage({ params }: { params: { id: string 
   const supabase = createServerSupabaseClient();
   const { id } = params;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
-
-  const { data: trip } = await supabase
-    .from("trips")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (!trip) redirect("/dashboard");
+  // Shared trip context — deduped with the layout's call via React cache().
+  const { members: allMembers, userId } = await getTripData(id);
 
   // Only accepted members with a real auth account can appear in chat.
   // Family-linked rows without a user_id (e.g. kids) are filtered out.
-  const { data: memberRows } = await supabase
-    .from("trip_members")
-    .select("id, user_id, name, role")
-    .eq("trip_id", id)
-    .eq("status", "accepted")
-    .not("user_id", "is", null)
-    .order("created_at");
-
-  const memberUserIds = (memberRows ?? [])
+  // allMembers is ordered by created_at (same as the old dedicated query).
+  const acceptedMembers = allMembers.filter(
+    (m) => m.status === "accepted" && !!m.user_id,
+  );
+  const memberUserIds = acceptedMembers
     .map((m) => m.user_id)
     .filter((v): v is string => !!v);
 
-  const { data: profileRows } = memberUserIds.length
-    ? await supabase
-        .from("user_profiles")
-        .select("id, avatar_url, full_name")
-        .in("id", memberUserIds)
-    : { data: [] as { id: string; avatar_url: string | null; full_name: string | null }[] };
+  // Fetch profiles + messages in parallel — both depend only on ids that
+  // are already resolved above.
+  const [profilesRes, messagesRes] = await Promise.all([
+    memberUserIds.length
+      ? supabase
+          .from("user_profiles")
+          .select("id, avatar_url, full_name")
+          .in("id", memberUserIds)
+      : Promise.resolve({ data: [] as { id: string; avatar_url: string | null; full_name: string | null }[] }),
+    // Last 50 messages — fetched desc for the index, reversed so the client
+    // gets them in chronological order.
+    supabase
+      .from("trip_messages")
+      .select("*")
+      .eq("trip_id", id)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
 
   const profileMap = new Map(
-    (profileRows ?? []).map((p) => [p.id, p])
+    (profilesRes.data ?? []).map((p) => [p.id, p])
   );
 
-  const members: ChatMember[] = (memberRows ?? []).map((m) => ({
+  const members: ChatMember[] = acceptedMembers.map((m) => ({
     id: m.id,
     userId: m.user_id as string,
     name: m.name,
@@ -74,26 +74,12 @@ export default async function ChatServerPage({ params }: { params: { id: string 
     role: m.role,
   }));
 
-  // Last 50 messages — fetched desc for the index, reversed so the client
-  // gets them in chronological order.
-  const { data: messagesRaw } = await supabase
-    .from("trip_messages")
-    .select("*")
-    .eq("trip_id", id)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  const initialMessages = ((messagesRaw ?? []) as TripMessage[]).slice().reverse();
+  const initialMessages = ((messagesRes.data ?? []) as TripMessage[]).slice().reverse();
 
   // Viewer's trip_member row drives sub-nav ordering, @mention matching,
-  // and the chat settings sheet. Single-row fetch on a unique (trip_id,
-  // user_id) combo — OK to bundle all three fields in one read.
-  const { data: viewerMemberRow } = await supabase
-    .from("trip_members")
-    .select("id, name, role_preference, chat_notification_level")
-    .eq("trip_id", id)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // and the chat settings sheet. Pulled from the shared members list — the
+  // previously dedicated trip_members lookup is now free via getTripData.
+  const viewerMemberRow = allMembers.find((m) => m.user_id === userId) ?? null;
   const currentUserRole = viewerMemberRow?.role_preference ?? null;
 
   const viewerSettings: ViewerChatSettings | null = viewerMemberRow
@@ -111,14 +97,12 @@ export default async function ChatServerPage({ params }: { params: { id: string 
   await supabase
     .from("trip_message_reads")
     .upsert(
-      { trip_id: id, user_id: user.id, last_read_at: new Date().toISOString() },
+      { trip_id: id, user_id: userId, last_read_at: new Date().toISOString() },
       { onConflict: "trip_id,user_id" }
     );
 
   return (
     <ChatPage
-      trip={trip as Trip}
-      userId={user.id}
       members={members}
       initialMessages={initialMessages}
       currentUserRole={currentUserRole}

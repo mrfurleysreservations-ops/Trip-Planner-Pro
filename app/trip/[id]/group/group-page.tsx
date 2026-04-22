@@ -4,11 +4,12 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES, ROLE_PREFERENCES } from "@/lib/constants";
 import { logActivity } from "@/lib/trip-activity";
-import type { Trip, TripMember, FamilyMember } from "@/types/database.types";
+import type { TripMember, FamilyMember } from "@/types/database.types";
 import type { GroupPageProps, FriendWithProfile, FamilyWithMembers } from "./page";
 import TripSubNav from "../trip-sub-nav";
 import BulkInviteModal from "./bulk-invite-modal";
 import MemberDetailModal from "./member-detail-modal";
+import { useTripData } from "../trip-data-context";
 
 // ─── Small UI components ───
 
@@ -29,7 +30,8 @@ export const StatusChip = ({ status }: { status: string }) => {
   );
 };
 
-export default function GroupPage({ trip, members: initialMembers, friends, familiesWithMembers, otherAppUsers, otherFamilies, rosterLinkedUserIds, userId, isHost }: GroupPageProps) {
+export default function GroupPage({ friends, familiesWithMembers, otherAppUsers, otherFamilies, rosterLinkedUserIds }: GroupPageProps) {
+  const { trip, members: initialMembers, userId, isHost } = useTripData();
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;

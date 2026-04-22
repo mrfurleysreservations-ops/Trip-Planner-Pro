@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
-  Trip,
   TripBooking,
-  TripMember,
   ItineraryEvent,
   TripExpense,
   ExpensePayer,
@@ -15,6 +13,7 @@ import { defaultTabForRole } from "@/lib/role-density";
 import { buildFamilyGroups } from "@/lib/family-groups";
 import { computeViewerBalance } from "@/lib/expense-balance";
 import { fetchUnreadChatState } from "@/lib/chat-unread";
+import { getTripData } from "@/lib/trip-data";
 import type { ExpenseWithRelations } from "./expenses/page";
 import TripPage, { type RoleHeroData } from "./trip-page";
 
@@ -24,36 +23,20 @@ export default async function TripServerPage({ params, searchParams }: { params:
   const wantsEdit = searchParams.edit === "true";
   const fromGroup = searchParams.from === "group";
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
+  // Shared trip context (trip row, members, events, auth). Deduped with the
+  // layout's call via React's cache() — same request, one set of queries.
+  const { trip, members, events, userId, isHost } = await getTripData(id);
 
-  // Batch 1: everything we can fetch against the trip id directly, plus the
-  // viewer's chat-unread state (which only needs trip_id + user.id). This is
-  // the biggest parallel window — the rest of the page waits on members or
-  // expense ids to resolve before the second batch can run.
+  // Batch 1: tab-specific fetches for the hub hero. The shared trip/members/
+  // events fetches now live in getTripData above. This batch is still the
+  // biggest parallel window for hub-only data.
   const [
-    tripRes,
-    membersRes,
     bookingsRes,
-    eventsRes,
     latestMessageRes,
     expensesRes,
     unreadState,
   ] = await Promise.all([
-    supabase.from("trips").select("*").eq("id", id).single(),
-    supabase.from("trip_members").select("*").eq("trip_id", id),
     supabase.from("trip_bookings").select("*").eq("trip_id", id).order("start_date", { ascending: true }),
-    // Itinerary events feed the role hero (next-event card, upcoming count).
-    // Ordered so the first event with a future-or-today date lands at index 0
-    // after we filter below.
-    supabase
-      .from("itinerary_events")
-      .select("*")
-      .eq("trip_id", id)
-      .not("date", "is", null)
-      .order("date", { ascending: true })
-      .order("start_time", { ascending: true, nullsFirst: false })
-      .order("sort_order", { ascending: true }),
     // Latest non-deleted chat message — drives the hero "💬 Latest" snippet.
     // Single-row fetch keeps the payload trivial even on noisy trips.
     supabase
@@ -71,20 +54,14 @@ export default async function TripServerPage({ params, searchParams }: { params:
       .order("created_at", { ascending: false }),
     // Reuse the same server path the client hook uses — keeps the hub hero
     // unread count and the sub-nav badge count in lockstep on every render.
-    fetchUnreadChatState(supabase, id, user.id),
+    fetchUnreadChatState(supabase, id, userId),
   ]);
 
-  const trip = tripRes.data as Trip | null;
-  if (!trip) redirect("/dashboard");
-
-  const members = (membersRes.data ?? []) as TripMember[];
   const bookings = bookingsRes.data ?? [];
-  const events = (eventsRes.data ?? []) as ItineraryEvent[];
   const allExpenses = (expensesRes.data ?? []) as TripExpense[];
 
-  const isHost = trip.owner_id === user.id;
   const memberCount = members.length;
-  const currentMember = members.find((m) => m.user_id === user.id) ?? null;
+  const currentMember = members.find((m) => m.user_id === userId) ?? null;
   const userName = currentMember?.name || "Someone";
   const currentUserRole: string | null = currentMember?.role_preference ?? null;
 
@@ -127,8 +104,25 @@ export default async function TripServerPage({ params, searchParams }: { params:
   // date via the server's ISO slice — good enough for a single-day window
   // (events are stored as plain DATE, no timezone). If your trip spans
   // different timezones, the hero might be off by a day at the edges.
+  //
+  // The shared getTripData events list is ordered by (date, sort_order). We
+  // re-sort here to preserve the hub's original (date, start_time asc nulls-
+  // last, sort_order) ordering so same-day events still surface in clock
+  // order regardless of how sort_order was assigned.
   const todayIso = new Date().toISOString().slice(0, 10);
-  const upcomingEventsAll = events.filter((e) => !!e.date && e.date >= todayIso);
+  const upcomingEventsAll = events
+    .filter((e) => !!e.date && e.date >= todayIso)
+    .slice()
+    .sort((a, b) => {
+      const dateCmp = (a.date ?? "").localeCompare(b.date ?? "");
+      if (dateCmp !== 0) return dateCmp;
+      if (a.start_time !== b.start_time) {
+        if (a.start_time === null) return 1;
+        if (b.start_time === null) return -1;
+        return a.start_time.localeCompare(b.start_time);
+      }
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    });
   const nextEvent: ItineraryEvent | null = upcomingEventsAll[0] ?? null;
   // Hub hero's Quick-scan shows up to 3 upcoming events. Past ones are
   // intentionally excluded — this is a "what's next" surface, not history.
@@ -217,14 +211,10 @@ export default async function TripServerPage({ params, searchParams }: { params:
 
   return (
     <TripPage
-      trip={trip}
-      userId={user.id}
       userName={userName}
-      isHost={isHost}
       needsSetup={needsSetup}
       memberCount={memberCount}
       bookings={bookings as TripBooking[]}
-      members={members}
       currentUserRole={currentUserRole}
       nextEvent={nextEvent}
       upcomingEvents={upcomingEventsTop3}

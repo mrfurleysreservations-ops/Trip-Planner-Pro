@@ -4,13 +4,12 @@ import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { THEMES, ROLE_PREFERENCES, type ThemeConfig } from "@/lib/constants";
 import { type ChatNotificationLevel } from "@/lib/chat-unread";
-import type { Trip, TripMessage } from "@/types/database.types";
+import type { TripMessage } from "@/types/database.types";
 import type { ChatMember, ViewerChatSettings } from "./page";
 import TripSubNav from "../trip-sub-nav";
+import { useTripData } from "../trip-data-context";
 
 interface ChatPageProps {
-  trip: Trip;
-  userId: string;
   members: ChatMember[];
   initialMessages: TripMessage[];
   /** Viewer's trip_members.role_preference — drives sub-nav order. */
@@ -97,13 +96,12 @@ function initialOf(name: string): string {
 // ═══════════════════════════════════════════
 
 export default function ChatPage({
-  trip,
-  userId,
   members,
   initialMessages,
   currentUserRole,
   viewerSettings,
 }: ChatPageProps) {
+  const { trip, userId } = useTripData();
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;

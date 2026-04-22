@@ -4,11 +4,12 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES, EVENT_TYPES, DRESS_CODES, TIME_SLOTS, PACKING_CATEGORIES, DRESS_CODE_SUGGESTIONS, getDressCodeEssentials, getDailyEssentials } from "@/lib/constants";
 import { logActivity } from "@/lib/trip-activity";
-import type { Trip, TripMember, ItineraryEvent, EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment } from "@/types/database.types";
+import type { ItineraryEvent, EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment } from "@/types/database.types";
 import type { PackingPageProps } from "./page";
 import type { TimeOfDay, WeatherBucket, ForecastCell, ForecastMap } from "@/lib/weather";
 import { weatherChipText } from "@/lib/weather";
 import TripSubNav from "../trip-sub-nav";
+import { useTripData } from "../trip-data-context";
 import SlotModal, { type ReuseChip } from "@/components/packing/slot-modal";
 import GearView from "@/components/gear/gear-view";
 import {
@@ -392,15 +393,16 @@ function getOverpackerExtras(dressCode: string | null, gender: string | null): s
 // ─── Main Component ───
 
 export default function PackingPage({
-  trip, members, events, participants, packingItems: initialPackingItems,
+  participants, packingItems: initialPackingItems,
   packingOutfits: initialPackingOutfits, outfitPackingItems: initialOutfitPackingItems,
   outfitGroups: initialOutfitGroups, outfitGroupEvents: initialOutfitGroupEvents,
-  userProfile, familyMembers, userId, isHost,
+  userProfile, familyMembers,
   packingBags: initialPackingBags, packingBagSections: initialPackingBagSections,
   packingBagContainers: initialPackingBagContainers, packingItemAssignments: initialPackingItemAssignments,
   weatherForecast,
   libraryBins, libraryItems, tripGearBins, primaryVehicleName,
 }: PackingPageProps) {
+  const { trip, members, events, userId, isHost } = useTripData();
   const supabase = createBrowserSupabaseClient();
   const router = useRouter();
   const th = THEMES[trip.trip_type] || THEMES.home;

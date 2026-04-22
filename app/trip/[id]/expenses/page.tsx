@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Trip, TripMember, TripExpense, ExpensePayer, ExpenseSplit, ItineraryEvent, FamilyMember } from "@/types/database.types";
+import type { TripExpense, ExpensePayer, ExpenseSplit, FamilyMember } from "@/types/database.types";
 import { buildFamilyGroups, type FamilyGroup } from "@/lib/family-groups";
+import { getTripData } from "@/lib/trip-data";
 import ExpensesPage from "./expenses-page";
 
 // Re-export so existing imports (`./page`) keep working — the type moved
@@ -14,13 +14,8 @@ export interface ExpenseWithRelations extends TripExpense {
 }
 
 export interface ExpensesPageProps {
-  trip: Trip;
-  members: TripMember[];
   expenses: ExpenseWithRelations[];
-  events: ItineraryEvent[];
   familyGroups: FamilyGroup[];
-  userId: string;
-  isHost: boolean;
   fromEvent: string | null;
   fromEventTitle: string | null;
   fromEventDate: string | null;
@@ -38,70 +33,43 @@ export default async function ExpensesServerPage({
   const supabase = createServerSupabaseClient();
   const { id } = params;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
+  // Shared trip context — deduped with the layout's call via React cache().
+  const { members } = await getTripData(id);
 
-  const { data: trip } = await supabase
-    .from("trips")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (!trip) redirect("/dashboard");
-
-  const isHost = trip.owner_id === user.id;
-
-  // Fetch trip members
-  const { data: members } = await supabase
-    .from("trip_members")
-    .select("*")
-    .eq("trip_id", id)
-    .order("created_at");
-
-  const allMembers = (members ?? []) as TripMember[];
-
-  // Fetch family_members for members that have a family_member_id
-  const familyMemberIds = allMembers
+  const familyMemberIds = members
     .map((m) => m.family_member_id)
     .filter(Boolean) as string[];
 
-  let familyMembersData: FamilyMember[] = [];
-  if (familyMemberIds.length > 0) {
-    const { data } = await supabase
-      .from("family_members")
+  // Expenses and family_members can run in parallel — both are trip-specific
+  // and independent of each other. payers/splits still need the expense ids
+  // so they land in a second parallel batch below.
+  const [expensesRes, familyMembersRes] = await Promise.all([
+    supabase
+      .from("trip_expenses")
       .select("*")
-      .in("id", familyMemberIds);
-    familyMembersData = (data ?? []) as FamilyMember[];
-  }
+      .eq("trip_id", id)
+      .order("created_at", { ascending: false }),
+    familyMemberIds.length > 0
+      ? supabase.from("family_members").select("*").in("id", familyMemberIds)
+      : Promise.resolve({ data: [] as FamilyMember[] }),
+  ]);
 
-  // Build family groups (shared with the trip hub hero — see lib/family-groups.ts).
-  const familyGroups = buildFamilyGroups(allMembers, familyMembersData);
+  const allExpenses = (expensesRes.data ?? []) as TripExpense[];
+  const familyMembersData = (familyMembersRes.data ?? []) as FamilyMember[];
 
-  // Fetch expenses with payers and splits
-  const { data: expenses } = await supabase
-    .from("trip_expenses")
-    .select("*")
-    .eq("trip_id", id)
-    .order("created_at", { ascending: false });
-
-  const allExpenses = (expenses ?? []) as TripExpense[];
+  const familyGroups = buildFamilyGroups(members, familyMembersData);
 
   const expenseIds = allExpenses.map((e) => e.id);
   let allPayers: ExpensePayer[] = [];
   let allSplits: ExpenseSplit[] = [];
 
   if (expenseIds.length > 0) {
-    const { data: payers } = await supabase
-      .from("expense_payers")
-      .select("*")
-      .in("expense_id", expenseIds);
-    allPayers = (payers ?? []) as ExpensePayer[];
-
-    const { data: splits } = await supabase
-      .from("expense_splits")
-      .select("*")
-      .in("expense_id", expenseIds);
-    allSplits = (splits ?? []) as ExpenseSplit[];
+    const [payersRes, splitsRes] = await Promise.all([
+      supabase.from("expense_payers").select("*").in("expense_id", expenseIds),
+      supabase.from("expense_splits").select("*").in("expense_id", expenseIds),
+    ]);
+    allPayers = (payersRes.data ?? []) as ExpensePayer[];
+    allSplits = (splitsRes.data ?? []) as ExpenseSplit[];
   }
 
   const expensesWithRelations: ExpenseWithRelations[] = allExpenses.map((e) => ({
@@ -110,23 +78,10 @@ export default async function ExpensesServerPage({
     splits: allSplits.filter((s) => s.expense_id === e.id),
   }));
 
-  // Fetch itinerary events (for linking)
-  const { data: events } = await supabase
-    .from("itinerary_events")
-    .select("*")
-    .eq("trip_id", id)
-    .order("date")
-    .order("sort_order");
-
   return (
     <ExpensesPage
-      trip={trip as Trip}
-      members={allMembers}
       expenses={expensesWithRelations}
-      events={(events ?? []) as ItineraryEvent[]}
       familyGroups={familyGroups}
-      userId={user.id}
-      isHost={isHost}
       fromEvent={searchParams?.fromEvent || null}
       fromEventTitle={searchParams?.fromEvent ? (searchParams?.title || null) : null}
       fromEventDate={searchParams?.date || null}

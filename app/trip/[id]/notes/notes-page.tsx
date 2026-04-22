@@ -6,9 +6,10 @@ import { THEMES, NOTE_CONVERT_OPTIONS } from "@/lib/constants";
 import { logActivity } from "@/lib/trip-activity";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import type { Trip, TripNote, TripMember } from "@/types/database.types";
+import type { TripNote } from "@/types/database.types";
 import type { NotesPageProps } from "./page";
 import TripSubNav from "../trip-sub-nav";
+import { useTripData } from "../trip-data-context";
 
 // ─── Filter type ───
 type FilterTab = "all" | "idea" | "finalized";
@@ -42,7 +43,8 @@ const StatusBadge = ({ status, convertedTo, accent }: { status: string; converte
   );
 };
 
-export default function NotesPage({ trip, notes: initialNotes, members, userId, isHost, openNoteId }: NotesPageProps) {
+export default function NotesPage({ notes: initialNotes, openNoteId }: NotesPageProps) {
+  const { trip, members, userId, isHost } = useTripData();
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;

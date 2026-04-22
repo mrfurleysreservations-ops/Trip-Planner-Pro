@@ -1,13 +1,10 @@
-import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Trip, TripMember, ItineraryEvent, EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment, TripWeatherForecast, GearBin, GearItem, TripGearBin } from "@/types/database.types";
+import type { EventParticipant, PackingItem, PackingOutfit, OutfitPackingItem, OutfitGroup, OutfitGroupEvent, UserProfile, FamilyMember, PackingBag, PackingBagSection, PackingBagContainer, PackingItemAssignment, TripWeatherForecast, GearBin, GearItem, TripGearBin } from "@/types/database.types";
 import { geocodeLocation, fetchForecast, bucketDailyByTOD, type ForecastMap, type ForecastCell } from "@/lib/weather";
+import { getTripData } from "@/lib/trip-data";
 import PackingPage from "./packing-page";
 
 export interface PackingPageProps {
-  trip: Trip;
-  members: TripMember[];
-  events: ItineraryEvent[];
   participants: EventParticipant[];
   packingItems: PackingItem[];
   packingOutfits: PackingOutfit[];
@@ -16,8 +13,6 @@ export interface PackingPageProps {
   outfitGroupEvents: OutfitGroupEvent[];
   userProfile: UserProfile;
   familyMembers: FamilyMember[];
-  userId: string;
-  isHost: boolean;
   packingBags: PackingBag[];
   packingBagSections: PackingBagSection[];
   packingBagContainers: PackingBagContainer[];
@@ -52,19 +47,16 @@ export default async function PackingServerPage({ params }: { params: { id: stri
   const supabase = createServerSupabaseClient();
   const { id } = params;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
-
-  const { data: trip } = await supabase.from("trips").select("*").eq("id", id).single();
-  if (!trip) redirect("/dashboard");
-
-  const isHost = trip.owner_id === user.id;
+  // Shared trip context — deduped with the layout's call via React cache().
+  // Packing still has 15+ tab-specific queries below. Parallelizing those is
+  // deferred to Phase 4 — this phase only removes the shared fetches.
+  const { trip, events, userId, isHost } = await getTripData(id);
 
   // Fetch user profile (for packing preferences, clothing styles, gender)
-  const { data: userProfile } = await supabase.from("user_profiles").select("*").eq("id", user.id).single();
+  const { data: userProfile } = await supabase.from("user_profiles").select("*").eq("id", userId).single();
 
   // Fetch user's family members (for the family-only person tabs)
-  const { data: families } = await supabase.from("families").select("*").eq("owner_id", user.id);
+  const { data: families } = await supabase.from("families").select("*").eq("owner_id", userId);
   const familyIds = (families ?? []).map(f => f.id);
   let familyMembers: FamilyMember[] = [];
   if (familyIds.length > 0) {
@@ -72,14 +64,8 @@ export default async function PackingServerPage({ params }: { params: { id: stri
     familyMembers = (data ?? []) as FamilyMember[];
   }
 
-  // Fetch trip members
-  const { data: members } = await supabase.from("trip_members").select("*").eq("trip_id", id).order("created_at");
-
-  // Fetch itinerary events
-  const { data: events } = await supabase.from("itinerary_events").select("*").eq("trip_id", id).order("date").order("sort_order");
-
   // Fetch event participants
-  const eventIds = (events ?? []).map(e => e.id);
+  const eventIds = events.map(e => e.id);
   let participants: EventParticipant[] = [];
   if (eventIds.length > 0) {
     const { data } = await supabase.from("event_participants").select("*").in("event_id", eventIds);
@@ -110,7 +96,7 @@ export default async function PackingServerPage({ params }: { params: { id: stri
   }
 
   // Fetch user's packing bags (persist across trips — belong to user, not trip)
-  const { data: packingBags } = await supabase.from("packing_bags").select("*").eq("user_id", user.id).order("sort_order");
+  const { data: packingBags } = await supabase.from("packing_bags").select("*").eq("user_id", userId).order("sort_order");
 
   // Fetch sections for the user's bags
   const bagIds = (packingBags ?? []).map(b => b.id);
@@ -144,7 +130,7 @@ export default async function PackingServerPage({ params }: { params: { id: stri
       supabase
         .from("gear_bins")
         .select("*")
-        .eq("owner_id", user.id)
+        .eq("owner_id", userId)
         .is("archived_at", null)
         .order("created_at", { ascending: true }),
       supabase
@@ -229,9 +215,6 @@ export default async function PackingServerPage({ params }: { params: { id: stri
 
   return (
     <PackingPage
-      trip={trip as Trip}
-      members={(members ?? []) as TripMember[]}
-      events={(events ?? []) as ItineraryEvent[]}
       participants={participants}
       packingItems={(packingItems ?? []) as PackingItem[]}
       packingOutfits={(packingOutfits ?? []) as PackingOutfit[]}
@@ -240,8 +223,6 @@ export default async function PackingServerPage({ params }: { params: { id: stri
       outfitGroupEvents={outfitGroupEvents}
       userProfile={userProfile as UserProfile}
       familyMembers={familyMembers}
-      userId={user.id}
-      isHost={isHost}
       packingBags={(packingBags ?? []) as PackingBag[]}
       packingBagSections={packingBagSections}
       packingBagContainers={packingBagContainers}

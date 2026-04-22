@@ -15,6 +15,7 @@ import {
 import { logActivity } from "@/lib/trip-activity";
 import TripSubNav from "../trip-sub-nav";
 import type {
+  Trip,
   ItineraryEvent,
   EventParticipant,
   MealItem,
@@ -23,6 +24,7 @@ import type {
   TripMember,
 } from "@/types/database.types";
 import type { SuppliesPageProps } from "./page";
+import { useTripData } from "../trip-data-context";
 
 // ─── Helpers ───
 
@@ -112,10 +114,6 @@ function Avatar({ id, name, size = 22 }: { id: string; name: string; size?: numb
 // ─── Main component ───
 
 export default function SuppliesPage({
-  trip,
-  userId,
-  isHost,
-  members,
   meals: initialMeals,
   mealItems: initialMealItems,
   participants: initialParticipants,
@@ -125,6 +123,7 @@ export default function SuppliesPage({
   focusSupplyId,
   focusMealId,
 }: SuppliesPageProps) {
+  const { trip, members, userId, isHost } = useTripData();
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createBrowserSupabaseClient();
@@ -2655,7 +2654,7 @@ function NewMealSheet({
   searchParams,
 }: {
   th: (typeof THEMES)["home"];
-  trip: SuppliesPageProps["trip"];
+  trip: Trip;
   currentMember: TripMember | null;
   onClose: () => void;
   onCreate: (draft: {

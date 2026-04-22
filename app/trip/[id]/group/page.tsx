@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Trip, TripMember, FamilyMember, Family } from "@/types/database.types";
+import type { FamilyMember, Family } from "@/types/database.types";
+import { getTripData } from "@/lib/trip-data";
 import GroupPage from "./group-page";
 
 export interface FriendWithProfile {
@@ -18,8 +18,6 @@ export interface FamilyWithMembers extends Family {
 }
 
 export interface GroupPageProps {
-  trip: Trip;
-  members: TripMember[];
   friends: FriendWithProfile[];
   familiesWithMembers: FamilyWithMembers[];
   otherAppUsers: FriendWithProfile[];
@@ -30,45 +28,26 @@ export interface GroupPageProps {
   // underlying family isn't in this user's own/friend scope (e.g. a co-host
   // added someone from a family the current viewer can't read).
   rosterLinkedUserIds: Record<string, string>;
-  userId: string;
-  isHost: boolean;
 }
 
 export default async function GroupServerPage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabaseClient();
   const { id } = params;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
-
-  const { data: trip } = await supabase
-    .from("trips")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (!trip) redirect("/dashboard");
-
-  const isHost = trip.owner_id === user.id;
-
-  // Fetch trip members
-  const { data: members } = await supabase
-    .from("trip_members")
-    .select("*")
-    .eq("trip_id", id)
-    .order("created_at");
+  // Shared trip context — deduped with the layout's call via React cache().
+  const { members, userId } = await getTripData(id);
 
   // Fetch accepted friend links where this user is either side
   const [sentRes, receivedRes] = await Promise.all([
     supabase
       .from("friend_links")
       .select("friend_id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("status", "accepted"),
     supabase
       .from("friend_links")
       .select("user_id")
-      .eq("friend_id", user.id)
+      .eq("friend_id", userId)
       .eq("status", "accepted"),
   ]);
 
@@ -95,7 +74,7 @@ export default async function GroupServerPage({ params }: { params: { id: string
   }
 
   // Fetch ALL families accessible to this user: own families + friends' families
-  const allFamilyOwnerIds = [user.id, ...friendUserIds];
+  const allFamilyOwnerIds = [userId, ...friendUserIds];
   let familiesWithMembers: FamilyWithMembers[] = [];
 
   if (allFamilyOwnerIds.length > 0) {
@@ -122,7 +101,7 @@ export default async function GroupServerPage({ params }: { params: { id: string
         ...f,
         family_members: f.family_members || [],
         owner_name: ownerNameMap[f.owner_id] || null,
-        is_own: f.owner_id === user.id,
+        is_own: f.owner_id === userId,
       }));
     }
   }
@@ -150,7 +129,7 @@ export default async function GroupServerPage({ params }: { params: { id: string
   // ── Discovery: other app users (NOT current user, NOT a friend) ──
   // Note: this exposes all public user_profiles rows to every logged-in user.
   // That's fine for the current hobby-project scope; flag if RLS is ever tightened.
-  const excludedUserIds = [user.id, ...friendUserIds];
+  const excludedUserIds = [userId, ...friendUserIds];
   let otherAppUsers: FriendWithProfile[] = [];
   {
     const { data: otherProfiles } = await supabase
@@ -202,15 +181,11 @@ export default async function GroupServerPage({ params }: { params: { id: string
 
   return (
     <GroupPage
-      trip={trip as Trip}
-      members={(members ?? []) as TripMember[]}
       friends={friends}
       familiesWithMembers={familiesWithMembers}
       otherAppUsers={otherAppUsers}
       otherFamilies={otherFamilies}
       rosterLinkedUserIds={rosterLinkedUserIds}
-      userId={user.id}
-      isHost={isHost}
     />
   );
 }

@@ -4,10 +4,11 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { THEMES, EVENT_TYPES, DRESS_CODES, TIME_SLOTS } from "@/lib/constants";
 import { logActivity } from "@/lib/trip-activity";
-import type { Trip, TripMember, ItineraryEvent, EventParticipant } from "@/types/database.types";
+import type { ItineraryEvent, EventParticipant } from "@/types/database.types";
 import type { ItineraryPageProps } from "./page";
 import { usePlacesAutocomplete } from "@/lib/use-places-autocomplete";
 import TripSubNav from "../trip-sub-nav";
+import { useTripData } from "../trip-data-context";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
@@ -100,10 +101,11 @@ function OptionalBadge() {
 // ─── Main component ───
 
 export default function ItineraryPage({
-  trip, events: initialEvents, participants: initialParticipants, members, userId, isHost,
+  participants: initialParticipants,
   openEventId, fromNote, fromNoteTitle, fromNoteDescription, fromNoteLink, fromNoteDate, fromNoteStartTime, fromNoteEndTime,
   eventExpenseTotals,
 }: ItineraryPageProps) {
+  const { trip, members, events: initialEvents, userId, isHost } = useTripData();
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;

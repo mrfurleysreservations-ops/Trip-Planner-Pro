@@ -1,21 +1,15 @@
-import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
-  Trip,
-  TripMember,
   ItineraryEvent,
   EventParticipant,
   MealItem,
   SupplyItem,
   GroceryCheckoff,
 } from "@/types/database.types";
+import { getTripData } from "@/lib/trip-data";
 import SuppliesPage from "./supplies-page";
 
 export interface SuppliesPageProps {
-  trip: Trip;
-  userId: string;
-  isHost: boolean;
-  members: TripMember[];
   meals: ItineraryEvent[];
   mealItems: MealItem[];
   participants: EventParticipant[];
@@ -36,46 +30,37 @@ export default async function SuppliesServerPage({
   const supabase = createServerSupabaseClient();
   const { id } = params;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
+  // Shared trip context — deduped with the layout's call via React cache().
+  const { events, userId } = await getTripData(id);
 
-  const { data: trip } = await supabase
-    .from("trips")
+  // Meals are just meal-typed itinerary events — derive from the shared
+  // events list instead of re-querying. The shared fetch orders by
+  // (date, sort_order); re-sort here to preserve the old
+  // (date, start_time, sort_order) ordering so meal cards keep clock-order
+  // within a day.
+  const meals: ItineraryEvent[] = events
+    .filter((e) => e.event_type === "meal")
+    .slice()
+    .sort((a, b) => {
+      const dateCmp = (a.date ?? "").localeCompare(b.date ?? "");
+      if (dateCmp !== 0) return dateCmp;
+      if (a.start_time !== b.start_time) {
+        if (a.start_time === null) return 1;
+        if (b.start_time === null) return -1;
+        return a.start_time.localeCompare(b.start_time);
+      }
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    });
+
+  // Supplies is trip-scoped; run it in parallel with nothing here since the
+  // meal_items / participants queries below depend on the derived mealIds.
+  const { data: suppliesData } = await supabase
+    .from("supply_items")
     .select("*")
-    .eq("id", id)
-    .single();
-
-  if (!trip) redirect("/dashboard");
-
-  const isHost = trip.owner_id === user.id;
-
-  // Fetch all in parallel. Most queries are scoped by trip_id; checkoffs
-  // are per-user and filtered post-hoc once we know the user's meal_item ids.
-  const [mealsRes, membersRes, suppliesRes] = await Promise.all([
-    supabase
-      .from("itinerary_events")
-      .select("*")
-      .eq("trip_id", id)
-      .eq("event_type", "meal")
-      .order("date")
-      .order("start_time")
-      .order("sort_order"),
-    supabase
-      .from("trip_members")
-      .select("*")
-      .eq("trip_id", id)
-      .order("created_at"),
-    supabase
-      .from("supply_items")
-      .select("*")
-      .eq("trip_id", id)
-      .order("sort_order")
-      .order("created_at"),
-  ]);
-
-  const meals = (mealsRes.data ?? []) as ItineraryEvent[];
-  const members = (membersRes.data ?? []) as TripMember[];
-  const supplies = (suppliesRes.data ?? []) as SupplyItem[];
+    .eq("trip_id", id)
+    .order("sort_order")
+    .order("created_at");
+  const supplies = (suppliesData ?? []) as SupplyItem[];
 
   const mealIds = meals.map((m) => m.id);
 
@@ -105,7 +90,7 @@ export default async function SuppliesServerPage({
     const { data } = await supabase
       .from("grocery_checkoffs")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .in("meal_item_id", mealItemIds);
     checkoffs = (data ?? []) as GroceryCheckoff[];
   }
@@ -117,10 +102,6 @@ export default async function SuppliesServerPage({
 
   return (
     <SuppliesPage
-      trip={trip as Trip}
-      userId={user.id}
-      isHost={isHost}
-      members={members}
       meals={meals}
       mealItems={mealItems}
       participants={participants}

@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { THEMES, EXPENSE_CATEGORIES, SPLIT_TYPES } from "@/lib/constants";
 import { logActivity } from "@/lib/trip-activity";
 import { computeFamilyBalances } from "@/lib/expense-balance";
-import type { Trip, TripMember, ItineraryEvent, ExpensePayer, ExpenseSplit } from "@/types/database.types";
+import type { TripMember, ExpensePayer, ExpenseSplit } from "@/types/database.types";
 import type { ExpensesPageProps, ExpenseWithRelations, FamilyGroup } from "./page";
 import TripSubNav from "../trip-sub-nav";
+import { useTripData } from "../trip-data-context";
 
 // ─── Helpers ───
 
@@ -112,10 +113,11 @@ function getFamilyColor(idx: number): string {
 // ═══════════════════════════════════════════
 
 export default function ExpensesPageComponent({
-  trip, members, expenses: initialExpenses, events, familyGroups,
-  userId, isHost, fromEvent, fromEventTitle, fromEventDate,
+  expenses: initialExpenses, familyGroups,
+  fromEvent, fromEventTitle, fromEventDate,
   fromSupply, fromSupplyTitle,
 }: ExpensesPageProps) {
+  const { trip, members, events, userId, isHost } = useTripData();
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const th = THEMES[trip.trip_type] || THEMES.home;
